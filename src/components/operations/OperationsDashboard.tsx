@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, AreaChart, Area } from "recharts";
-import { TrendingUp, TrendingDown, Target, Award, Calendar, Clock, Filter, Bot } from "lucide-react";
+import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, AreaChart, Area, PieChart, Pie, Cell } from "recharts";
+import { TrendingUp, TrendingDown, Target, Award, Calendar, Clock, Filter, Bot, Info } from "lucide-react";
+import { Tooltip as TooltipComponent, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
@@ -1036,82 +1037,190 @@ const OperationsDashboard = ({ userId }: OperationsDashboardProps) => {
 
       {/* Análise Comparativa por Estratégia */}
       {strategyStats.length > 1 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Bot className="w-5 h-5" />
-              Análise Comparativa por Estratégia
-            </CardTitle>
-            <CardDescription>
-              Métricas detalhadas de performance para cada estratégia (Win Rate, Payoff, Drawdown)
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {strategyStats.map((stat) => (
-                <div key={stat.strategy} className="border rounded-lg p-4">
-                  <div className="flex items-center justify-between mb-3">
-                    <h3 className="font-semibold text-lg">{stat.strategy}</h3>
-                    <div className={`text-xl font-bold ${stat.totalResult >= 0 ? 'text-success' : 'text-destructive'}`}>
-                      {stat.totalResult >= 0 ? '+' : ''}
-                      {stat.totalResult.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
-                    </div>
-                  </div>
-                  
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    <div>
-                      <p className="text-sm text-muted-foreground">Operações</p>
-                      <p className="text-lg font-semibold">{stat.totalOps}</p>
+        <>
+          {/* Gráfico de Pizza - Distribuição de Operações */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Bot className="w-5 h-5" />
+                Distribuição de Operações por Estratégia
+              </CardTitle>
+              <CardDescription>
+                Percentual de operações realizadas com cada estratégia
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ResponsiveContainer width="100%" height={400}>
+                <PieChart>
+                  <Pie
+                    data={strategyStats}
+                    dataKey="totalOps"
+                    nameKey="strategy"
+                    cx="50%"
+                    cy="50%"
+                    outerRadius={120}
+                    label={({ strategy, totalOps, percent }) => 
+                      `${strategy}: ${totalOps} (${(percent * 100).toFixed(1)}%)`
+                    }
+                    labelLine={true}
+                  >
+                    {strategyStats.map((entry, index) => {
+                      const colors = [
+                        'hsl(var(--primary))',
+                        'hsl(var(--success))',
+                        'hsl(var(--destructive))',
+                        'hsl(var(--warning))',
+                        'hsl(var(--info))',
+                        '#8884d8',
+                        '#82ca9d',
+                        '#ffc658',
+                        '#ff8042',
+                        '#a4de6c'
+                      ];
+                      return (
+                        <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />
+                      );
+                    })}
+                  </Pie>
+                  <Tooltip 
+                    formatter={(value: number, name: string) => [
+                      `${value} operações`,
+                      name
+                    ]}
+                  />
+                  <Legend />
+                </PieChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+
+          {/* Análise Detalhada por Estratégia */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Bot className="w-5 h-5" />
+                Análise Comparativa por Estratégia
+              </CardTitle>
+              <CardDescription>
+                Métricas detalhadas de performance para cada estratégia
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {strategyStats.map((stat) => (
+                  <div key={stat.strategy} className="border rounded-lg p-4">
+                    <div className="flex items-center justify-between mb-3">
+                      <h3 className="font-semibold text-lg">{stat.strategy}</h3>
+                      <div className={`text-xl font-bold ${stat.totalResult >= 0 ? 'text-success' : 'text-destructive'}`}>
+                        {stat.totalResult >= 0 ? '+' : ''}
+                        {stat.totalResult.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
+                      </div>
                     </div>
                     
-                    <div>
-                      <p className="text-sm text-muted-foreground">Win Rate</p>
-                      <p className="text-lg font-semibold text-primary">{stat.winRate.toFixed(1)}%</p>
-                      <p className="text-xs text-muted-foreground">
-                        {stat.positive}W / {stat.negative}L
-                      </p>
-                    </div>
+                    <TooltipProvider>
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        <div>
+                          <p className="text-sm text-muted-foreground">Operações</p>
+                          <p className="text-lg font-semibold">{stat.totalOps}</p>
+                        </div>
+                        
+                        <div>
+                          <div className="flex items-center gap-1 mb-1">
+                            <p className="text-sm text-muted-foreground">Win Rate</p>
+                            <TooltipComponent>
+                              <TooltipTrigger asChild>
+                                <Info className="w-3 h-3 text-muted-foreground cursor-help" />
+                              </TooltipTrigger>
+                              <TooltipContent className="max-w-xs">
+                                <p className="font-semibold mb-1">Win Rate (Taxa de Acerto)</p>
+                                <p className="text-xs">
+                                  Percentual de operações positivas (ganhos) em relação ao total. 
+                                  Um Win Rate de 60% significa que 6 em cada 10 operações foram lucrativas. 
+                                  Valores acima de 50% indicam mais acertos que erros.
+                                </p>
+                              </TooltipContent>
+                            </TooltipComponent>
+                          </div>
+                          <p className="text-lg font-semibold text-primary">{stat.winRate.toFixed(1)}%</p>
+                          <p className="text-xs text-muted-foreground">
+                            {stat.positive}W / {stat.negative}L
+                          </p>
+                        </div>
+                        
+                        <div>
+                          <div className="flex items-center gap-1 mb-1">
+                            <p className="text-sm text-muted-foreground">Payoff</p>
+                            <TooltipComponent>
+                              <TooltipTrigger asChild>
+                                <Info className="w-3 h-3 text-muted-foreground cursor-help" />
+                              </TooltipTrigger>
+                              <TooltipContent className="max-w-xs">
+                                <p className="font-semibold mb-1">Payoff (Razão Risco/Retorno)</p>
+                                <p className="text-xs">
+                                  Relação entre o ganho médio e a perda média. Um Payoff de 2.0 significa que 
+                                  quando você ganha, ganha o dobro do que perde em média. Valores acima de 1.0 
+                                  são positivos - você ganha mais do que perde. Estratégias com Payoff alto 
+                                  podem ser lucrativas mesmo com Win Rate abaixo de 50%.
+                                </p>
+                              </TooltipContent>
+                            </TooltipComponent>
+                          </div>
+                          <p className={`text-lg font-semibold ${stat.payoff >= 1 ? 'text-success' : 'text-destructive'}`}>
+                            {stat.payoff.toFixed(2)}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            Ganho/Perda médio
+                          </p>
+                        </div>
+                        
+                        <div>
+                          <div className="flex items-center gap-1 mb-1">
+                            <p className="text-sm text-muted-foreground">Max Drawdown</p>
+                            <TooltipComponent>
+                              <TooltipTrigger asChild>
+                                <Info className="w-3 h-3 text-muted-foreground cursor-help" />
+                              </TooltipTrigger>
+                              <TooltipContent className="max-w-xs">
+                                <p className="font-semibold mb-1">Max Drawdown (Maior Queda)</p>
+                                <p className="text-xs">
+                                  Maior perda acumulada do pico até o vale. Representa o pior cenário que 
+                                  você enfrentou - quanto você perdeu do ponto mais alto até o mais baixo. 
+                                  Valores menores indicam menor risco. Por exemplo: se seu capital chegou a 
+                                  R$ 10.000 e caiu para R$ 8.000, o drawdown foi de R$ 2.000 (20%).
+                                </p>
+                              </TooltipContent>
+                            </TooltipComponent>
+                          </div>
+                          <p className="text-lg font-semibold text-destructive">
+                            {stat.maxDrawdown.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            Maior queda
+                          </p>
+                        </div>
+                      </div>
+                    </TooltipProvider>
                     
-                    <div>
-                      <p className="text-sm text-muted-foreground">Payoff</p>
-                      <p className={`text-lg font-semibold ${stat.payoff >= 1 ? 'text-success' : 'text-destructive'}`}>
-                        {stat.payoff.toFixed(2)}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        Ganho/Perda médio
-                      </p>
-                    </div>
-                    
-                    <div>
-                      <p className="text-sm text-muted-foreground">Max Drawdown</p>
-                      <p className="text-lg font-semibold text-destructive">
-                        {stat.maxDrawdown.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        Maior queda
-                      </p>
+                    <div className="grid grid-cols-2 gap-4 mt-3 pt-3 border-t">
+                      <div>
+                        <p className="text-xs text-muted-foreground">Ganho Médio</p>
+                        <p className="text-sm font-medium text-success">
+                          +{stat.averageWin.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-muted-foreground">Perda Média</p>
+                        <p className="text-sm font-medium text-destructive">
+                          -{stat.averageLoss.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
+                        </p>
+                      </div>
                     </div>
                   </div>
-                  
-                  <div className="grid grid-cols-2 gap-4 mt-3 pt-3 border-t">
-                    <div>
-                      <p className="text-xs text-muted-foreground">Ganho Médio</p>
-                      <p className="text-sm font-medium text-success">
-                        +{stat.averageWin.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-muted-foreground">Perda Média</p>
-                      <p className="text-sm font-medium text-destructive">
-                        -{stat.averageLoss.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </>
       )}
     </div>
   );
