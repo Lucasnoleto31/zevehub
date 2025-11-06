@@ -27,9 +27,6 @@ interface Stats {
   payoff: number;
   averageWin: number;
   averageLoss: number;
-  maxDrawdown: number;
-  maxDrawdownDays: number;
-  currentDrawdown: number;
 }
 
 const OperationsDashboard = ({ userId }: OperationsDashboardProps) => {
@@ -47,12 +44,8 @@ const OperationsDashboard = ({ userId }: OperationsDashboardProps) => {
     payoff: 0,
     averageWin: 0,
     averageLoss: 0,
-    maxDrawdown: 0,
-    maxDrawdownDays: 0,
-    currentDrawdown: 0,
   });
   const [performanceCurve, setPerformanceCurve] = useState<any[]>([]);
-  const [drawdownCurve, setDrawdownCurve] = useState<any[]>([]);
   const [weekdayStats, setWeekdayStats] = useState<any[]>([]);
   const [monthStats, setMonthStats] = useState<any[]>([]);
   const [hourStats, setHourStats] = useState<any[]>([]);
@@ -115,9 +108,6 @@ const OperationsDashboard = ({ userId }: OperationsDashboardProps) => {
         payoff: 0,
         averageWin: 0,
         averageLoss: 0,
-        maxDrawdown: 0,
-        maxDrawdownDays: 0,
-        currentDrawdown: 0,
       });
       return;
     }
@@ -181,9 +171,6 @@ const OperationsDashboard = ({ userId }: OperationsDashboardProps) => {
       payoff,
       averageWin,
       averageLoss,
-      maxDrawdown: 0, // será calculado no generateCharts
-      maxDrawdownDays: 0,
-      currentDrawdown: 0,
     });
   };
 
@@ -197,67 +184,16 @@ const OperationsDashboard = ({ userId }: OperationsDashboardProps) => {
     }, {} as Record<string, number>);
 
     let accumulated = 0;
-    let peak = 0;
-    let maxDrawdown = 0;
-    let maxDrawdownDays = 0;
-    let drawdownStartDate = null;
-    let currentDrawdownDays = 0;
-    
-    const curve: any[] = [];
-    const drawdown: any[] = [];
-    
-    Object.entries(dailyResults)
+    const curve = Object.entries(dailyResults)
       .sort(([dateA], [dateB]) => dateA.localeCompare(dateB))
-      .forEach(([date, result]) => {
+      .map(([date, result]) => {
         accumulated += result;
-        
-        // Atualizar pico
-        if (accumulated > peak) {
-          peak = accumulated;
-          drawdownStartDate = null;
-          currentDrawdownDays = 0;
-        }
-        
-        // Calcular drawdown atual
-        const currentDrawdown = accumulated - peak;
-        
-        // Registrar maior drawdown
-        if (currentDrawdown < maxDrawdown) {
-          maxDrawdown = currentDrawdown;
-        }
-        
-        // Contar dias em drawdown
-        if (currentDrawdown < 0) {
-          if (drawdownStartDate === null) {
-            drawdownStartDate = date;
-            currentDrawdownDays = 1;
-          } else {
-            currentDrawdownDays++;
-          }
-          maxDrawdownDays = Math.max(maxDrawdownDays, currentDrawdownDays);
-        }
-        
-        curve.push({
+        return {
           date: new Date(date).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" }),
           value: accumulated,
-        });
-        
-        drawdown.push({
-          date: new Date(date).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" }),
-          drawdown: currentDrawdown,
-        });
+        };
       });
-    
     setPerformanceCurve(curve);
-    setDrawdownCurve(drawdown);
-    
-    // Atualizar stats com drawdown
-    setStats(prev => ({
-      ...prev,
-      maxDrawdown,
-      maxDrawdownDays,
-      currentDrawdown: drawdown.length > 0 ? drawdown[drawdown.length - 1].drawdown : 0,
-    }));
 
     // Melhores dias da semana (Segunda a Sexta apenas)
     const weekdays = ["Seg", "Ter", "Qua", "Qui", "Sex"];
@@ -279,19 +215,26 @@ const OperationsDashboard = ({ userId }: OperationsDashboardProps) => {
       }))
     );
 
-    // Melhores meses
+    // Melhores meses (ano/mês agrupado)
     const monthData = ops.reduce((acc, op) => {
-      const month = new Date(op.operation_date).toLocaleDateString("pt-BR", { month: "short" });
-      if (!acc[month]) acc[month] = 0;
-      acc[month] += parseFloat(op.result.toString());
+      const date = new Date(op.operation_date);
+      const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+      const monthLabel = date.toLocaleDateString("pt-BR", { month: "short", year: "2-digit" });
+      
+      if (!acc[monthKey]) {
+        acc[monthKey] = { label: monthLabel, result: 0 };
+      }
+      acc[monthKey].result += parseFloat(op.result.toString());
       return acc;
-    }, {} as Record<string, number>);
+    }, {} as Record<string, { label: string; result: number }>);
 
     setMonthStats(
-      Object.entries(monthData).map(([month, result]) => ({
-        month,
-        result,
-      }))
+      Object.entries(monthData)
+        .sort(([keyA], [keyB]) => keyA.localeCompare(keyB))
+        .map(([_, data]) => ({
+          month: data.label,
+          result: data.result,
+        }))
     );
 
     // Melhores horários
@@ -382,15 +325,25 @@ const OperationsDashboard = ({ userId }: OperationsDashboardProps) => {
 
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Drawdown Máximo</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">Sequências</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-destructive">
-              {stats.maxDrawdown.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <TrendingUp className="w-4 h-4 text-success" />
+                  <span className="text-sm text-muted-foreground">Positiva</span>
+                </div>
+                <span className="text-xl font-bold text-success">{stats.positiveStreak} dias</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <TrendingDown className="w-4 h-4 text-destructive" />
+                  <span className="text-sm text-muted-foreground">Negativa</span>
+                </div>
+                <span className="text-xl font-bold text-destructive">{stats.negativeStreak} dias</span>
+              </div>
             </div>
-            <p className="text-xs text-muted-foreground mt-1">
-              {stats.maxDrawdownDays} dias para recuperar
-            </p>
           </CardContent>
         </Card>
       </div>
@@ -414,21 +367,21 @@ const OperationsDashboard = ({ userId }: OperationsDashboardProps) => {
         </CardContent>
       </Card>
 
-      {/* Drawdown Chart */}
+      {/* Performance Mensal */}
       <Card>
         <CardHeader>
-          <CardTitle>Análise de Drawdown</CardTitle>
-          <CardDescription>Queda desde o pico mais alto - quanto mais negativo, maior o risco</CardDescription>
+          <CardTitle>Performance Mensal</CardTitle>
+          <CardDescription>Comparativo de resultados mês a mês</CardDescription>
         </CardHeader>
         <CardContent>
           <ResponsiveContainer width="100%" height={300}>
-            <LineChart data={drawdownCurve}>
+            <BarChart data={monthStats}>
               <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="date" />
+              <XAxis dataKey="month" />
               <YAxis />
               <Tooltip formatter={(value: number) => value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })} />
-              <Line type="monotone" dataKey="drawdown" stroke="hsl(var(--destructive))" strokeWidth={2} />
-            </LineChart>
+              <Bar dataKey="result" fill="hsl(var(--primary))" />
+            </BarChart>
           </ResponsiveContainer>
         </CardContent>
       </Card>
