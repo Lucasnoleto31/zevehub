@@ -2,7 +2,13 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, AreaChart, Area } from "recharts";
-import { TrendingUp, TrendingDown, Target, Award, Calendar, Clock } from "lucide-react";
+import { TrendingUp, TrendingDown, Target, Award, Calendar, Clock, Filter } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar as CalendarComponent } from "@/components/ui/calendar";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
+import { cn } from "@/lib/utils";
 
 interface OperationsDashboardProps {
   userId: string;
@@ -37,6 +43,10 @@ interface Stats {
 
 const OperationsDashboard = ({ userId }: OperationsDashboardProps) => {
   const [operations, setOperations] = useState<Operation[]>([]);
+  const [filteredOperations, setFilteredOperations] = useState<Operation[]>([]);
+  const [dateFilter, setDateFilter] = useState<string>("all");
+  const [customStartDate, setCustomStartDate] = useState<Date>();
+  const [customEndDate, setCustomEndDate] = useState<Date>();
   const [stats, setStats] = useState<Stats>({
     totalOperations: 0,
     positiveDays: 0,
@@ -68,6 +78,17 @@ const OperationsDashboard = ({ userId }: OperationsDashboardProps) => {
     loadOperations();
   }, [userId]);
 
+  useEffect(() => {
+    applyDateFilter();
+  }, [operations, dateFilter, customStartDate, customEndDate]);
+
+  useEffect(() => {
+    if (filteredOperations.length > 0) {
+      calculateStats(filteredOperations);
+      generateCharts(filteredOperations);
+    }
+  }, [filteredOperations]);
+
   const loadOperations = async () => {
     try {
       // Buscar todas as operações sem limite
@@ -97,13 +118,64 @@ const OperationsDashboard = ({ userId }: OperationsDashboardProps) => {
 
       console.log(`Carregadas ${allOperations.length} operações`);
       setOperations(allOperations);
-      calculateStats(allOperations);
-      generateCharts(allOperations);
     } catch (error) {
       console.error("Erro ao carregar operações:", error);
     } finally {
       setLoading(false);
     }
+  };
+
+  const applyDateFilter = () => {
+    if (operations.length === 0) {
+      setFilteredOperations([]);
+      return;
+    }
+
+    const now = new Date();
+    let filtered = [...operations];
+
+    switch (dateFilter) {
+      case "7days":
+        const last7Days = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+        filtered = operations.filter(op => new Date(op.operation_date) >= last7Days);
+        break;
+      
+      case "30days":
+        const last30Days = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+        filtered = operations.filter(op => new Date(op.operation_date) >= last30Days);
+        break;
+      
+      case "currentMonth":
+        const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+        filtered = operations.filter(op => new Date(op.operation_date) >= startOfMonth);
+        break;
+      
+      case "currentYear":
+        const startOfYear = new Date(now.getFullYear(), 0, 1);
+        filtered = operations.filter(op => new Date(op.operation_date) >= startOfYear);
+        break;
+      
+      case "custom":
+        if (customStartDate || customEndDate) {
+          filtered = operations.filter(op => {
+            const opDate = new Date(op.operation_date);
+            if (customStartDate && customEndDate) {
+              return opDate >= customStartDate && opDate <= customEndDate;
+            } else if (customStartDate) {
+              return opDate >= customStartDate;
+            } else if (customEndDate) {
+              return opDate <= customEndDate;
+            }
+            return true;
+          });
+        }
+        break;
+      
+      default: // "all"
+        filtered = operations;
+    }
+
+    setFilteredOperations(filtered);
   };
 
   const calculateStats = (ops: Operation[]) => {
@@ -352,6 +424,127 @@ const OperationsDashboard = ({ userId }: OperationsDashboardProps) => {
 
   return (
     <div className="space-y-6">
+      {/* Date Filters */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Filter className="w-5 h-5" />
+            Filtros de Período
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              variant={dateFilter === "all" ? "default" : "outline"}
+              size="sm"
+              onClick={() => setDateFilter("all")}
+            >
+              Todos
+            </Button>
+            <Button
+              variant={dateFilter === "7days" ? "default" : "outline"}
+              size="sm"
+              onClick={() => setDateFilter("7days")}
+            >
+              Últimos 7 dias
+            </Button>
+            <Button
+              variant={dateFilter === "30days" ? "default" : "outline"}
+              size="sm"
+              onClick={() => setDateFilter("30days")}
+            >
+              Últimos 30 dias
+            </Button>
+            <Button
+              variant={dateFilter === "currentMonth" ? "default" : "outline"}
+              size="sm"
+              onClick={() => setDateFilter("currentMonth")}
+            >
+              Mês Atual
+            </Button>
+            <Button
+              variant={dateFilter === "currentYear" ? "default" : "outline"}
+              size="sm"
+              onClick={() => setDateFilter("currentYear")}
+            >
+              Ano Atual
+            </Button>
+            
+            <div className="flex gap-2 items-center">
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant={dateFilter === "custom" ? "default" : "outline"}
+                    size="sm"
+                    className={cn(!customStartDate && "text-muted-foreground")}
+                  >
+                    <Calendar className="mr-2 h-4 w-4" />
+                    {customStartDate ? format(customStartDate, "dd/MM/yyyy", { locale: ptBR }) : "Data Início"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0">
+                  <CalendarComponent
+                    mode="single"
+                    selected={customStartDate}
+                    onSelect={(date) => {
+                      setCustomStartDate(date);
+                      setDateFilter("custom");
+                    }}
+                    initialFocus
+                    className="pointer-events-auto"
+                  />
+                </PopoverContent>
+              </Popover>
+
+              <span className="text-muted-foreground">até</span>
+
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant={dateFilter === "custom" ? "default" : "outline"}
+                    size="sm"
+                    className={cn(!customEndDate && "text-muted-foreground")}
+                  >
+                    <Calendar className="mr-2 h-4 w-4" />
+                    {customEndDate ? format(customEndDate, "dd/MM/yyyy", { locale: ptBR }) : "Data Fim"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0">
+                  <CalendarComponent
+                    mode="single"
+                    selected={customEndDate}
+                    onSelect={(date) => {
+                      setCustomEndDate(date);
+                      setDateFilter("custom");
+                    }}
+                    initialFocus
+                    className="pointer-events-auto"
+                  />
+                </PopoverContent>
+              </Popover>
+
+              {(customStartDate || customEndDate) && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setCustomStartDate(undefined);
+                    setCustomEndDate(undefined);
+                    setDateFilter("all");
+                  }}
+                >
+                  Limpar
+                </Button>
+              )}
+            </div>
+          </div>
+          
+          <p className="text-sm text-muted-foreground mt-3">
+            Mostrando {filteredOperations.length} de {operations.length} operações
+          </p>
+        </CardContent>
+      </Card>
+
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
         <Card>
@@ -442,7 +635,6 @@ const OperationsDashboard = ({ userId }: OperationsDashboardProps) => {
         <CardContent>
           <ResponsiveContainer width="100%" height={300}>
             <AreaChart data={performanceCurve}>
-              <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="date" />
               <YAxis />
               <Tooltip formatter={(value: number) => value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })} />
