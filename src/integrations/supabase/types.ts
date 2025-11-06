@@ -146,6 +146,48 @@ export type Database = {
         }
         Relationships: []
       }
+      trading_operations: {
+        Row: {
+          asset: string
+          contracts: number
+          costs: number
+          created_at: string
+          id: string
+          notes: string | null
+          operation_date: string
+          operation_time: string
+          result: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          asset: string
+          contracts: number
+          costs?: number
+          created_at?: string
+          id?: string
+          notes?: string | null
+          operation_date: string
+          operation_time: string
+          result: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          asset?: string
+          contracts?: number
+          costs?: number
+          created_at?: string
+          id?: string
+          notes?: string | null
+          operation_date?: string
+          operation_time?: string
+          result?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_permissions: {
         Row: {
           can_edit: boolean | null

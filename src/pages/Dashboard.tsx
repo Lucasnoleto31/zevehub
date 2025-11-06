@@ -18,6 +18,7 @@ import {
   Shield,
   Settings,
   Bell,
+  LineChart,
 } from "lucide-react";
 import StatsCard from "@/components/dashboard/StatsCard";
 import BotsList from "@/components/dashboard/BotsList";
@@ -105,6 +106,15 @@ const Dashboard = () => {
             </div>
             
             <div className="flex items-center gap-4">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => navigate("/operations")}
+                className="gap-2"
+              >
+                <LineChart className="w-4 h-4" />
+                Operações
+              </Button>
               {isAdmin && (
                 <Button
                   variant="outline"
