@@ -31,11 +31,13 @@ const PerformanceHeatmap = ({ operations }: PerformanceHeatmapProps) => {
     const heatmapMap = new Map<string, { result: number; count: number }>();
 
     operations.forEach((op) => {
-      const date = new Date(op.operation_date);
+      // Parse date mais confiável para evitar problemas de timezone
+      const [year, month, day] = op.operation_date.split('-').map(Number);
+      const date = new Date(year, month - 1, day);
       const weekday = date.getDay(); // 0=Dom, 1=Seg...6=Sab
       const hour = parseInt(op.operation_time.split(":")[0]);
 
-      // Ignorar fins de semana
+      // Ignorar apenas fins de semana (domingo=0 e sábado=6)
       if (weekday === 0 || weekday === 6) return;
 
       const key = `${weekday}-${hour}`;
