@@ -2,10 +2,12 @@ import { useEffect, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { TrendingUp, TrendingDown, Activity, Target, Info } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 interface Operation {
   operation_date: string;
   result: number;
+  strategy?: string;
 }
 
 interface Metrics {
@@ -21,32 +23,55 @@ interface AdvancedMetricsProps {
 }
 
 const AdvancedMetrics = ({ operations }: AdvancedMetricsProps) => {
-  const [metrics, setMetrics] = useState<Metrics>({
-    sharpeRatio: 0,
-    maxDrawdown: 0,
-    profitFactor: 0,
-    expectancy: 0,
-    recoveryFactor: 0,
-  });
+  const [metricsByStrategy, setMetricsByStrategy] = useState<Record<string, Metrics>>({});
+  const [strategies, setStrategies] = useState<string[]>([]);
 
   useEffect(() => {
-    calculateMetrics();
+    calculateMetricsByStrategy();
   }, [operations]);
 
-  const calculateMetrics = () => {
+  const calculateMetricsByStrategy = () => {
     if (operations.length === 0) {
-      setMetrics({
+      setMetricsByStrategy({});
+      setStrategies([]);
+      return;
+    }
+
+    // Agrupar operações por estratégia
+    const operationsByStrategy: Record<string, Operation[]> = {};
+    operations.forEach((op) => {
+      const strategy = op.strategy || "Sem estratégia";
+      if (!operationsByStrategy[strategy]) {
+        operationsByStrategy[strategy] = [];
+      }
+      operationsByStrategy[strategy].push(op);
+    });
+
+    const calculatedMetrics: Record<string, Metrics> = {};
+    const strategyNames = Object.keys(operationsByStrategy);
+
+    strategyNames.forEach((strategy) => {
+      const strategyOps = operationsByStrategy[strategy];
+      calculatedMetrics[strategy] = calculateMetrics(strategyOps);
+    });
+
+    setMetricsByStrategy(calculatedMetrics);
+    setStrategies(strategyNames);
+  };
+
+  const calculateMetrics = (ops: Operation[]): Metrics => {
+    if (ops.length === 0) {
+      return {
         sharpeRatio: 0,
         maxDrawdown: 0,
         profitFactor: 0,
         expectancy: 0,
         recoveryFactor: 0,
-      });
-      return;
+      };
     }
     // Agrupar por dia
     const dailyResults = new Map<string, number>();
-    operations.forEach((op) => {
+    ops.forEach((op) => {
       const date = op.operation_date;
       dailyResults.set(date, (dailyResults.get(date) || 0) + op.result);
     });
@@ -59,7 +84,7 @@ const AdvancedMetrics = ({ operations }: AdvancedMetricsProps) => {
       dailyReturns.reduce((sum, ret) => sum + Math.pow(ret - avgReturn, 2), 0) /
       dailyReturns.length;
     const stdDev = Math.sqrt(variance);
-    const riskFreeRate = 0; // Taxa livre de risco (pode ajustar)
+    const riskFreeRate = 0;
     const sharpeRatio = stdDev !== 0 ? (avgReturn - riskFreeRate) / stdDev : 0;
 
     // Calcular Maximum Drawdown
@@ -79,16 +104,16 @@ const AdvancedMetrics = ({ operations }: AdvancedMetricsProps) => {
     });
 
     // Calcular Profit Factor
-    const gains = operations.filter((op) => op.result > 0).reduce((sum, op) => sum + op.result, 0);
+    const gains = ops.filter((op) => op.result > 0).reduce((sum, op) => sum + op.result, 0);
     const losses = Math.abs(
-      operations.filter((op) => op.result < 0).reduce((sum, op) => sum + op.result, 0)
+      ops.filter((op) => op.result < 0).reduce((sum, op) => sum + op.result, 0)
     );
     const profitFactor = losses !== 0 ? gains / losses : gains > 0 ? Infinity : 0;
 
     // Calcular Expectancy (expectativa)
-    const totalOperations = operations.length;
-    const winningTrades = operations.filter((op) => op.result > 0).length;
-    const losingTrades = operations.filter((op) => op.result < 0).length;
+    const totalOperations = ops.length;
+    const winningTrades = ops.filter((op) => op.result > 0).length;
+    const losingTrades = ops.filter((op) => op.result < 0).length;
     const avgWin = winningTrades > 0 ? gains / winningTrades : 0;
     const avgLoss = losingTrades > 0 ? losses / losingTrades : 0;
     const winRate = winningTrades / totalOperations;
@@ -96,16 +121,16 @@ const AdvancedMetrics = ({ operations }: AdvancedMetricsProps) => {
     const expectancy = winRate * avgWin - lossRate * avgLoss;
 
     // Calcular Recovery Factor
-    const totalProfit = operations.reduce((sum, op) => sum + op.result, 0);
+    const totalProfit = ops.reduce((sum, op) => sum + op.result, 0);
     const recoveryFactor = maxDrawdown !== 0 ? totalProfit / maxDrawdown : 0;
 
-    setMetrics({
+    return {
       sharpeRatio: isFinite(sharpeRatio) ? sharpeRatio : 0,
       maxDrawdown,
       profitFactor: isFinite(profitFactor) ? profitFactor : 0,
       expectancy,
       recoveryFactor: isFinite(recoveryFactor) ? recoveryFactor : 0,
-    });
+    };
   };
 
 
@@ -160,92 +185,125 @@ const AdvancedMetrics = ({ operations }: AdvancedMetricsProps) => {
     </Card>
   );
 
+  const renderMetricsForStrategy = (metrics: Metrics) => (
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <MetricCard
+        title="Sharpe Ratio"
+        value={metrics.sharpeRatio.toFixed(2)}
+        icon={TrendingUp}
+        description={
+          metrics.sharpeRatio > 1
+            ? "Excelente retorno ajustado"
+            : metrics.sharpeRatio > 0
+            ? "Retorno positivo com risco"
+            : "Retorno abaixo do esperado"
+        }
+        tooltip="Mede o retorno ajustado ao risco. Valores acima de 1 são considerados bons, acima de 2 excelentes."
+        isPositive={metrics.sharpeRatio > 0}
+      />
+
+      <MetricCard
+        title="Max Drawdown"
+        value={metrics.maxDrawdown.toLocaleString("pt-BR", {
+          style: "currency",
+          currency: "BRL",
+        })}
+        icon={TrendingDown}
+        description="Maior perda acumulada"
+        tooltip="A maior queda do pico até o vale. Indica o maior risco histórico enfrentado."
+        isPositive={false}
+      />
+
+      <MetricCard
+        title="Profit Factor"
+        value={
+          isFinite(metrics.profitFactor)
+            ? metrics.profitFactor.toFixed(2)
+            : "∞"
+        }
+        icon={Target}
+        description={
+          metrics.profitFactor > 2
+            ? "Performance excepcional"
+            : metrics.profitFactor > 1
+            ? "Estratégia lucrativa"
+            : "Necessita ajustes"
+        }
+        tooltip="Relação entre lucros e perdas. Valores acima de 1.5 indicam boa lucratividade."
+        isPositive={metrics.profitFactor > 1}
+      />
+
+      <MetricCard
+        title="Expectancy"
+        value={metrics.expectancy.toLocaleString("pt-BR", {
+          style: "currency",
+          currency: "BRL",
+        })}
+        icon={Activity}
+        description="Ganho esperado por operação"
+        tooltip="Valor médio esperado de ganho ou perda por operação executada."
+        isPositive={metrics.expectancy > 0}
+      />
+
+      <MetricCard
+        title="Recovery Factor"
+        value={metrics.recoveryFactor.toFixed(2)}
+        icon={TrendingUp}
+        description={
+          metrics.recoveryFactor > 3
+            ? "Recuperação forte"
+            : metrics.recoveryFactor > 1
+            ? "Boa recuperação"
+            : "Recuperação lenta"
+        }
+        tooltip="Relação entre lucro total e drawdown máximo. Valores acima de 2 são bons."
+        isPositive={metrics.recoveryFactor > 1}
+      />
+    </div>
+  );
+
+  if (strategies.length === 0) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Activity className="w-5 h-5" />
+            Métricas Avançadas por Robô
+          </CardTitle>
+          <CardDescription>
+            Nenhuma operação encontrada para exibir métricas
+          </CardDescription>
+        </CardHeader>
+      </Card>
+    );
+  }
+
   return (
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Activity className="w-5 h-5" />
-          Métricas Avançadas
+          Métricas Avançadas por Robô
         </CardTitle>
         <CardDescription>
-          Indicadores de risco e performance ajustada
+          Indicadores de risco e performance ajustada por estratégia
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          <MetricCard
-            title="Sharpe Ratio"
-            value={metrics.sharpeRatio.toFixed(2)}
-            icon={TrendingUp}
-            description={
-              metrics.sharpeRatio > 1
-                ? "Excelente retorno ajustado"
-                : metrics.sharpeRatio > 0
-                ? "Retorno positivo com risco"
-                : "Retorno abaixo do esperado"
-            }
-            tooltip="Mede o retorno ajustado ao risco. Valores acima de 1 são considerados bons, acima de 2 excelentes."
-            isPositive={metrics.sharpeRatio > 0}
-          />
-
-          <MetricCard
-            title="Max Drawdown"
-            value={metrics.maxDrawdown.toLocaleString("pt-BR", {
-              style: "currency",
-              currency: "BRL",
-            })}
-            icon={TrendingDown}
-            description="Maior perda acumulada"
-            tooltip="A maior queda do pico até o vale. Indica o maior risco histórico enfrentado."
-            isPositive={false}
-          />
-
-          <MetricCard
-            title="Profit Factor"
-            value={
-              isFinite(metrics.profitFactor)
-                ? metrics.profitFactor.toFixed(2)
-                : "∞"
-            }
-            icon={Target}
-            description={
-              metrics.profitFactor > 2
-                ? "Performance excepcional"
-                : metrics.profitFactor > 1
-                ? "Estratégia lucrativa"
-                : "Necessita ajustes"
-            }
-            tooltip="Relação entre lucros e perdas. Valores acima de 1.5 indicam boa lucratividade."
-            isPositive={metrics.profitFactor > 1}
-          />
-
-          <MetricCard
-            title="Expectancy"
-            value={metrics.expectancy.toLocaleString("pt-BR", {
-              style: "currency",
-              currency: "BRL",
-            })}
-            icon={Activity}
-            description="Ganho esperado por operação"
-            tooltip="Valor médio esperado de ganho ou perda por operação executada."
-            isPositive={metrics.expectancy > 0}
-          />
-
-          <MetricCard
-            title="Recovery Factor"
-            value={metrics.recoveryFactor.toFixed(2)}
-            icon={TrendingUp}
-            description={
-              metrics.recoveryFactor > 3
-                ? "Recuperação forte"
-                : metrics.recoveryFactor > 1
-                ? "Boa recuperação"
-                : "Recuperação lenta"
-            }
-            tooltip="Relação entre lucro total e drawdown máximo. Valores acima de 2 são bons."
-            isPositive={metrics.recoveryFactor > 1}
-          />
-        </div>
+        <Tabs defaultValue={strategies[0]} className="w-full">
+          <TabsList className="w-full flex flex-wrap h-auto">
+            {strategies.map((strategy) => (
+              <TabsTrigger key={strategy} value={strategy} className="flex-1 min-w-[120px]">
+                {strategy}
+              </TabsTrigger>
+            ))}
+          </TabsList>
+          {strategies.map((strategy) => (
+            <TabsContent key={strategy} value={strategy} className="mt-6">
+              {renderMetricsForStrategy(metricsByStrategy[strategy])}
+            </TabsContent>
+          ))}
+        </Tabs>
       </CardContent>
     </Card>
   );
