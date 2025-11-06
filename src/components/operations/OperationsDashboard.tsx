@@ -7,6 +7,7 @@ import { Tooltip as TooltipComponent, TooltipContent, TooltipProvider, TooltipTr
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
@@ -204,16 +205,7 @@ const OperationsDashboard = ({ userId }: OperationsDashboardProps) => {
     if (hourFilter !== "all") {
       filtered = filtered.filter(op => {
         const hour = parseInt(op.operation_time.split(":")[0]);
-        switch (hourFilter) {
-          case "morning": // 9:00 - 12:00
-            return hour >= 9 && hour < 12;
-          case "afternoon": // 12:00 - 15:00
-            return hour >= 12 && hour < 15;
-          case "late": // 15:00 - 18:00
-            return hour >= 15 && hour < 18;
-          default:
-            return true;
-        }
+        return hour === parseInt(hourFilter);
       });
     }
 
@@ -753,137 +745,133 @@ const OperationsDashboard = ({ userId }: OperationsDashboardProps) => {
         </Card>
       )}
 
-      {/* Hour Filter */}
+      {/* Filtros Compactos */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Clock className="w-5 h-5" />
-            Filtro de Horário
+            <Filter className="w-5 h-5" />
+            Filtros Adicionais
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="flex flex-wrap gap-2">
-            <Button
-              variant={hourFilter === "all" ? "default" : "outline"}
-              size="sm"
-              onClick={() => setHourFilter("all")}
-            >
-              Todos
-            </Button>
-            <Button
-              variant={hourFilter === "morning" ? "default" : "outline"}
-              size="sm"
-              onClick={() => setHourFilter("morning")}
-            >
-              Manhã (09:00-12:00)
-            </Button>
-            <Button
-              variant={hourFilter === "afternoon" ? "default" : "outline"}
-              size="sm"
-              onClick={() => setHourFilter("afternoon")}
-            >
-              Tarde (12:00-15:00)
-            </Button>
-            <Button
-              variant={hourFilter === "late" ? "default" : "outline"}
-              size="sm"
-              onClick={() => setHourFilter("late")}
-            >
-              Final (15:00-18:00)
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {/* Hour Filter */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium flex items-center gap-2">
+                <Clock className="w-4 h-4" />
+                Horário
+              </label>
+              <Select value={hourFilter} onValueChange={setHourFilter}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Todos os horários" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos os horários</SelectItem>
+                  <SelectItem value="9">09:00 - 10:00</SelectItem>
+                  <SelectItem value="10">10:00 - 11:00</SelectItem>
+                  <SelectItem value="11">11:00 - 12:00</SelectItem>
+                  <SelectItem value="12">12:00 - 13:00</SelectItem>
+                  <SelectItem value="13">13:00 - 14:00</SelectItem>
+                  <SelectItem value="14">14:00 - 15:00</SelectItem>
+                  <SelectItem value="15">15:00 - 16:00</SelectItem>
+                  <SelectItem value="16">16:00 - 17:00</SelectItem>
+                  <SelectItem value="17">17:00 - 18:00</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
 
-      {/* Weekday Filter */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Calendar className="w-5 h-5" />
-            Filtro de Dias da Semana
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex flex-wrap gap-2">
-            <Button
-              variant={weekdayFilter.length === 0 ? "default" : "outline"}
-              size="sm"
-              onClick={() => setWeekdayFilter([])}
-            >
-              Todos
-            </Button>
-            {[
-              { label: "Segunda", value: "1" },
-              { label: "Terça", value: "2" },
-              { label: "Quarta", value: "3" },
-              { label: "Quinta", value: "4" },
-              { label: "Sexta", value: "5" },
-            ].map((day) => (
-              <Button
-                key={day.value}
-                variant={weekdayFilter.includes(day.value) ? "default" : "outline"}
-                size="sm"
-                onClick={() => {
-                  if (weekdayFilter.includes(day.value)) {
-                    setWeekdayFilter(weekdayFilter.filter(d => d !== day.value));
-                  } else {
-                    setWeekdayFilter([...weekdayFilter, day.value]);
-                  }
-                }}
-              >
-                {day.label}
-              </Button>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
+            {/* Weekday Filter */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium flex items-center gap-2">
+                <Calendar className="w-4 h-4" />
+                Dias da Semana
+              </label>
+              <div className="flex flex-wrap gap-1">
+                {[
+                  { label: "Seg", value: "1" },
+                  { label: "Ter", value: "2" },
+                  { label: "Qua", value: "3" },
+                  { label: "Qui", value: "4" },
+                  { label: "Sex", value: "5" },
+                ].map((day) => (
+                  <Button
+                    key={day.value}
+                    variant={weekdayFilter.includes(day.value) ? "default" : "outline"}
+                    size="sm"
+                    className="h-8 px-2"
+                    onClick={() => {
+                      if (weekdayFilter.includes(day.value)) {
+                        setWeekdayFilter(weekdayFilter.filter(d => d !== day.value));
+                      } else {
+                        setWeekdayFilter([...weekdayFilter, day.value]);
+                      }
+                    }}
+                  >
+                    {day.label}
+                  </Button>
+                ))}
+                {weekdayFilter.length > 0 && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-8 px-2"
+                    onClick={() => setWeekdayFilter([])}
+                  >
+                    Limpar
+                  </Button>
+                )}
+              </div>
+            </div>
 
-      {/* Month Filter */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Calendar className="w-5 h-5" />
-            Filtro de Meses
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex flex-wrap gap-2">
-            <Button
-              variant={monthFilter.length === 0 ? "default" : "outline"}
-              size="sm"
-              onClick={() => setMonthFilter([])}
-            >
-              Todos
-            </Button>
-            {[
-              { label: "Jan", value: "0" },
-              { label: "Fev", value: "1" },
-              { label: "Mar", value: "2" },
-              { label: "Abr", value: "3" },
-              { label: "Mai", value: "4" },
-              { label: "Jun", value: "5" },
-              { label: "Jul", value: "6" },
-              { label: "Ago", value: "7" },
-              { label: "Set", value: "8" },
-              { label: "Out", value: "9" },
-              { label: "Nov", value: "10" },
-              { label: "Dez", value: "11" },
-            ].map((month) => (
-              <Button
-                key={month.value}
-                variant={monthFilter.includes(month.value) ? "default" : "outline"}
-                size="sm"
-                onClick={() => {
-                  if (monthFilter.includes(month.value)) {
-                    setMonthFilter(monthFilter.filter(m => m !== month.value));
-                  } else {
-                    setMonthFilter([...monthFilter, month.value]);
-                  }
-                }}
-              >
-                {month.label}
-              </Button>
-            ))}
+            {/* Month Filter */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium flex items-center gap-2">
+                <Calendar className="w-4 h-4" />
+                Meses
+              </label>
+              <div className="flex flex-wrap gap-1">
+                {[
+                  { label: "Jan", value: "0" },
+                  { label: "Fev", value: "1" },
+                  { label: "Mar", value: "2" },
+                  { label: "Abr", value: "3" },
+                  { label: "Mai", value: "4" },
+                  { label: "Jun", value: "5" },
+                  { label: "Jul", value: "6" },
+                  { label: "Ago", value: "7" },
+                  { label: "Set", value: "8" },
+                  { label: "Out", value: "9" },
+                  { label: "Nov", value: "10" },
+                  { label: "Dez", value: "11" },
+                ].map((month) => (
+                  <Button
+                    key={month.value}
+                    variant={monthFilter.includes(month.value) ? "default" : "outline"}
+                    size="sm"
+                    className="h-8 px-2 text-xs"
+                    onClick={() => {
+                      if (monthFilter.includes(month.value)) {
+                        setMonthFilter(monthFilter.filter(m => m !== month.value));
+                      } else {
+                        setMonthFilter([...monthFilter, month.value]);
+                      }
+                    }}
+                  >
+                    {month.label}
+                  </Button>
+                ))}
+                {monthFilter.length > 0 && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-8 px-2 text-xs"
+                    onClick={() => setMonthFilter([])}
+                  >
+                    Limpar
+                  </Button>
+                )}
+              </div>
+            </div>
           </div>
         </CardContent>
       </Card>
