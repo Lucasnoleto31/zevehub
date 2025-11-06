@@ -351,17 +351,22 @@ const OperationImport = ({ userId }: OperationImportProps) => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {previewData.map((op, index) => (
-                    <TableRow key={index}>
-                      <TableCell className="text-xs">{op.operation_date}</TableCell>
-                      <TableCell className="text-xs">{op.operation_time}</TableCell>
-                      <TableCell className="text-xs">{op.asset}</TableCell>
-                      <TableCell className="text-xs text-right">{op.contracts}</TableCell>
-                      <TableCell className={`text-xs text-right font-medium ${op.result >= 0 ? 'text-success' : 'text-destructive'}`}>
-                        {op.result >= 0 ? '+' : ''}{op.result.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                  {previewData.map((op, index) => {
+                    const [year, month, day] = op.operation_date.split('-');
+                    const formattedDate = `${day}/${month}/${year}`;
+                    
+                    return (
+                      <TableRow key={index}>
+                        <TableCell className="text-xs">{formattedDate}</TableCell>
+                        <TableCell className="text-xs">{op.operation_time}</TableCell>
+                        <TableCell className="text-xs">{op.asset}</TableCell>
+                        <TableCell className="text-xs text-right">{op.contracts}</TableCell>
+                        <TableCell className={`text-xs text-right font-medium ${op.result >= 0 ? 'text-success' : 'text-destructive'}`}>
+                          {op.result >= 0 ? '+' : ''}{op.result.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
                 </TableBody>
               </Table>
             </ScrollArea>
