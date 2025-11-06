@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
@@ -7,84 +6,67 @@ import { Trophy, TrendingDown, Calendar } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
+interface Operation {
+  operation_date: string;
+  result: number;
+}
+
 interface DayPerformance {
   date: string;
   result: number;
   operations: number;
 }
 
-const TopPerformanceDays = () => {
+interface TopPerformanceDaysProps {
+  operations: Operation[];
+}
+
+const TopPerformanceDays = ({ operations }: TopPerformanceDaysProps) => {
   const [bestDays, setBestDays] = useState<DayPerformance[]>([]);
   const [worstDays, setWorstDays] = useState<DayPerformance[]>([]);
-  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    loadTopDays();
-  }, []);
+    processTopDays();
+  }, [operations]);
 
-  const loadTopDays = async () => {
-    try {
-      const { data, error } = await supabase
-        .from("trading_operations")
-        .select("operation_date, result");
+  const processTopDays = () => {
+    // Agrupar por dia
+    const dayMap = new Map<string, { result: number; count: number }>();
 
-      if (error) throw error;
+    operations.forEach((op) => {
+      const date = op.operation_date;
 
-      if (data) {
-        // Agrupar por dia
-        const dayMap = new Map<string, { result: number; count: number }>();
-
-        data.forEach((op) => {
-          const date = op.operation_date;
-
-          if (!dayMap.has(date)) {
-            dayMap.set(date, { result: 0, count: 0 });
-          }
-
-          const current = dayMap.get(date)!;
-          current.result += op.result;
-          current.count += 1;
-        });
-
-        // Converter para array e ordenar
-        const daysArray: DayPerformance[] = Array.from(dayMap.entries()).map(
-          ([date, data]) => ({
-            date,
-            result: data.result,
-            operations: data.count,
-          })
-        );
-
-        // Top 5 melhores dias
-        const best = [...daysArray]
-          .sort((a, b) => b.result - a.result)
-          .slice(0, 5);
-        setBestDays(best);
-
-        // Top 5 piores dias
-        const worst = [...daysArray]
-          .sort((a, b) => a.result - b.result)
-          .slice(0, 5);
-        setWorstDays(worst);
+      if (!dayMap.has(date)) {
+        dayMap.set(date, { result: 0, count: 0 });
       }
-    } catch (error) {
-      console.error("Erro ao carregar top dias:", error);
-    } finally {
-      setLoading(false);
-    }
+
+      const current = dayMap.get(date)!;
+      current.result += op.result;
+      current.count += 1;
+    });
+
+    // Converter para array e ordenar
+    const daysArray: DayPerformance[] = Array.from(dayMap.entries()).map(
+      ([date, data]) => ({
+        date,
+        result: data.result,
+        operations: data.count,
+      })
+    );
+
+    // Top 5 melhores dias
+    const best = [...daysArray]
+      .sort((a, b) => b.result - a.result)
+      .slice(0, 5);
+    setBestDays(best);
+
+    // Top 5 piores dias
+    const worst = [...daysArray]
+      .sort((a, b) => a.result - b.result)
+      .slice(0, 5);
+    setWorstDays(worst);
   };
 
-  if (loading) {
-    return (
-      <Card>
-        <CardContent className="pt-6">
-          <div className="flex items-center justify-center py-8">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
 
   const DayCard = ({ day, rank, isBest }: { day: DayPerformance; rank: number; isBest: boolean }) => (
     <div

@@ -1405,12 +1405,12 @@ const OperationsDashboard = ({ userId }: OperationsDashboardProps) => {
           </Card>
 
           {/* Métricas Avançadas */}
-          <AdvancedMetrics />
+          <AdvancedMetrics operations={filteredOperations} />
 
           {/* Performance Analysis Grid */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <PerformanceHeatmap />
-            <TopPerformanceDays />
+            <PerformanceHeatmap operations={filteredOperations} />
+            <TopPerformanceDays operations={filteredOperations} />
           </div>
         </>
       )}

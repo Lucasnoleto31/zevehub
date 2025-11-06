@@ -1,8 +1,12 @@
 import { useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { TrendingUp, TrendingDown, Activity, Target, Info } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+
+interface Operation {
+  operation_date: string;
+  result: number;
+}
 
 interface Metrics {
   sharpeRatio: number;
@@ -12,7 +16,11 @@ interface Metrics {
   recoveryFactor: number;
 }
 
-const AdvancedMetrics = () => {
+interface AdvancedMetricsProps {
+  operations: Operation[];
+}
+
+const AdvancedMetrics = ({ operations }: AdvancedMetricsProps) => {
   const [metrics, setMetrics] = useState<Metrics>({
     sharpeRatio: 0,
     maxDrawdown: 0,
@@ -20,103 +28,86 @@ const AdvancedMetrics = () => {
     expectancy: 0,
     recoveryFactor: 0,
   });
-  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     calculateMetrics();
-  }, []);
+  }, [operations]);
 
-  const calculateMetrics = async () => {
-    try {
-      const { data, error } = await supabase
-        .from("trading_operations")
-        .select("operation_date, result")
-        .order("operation_date", { ascending: true });
-
-      if (error) throw error;
-
-      if (data && data.length > 0) {
-        // Agrupar por dia
-        const dailyResults = new Map<string, number>();
-        data.forEach((op) => {
-          const date = op.operation_date;
-          dailyResults.set(date, (dailyResults.get(date) || 0) + op.result);
-        });
-
-        const dailyReturns = Array.from(dailyResults.values());
-
-        // Calcular Sharpe Ratio
-        const avgReturn = dailyReturns.reduce((a, b) => a + b, 0) / dailyReturns.length;
-        const variance =
-          dailyReturns.reduce((sum, ret) => sum + Math.pow(ret - avgReturn, 2), 0) /
-          dailyReturns.length;
-        const stdDev = Math.sqrt(variance);
-        const riskFreeRate = 0; // Taxa livre de risco (pode ajustar)
-        const sharpeRatio = stdDev !== 0 ? (avgReturn - riskFreeRate) / stdDev : 0;
-
-        // Calcular Maximum Drawdown
-        let peak = 0;
-        let maxDrawdown = 0;
-        let accumulated = 0;
-
-        dailyReturns.forEach((result) => {
-          accumulated += result;
-          if (accumulated > peak) {
-            peak = accumulated;
-          }
-          const drawdown = peak - accumulated;
-          if (drawdown > maxDrawdown) {
-            maxDrawdown = drawdown;
-          }
-        });
-
-        // Calcular Profit Factor
-        const gains = data.filter((op) => op.result > 0).reduce((sum, op) => sum + op.result, 0);
-        const losses = Math.abs(
-          data.filter((op) => op.result < 0).reduce((sum, op) => sum + op.result, 0)
-        );
-        const profitFactor = losses !== 0 ? gains / losses : gains > 0 ? Infinity : 0;
-
-        // Calcular Expectancy (expectativa)
-        const totalOperations = data.length;
-        const winningTrades = data.filter((op) => op.result > 0).length;
-        const losingTrades = data.filter((op) => op.result < 0).length;
-        const avgWin = winningTrades > 0 ? gains / winningTrades : 0;
-        const avgLoss = losingTrades > 0 ? losses / losingTrades : 0;
-        const winRate = winningTrades / totalOperations;
-        const lossRate = losingTrades / totalOperations;
-        const expectancy = winRate * avgWin - lossRate * avgLoss;
-
-        // Calcular Recovery Factor
-        const totalProfit = data.reduce((sum, op) => sum + op.result, 0);
-        const recoveryFactor = maxDrawdown !== 0 ? totalProfit / maxDrawdown : 0;
-
-        setMetrics({
-          sharpeRatio: isFinite(sharpeRatio) ? sharpeRatio : 0,
-          maxDrawdown,
-          profitFactor: isFinite(profitFactor) ? profitFactor : 0,
-          expectancy,
-          recoveryFactor: isFinite(recoveryFactor) ? recoveryFactor : 0,
-        });
-      }
-    } catch (error) {
-      console.error("Erro ao calcular métricas:", error);
-    } finally {
-      setLoading(false);
+  const calculateMetrics = () => {
+    if (operations.length === 0) {
+      setMetrics({
+        sharpeRatio: 0,
+        maxDrawdown: 0,
+        profitFactor: 0,
+        expectancy: 0,
+        recoveryFactor: 0,
+      });
+      return;
     }
+    // Agrupar por dia
+    const dailyResults = new Map<string, number>();
+    operations.forEach((op) => {
+      const date = op.operation_date;
+      dailyResults.set(date, (dailyResults.get(date) || 0) + op.result);
+    });
+
+    const dailyReturns = Array.from(dailyResults.values());
+
+    // Calcular Sharpe Ratio
+    const avgReturn = dailyReturns.reduce((a, b) => a + b, 0) / dailyReturns.length;
+    const variance =
+      dailyReturns.reduce((sum, ret) => sum + Math.pow(ret - avgReturn, 2), 0) /
+      dailyReturns.length;
+    const stdDev = Math.sqrt(variance);
+    const riskFreeRate = 0; // Taxa livre de risco (pode ajustar)
+    const sharpeRatio = stdDev !== 0 ? (avgReturn - riskFreeRate) / stdDev : 0;
+
+    // Calcular Maximum Drawdown
+    let peak = 0;
+    let maxDrawdown = 0;
+    let accumulated = 0;
+
+    dailyReturns.forEach((result) => {
+      accumulated += result;
+      if (accumulated > peak) {
+        peak = accumulated;
+      }
+      const drawdown = peak - accumulated;
+      if (drawdown > maxDrawdown) {
+        maxDrawdown = drawdown;
+      }
+    });
+
+    // Calcular Profit Factor
+    const gains = operations.filter((op) => op.result > 0).reduce((sum, op) => sum + op.result, 0);
+    const losses = Math.abs(
+      operations.filter((op) => op.result < 0).reduce((sum, op) => sum + op.result, 0)
+    );
+    const profitFactor = losses !== 0 ? gains / losses : gains > 0 ? Infinity : 0;
+
+    // Calcular Expectancy (expectativa)
+    const totalOperations = operations.length;
+    const winningTrades = operations.filter((op) => op.result > 0).length;
+    const losingTrades = operations.filter((op) => op.result < 0).length;
+    const avgWin = winningTrades > 0 ? gains / winningTrades : 0;
+    const avgLoss = losingTrades > 0 ? losses / losingTrades : 0;
+    const winRate = winningTrades / totalOperations;
+    const lossRate = losingTrades / totalOperations;
+    const expectancy = winRate * avgWin - lossRate * avgLoss;
+
+    // Calcular Recovery Factor
+    const totalProfit = operations.reduce((sum, op) => sum + op.result, 0);
+    const recoveryFactor = maxDrawdown !== 0 ? totalProfit / maxDrawdown : 0;
+
+    setMetrics({
+      sharpeRatio: isFinite(sharpeRatio) ? sharpeRatio : 0,
+      maxDrawdown,
+      profitFactor: isFinite(profitFactor) ? profitFactor : 0,
+      expectancy,
+      recoveryFactor: isFinite(recoveryFactor) ? recoveryFactor : 0,
+    });
   };
 
-  if (loading) {
-    return (
-      <Card>
-        <CardContent className="pt-6">
-          <div className="flex items-center justify-center py-8">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
 
   const MetricCard = ({
     title,

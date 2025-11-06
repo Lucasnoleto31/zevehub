@@ -1,7 +1,12 @@
 import { useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { TrendingUp } from "lucide-react";
+
+interface Operation {
+  operation_date: string;
+  operation_time: string;
+  result: number;
+}
 
 interface HeatmapData {
   weekday: string;
@@ -10,70 +15,59 @@ interface HeatmapData {
   operations: number;
 }
 
-const PerformanceHeatmap = () => {
+interface PerformanceHeatmapProps {
+  operations: Operation[];
+}
+
+const PerformanceHeatmap = ({ operations }: PerformanceHeatmapProps) => {
   const [heatmapData, setHeatmapData] = useState<HeatmapData[]>([]);
-  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    loadHeatmapData();
-  }, []);
+    processHeatmapData();
+  }, [operations]);
 
-  const loadHeatmapData = async () => {
-    try {
-      const { data, error } = await supabase
-        .from("trading_operations")
-        .select("operation_date, operation_time, result");
+  const processHeatmapData = () => {
+    // Processar dados para criar matriz de heatmap
+    const heatmapMap = new Map<string, { result: number; count: number }>();
 
-      if (error) throw error;
+    operations.forEach((op) => {
+      const date = new Date(op.operation_date);
+      const weekday = date.getDay(); // 0=Dom, 1=Seg...6=Sab
+      const hour = parseInt(op.operation_time.split(":")[0]);
 
-      if (data) {
-        // Processar dados para criar matriz de heatmap
-        const heatmapMap = new Map<string, { result: number; count: number }>();
+      // Ignorar fins de semana
+      if (weekday === 0 || weekday === 6) return;
 
-        data.forEach((op) => {
-          const date = new Date(op.operation_date);
-          const weekday = date.getDay(); // 0=Dom, 1=Seg...6=Sab
-          const hour = parseInt(op.operation_time.split(":")[0]);
+      const key = `${weekday}-${hour}`;
 
-          // Ignorar fins de semana
-          if (weekday === 0 || weekday === 6) return;
-
-          const key = `${weekday}-${hour}`;
-
-          if (!heatmapMap.has(key)) {
-            heatmapMap.set(key, { result: 0, count: 0 });
-          }
-
-          const current = heatmapMap.get(key)!;
-          current.result += op.result;
-          current.count += 1;
-        });
-
-        // Converter para array
-        const heatmapArray: HeatmapData[] = [];
-        const weekdays = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
-
-        for (let day = 1; day <= 5; day++) {
-          for (let hour = 9; hour <= 17; hour++) {
-            const key = `${day}-${hour}`;
-            const data = heatmapMap.get(key);
-
-            heatmapArray.push({
-              weekday: weekdays[day],
-              hour: `${hour}h`,
-              result: data ? data.result / data.count : 0,
-              operations: data ? data.count : 0,
-            });
-          }
-        }
-
-        setHeatmapData(heatmapArray);
+      if (!heatmapMap.has(key)) {
+        heatmapMap.set(key, { result: 0, count: 0 });
       }
-    } catch (error) {
-      console.error("Erro ao carregar dados do heatmap:", error);
-    } finally {
-      setLoading(false);
+
+      const current = heatmapMap.get(key)!;
+      current.result += op.result;
+      current.count += 1;
+    });
+
+    // Converter para array
+    const heatmapArray: HeatmapData[] = [];
+    const weekdays = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
+
+    for (let day = 1; day <= 5; day++) {
+      for (let hour = 9; hour <= 17; hour++) {
+        const key = `${day}-${hour}`;
+        const data = heatmapMap.get(key);
+
+        heatmapArray.push({
+          weekday: weekdays[day],
+          hour: `${hour}h`,
+          result: data ? data.result / data.count : 0,
+          operations: data ? data.count : 0,
+        });
+      }
     }
+
+    setHeatmapData(heatmapArray);
   };
 
   const getColorIntensity = (result: number, operations: number) => {
@@ -98,18 +92,6 @@ const PerformanceHeatmap = () => {
     
     return "bg-muted";
   };
-
-  if (loading) {
-    return (
-      <Card>
-        <CardContent className="pt-6">
-          <div className="flex items-center justify-center py-8">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
 
   const weekdays = ["Seg", "Ter", "Qua", "Qui", "Sex"];
   const hours = Array.from({ length: 9 }, (_, i) => `${i + 9}h`);
