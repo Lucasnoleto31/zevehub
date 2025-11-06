@@ -57,18 +57,35 @@ const OperationsDashboard = ({ userId }: OperationsDashboardProps) => {
 
   const loadOperations = async () => {
     try {
-      const { data, error } = await supabase
-        .from("trading_operations")
-        .select("operation_date, operation_time, result")
-        .eq("user_id", userId)
-        .order("operation_date", { ascending: true });
+      // Buscar todas as operações sem limite
+      let allOperations: Operation[] = [];
+      let from = 0;
+      const batchSize = 1000;
+      let hasMore = true;
 
-      if (error) throw error;
+      while (hasMore) {
+        const { data, error } = await supabase
+          .from("trading_operations")
+          .select("operation_date, operation_time, result")
+          .eq("user_id", userId)
+          .order("operation_date", { ascending: true })
+          .range(from, from + batchSize - 1);
 
-      const ops = data || [];
-      setOperations(ops);
-      calculateStats(ops);
-      generateCharts(ops);
+        if (error) throw error;
+
+        if (data && data.length > 0) {
+          allOperations = [...allOperations, ...data];
+          from += batchSize;
+          hasMore = data.length === batchSize;
+        } else {
+          hasMore = false;
+        }
+      }
+
+      console.log(`Carregadas ${allOperations.length} operações`);
+      setOperations(allOperations);
+      calculateStats(allOperations);
+      generateCharts(allOperations);
     } catch (error) {
       console.error("Erro ao carregar operações:", error);
     } finally {
@@ -158,15 +175,24 @@ const OperationsDashboard = ({ userId }: OperationsDashboardProps) => {
   };
 
   const generateCharts = (ops: Operation[]) => {
-    // Curva de performance (acumulado)
+    // Curva de performance (acumulado por dia)
+    const dailyResults = ops.reduce((acc, op) => {
+      const date = op.operation_date;
+      if (!acc[date]) acc[date] = 0;
+      acc[date] += parseFloat(op.result.toString());
+      return acc;
+    }, {} as Record<string, number>);
+
     let accumulated = 0;
-    const curve = ops.map((op) => {
-      accumulated += parseFloat(op.result.toString());
-      return {
-        date: new Date(op.operation_date).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" }),
-        value: accumulated,
-      };
-    });
+    const curve = Object.entries(dailyResults)
+      .sort(([dateA], [dateB]) => dateA.localeCompare(dateB))
+      .map(([date, result]) => {
+        accumulated += result;
+        return {
+          date: new Date(date).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" }),
+          value: accumulated,
+        };
+      });
     setPerformanceCurve(curve);
 
     // Melhores dias da semana
