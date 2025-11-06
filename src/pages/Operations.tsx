@@ -11,7 +11,6 @@ import OperationsTable from "@/components/operations/OperationsTable";
 import OperationsDashboard from "@/components/operations/OperationsDashboard";
 import OperationImport from "@/components/operations/OperationImport";
 import DeleteAllOperations from "@/components/operations/DeleteAllOperations";
-import BotsManager from "@/components/operations/BotsManager";
 
 const Operations = () => {
   const navigate = useNavigate();
@@ -75,9 +74,8 @@ const Operations = () => {
 
       <main className="container mx-auto px-4 py-8">
         <Tabs defaultValue="register" className="space-y-6">
-          <TabsList className="grid w-full max-w-2xl grid-cols-3">
+          <TabsList className="grid w-full max-w-md grid-cols-2">
             <TabsTrigger value="register">Registrar</TabsTrigger>
-            <TabsTrigger value="bots">Robôs</TabsTrigger>
             <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
           </TabsList>
 
@@ -116,10 +114,6 @@ const Operations = () => {
                 </Card>
               </div>
             </div>
-          </TabsContent>
-
-          <TabsContent value="bots">
-            <BotsManager userId={user?.id} />
           </TabsContent>
 
           <TabsContent value="dashboard">
