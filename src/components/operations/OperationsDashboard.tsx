@@ -27,6 +27,10 @@ interface Stats {
   payoff: number;
   averageWin: number;
   averageLoss: number;
+  positiveMonths: number;
+  negativeMonths: number;
+  monthlyConsistency: number;
+  averageMonthlyResult: number;
 }
 
 const OperationsDashboard = ({ userId }: OperationsDashboardProps) => {
@@ -44,6 +48,10 @@ const OperationsDashboard = ({ userId }: OperationsDashboardProps) => {
     payoff: 0,
     averageWin: 0,
     averageLoss: 0,
+    positiveMonths: 0,
+    negativeMonths: 0,
+    monthlyConsistency: 0,
+    averageMonthlyResult: 0,
   });
   const [performanceCurve, setPerformanceCurve] = useState<any[]>([]);
   const [weekdayStats, setWeekdayStats] = useState<any[]>([]);
@@ -108,6 +116,10 @@ const OperationsDashboard = ({ userId }: OperationsDashboardProps) => {
         payoff: 0,
         averageWin: 0,
         averageLoss: 0,
+        positiveMonths: 0,
+        negativeMonths: 0,
+        monthlyConsistency: 0,
+        averageMonthlyResult: 0,
       });
       return;
     }
@@ -138,6 +150,26 @@ const OperationsDashboard = ({ userId }: OperationsDashboardProps) => {
       : 0;
 
     const payoff = averageLoss > 0 ? averageWin / averageLoss : 0;
+
+    // Calcular consistência mensal
+    const monthlyResults = ops.reduce((acc, op) => {
+      const date = new Date(op.operation_date);
+      const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+      
+      if (!acc[monthKey]) acc[monthKey] = 0;
+      acc[monthKey] += parseFloat(op.result.toString());
+      return acc;
+    }, {} as Record<string, number>);
+
+    const monthlyResultsArray = Object.values(monthlyResults);
+    const positiveMonths = monthlyResultsArray.filter(r => r > 0).length;
+    const negativeMonths = monthlyResultsArray.filter(r => r < 0).length;
+    const monthlyConsistency = monthlyResultsArray.length > 0 
+      ? (positiveMonths / monthlyResultsArray.length) * 100 
+      : 0;
+    const averageMonthlyResult = monthlyResultsArray.length > 0
+      ? monthlyResultsArray.reduce((sum, r) => sum + r, 0) / monthlyResultsArray.length
+      : 0;
 
     // Calcular sequências
     let currentStreak = 0;
@@ -171,6 +203,10 @@ const OperationsDashboard = ({ userId }: OperationsDashboardProps) => {
       payoff,
       averageWin,
       averageLoss,
+      positiveMonths,
+      negativeMonths,
+      monthlyConsistency,
+      averageMonthlyResult,
     });
   };
 
@@ -215,26 +251,23 @@ const OperationsDashboard = ({ userId }: OperationsDashboardProps) => {
       }))
     );
 
-    // Melhores meses (ano/mês agrupado)
+    // Performance mensal (agrupado por mês, somando todos os anos)
+    const monthNames = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
     const monthData = ops.reduce((acc, op) => {
       const date = new Date(op.operation_date);
-      const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-      const monthLabel = date.toLocaleDateString("pt-BR", { month: "short", year: "2-digit" });
+      const monthIndex = date.getMonth();
+      const monthName = monthNames[monthIndex];
       
-      if (!acc[monthKey]) {
-        acc[monthKey] = { label: monthLabel, result: 0 };
-      }
-      acc[monthKey].result += parseFloat(op.result.toString());
+      if (!acc[monthName]) acc[monthName] = 0;
+      acc[monthName] += parseFloat(op.result.toString());
       return acc;
-    }, {} as Record<string, { label: string; result: number }>);
+    }, {} as Record<string, number>);
 
     setMonthStats(
-      Object.entries(monthData)
-        .sort(([keyA], [keyB]) => keyA.localeCompare(keyB))
-        .map(([_, data]) => ({
-          month: data.label,
-          result: data.result,
-        }))
+      monthNames.map((month) => ({
+        month,
+        result: monthData[month] || 0,
+      }))
     );
 
     // Melhores horários
@@ -280,7 +313,7 @@ const OperationsDashboard = ({ userId }: OperationsDashboardProps) => {
   return (
     <div className="space-y-6">
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">Resultado Acumulado</CardTitle>
@@ -319,6 +352,18 @@ const OperationsDashboard = ({ userId }: OperationsDashboardProps) => {
             <div className="text-2xl font-bold">{stats.payoff.toFixed(2)}</div>
             <p className="text-xs text-muted-foreground mt-1">
               Ganho médio / Perda média
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Consistência Mensal</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{stats.monthlyConsistency.toFixed(1)}%</div>
+            <p className="text-xs text-muted-foreground mt-1">
+              {stats.positiveMonths} meses positivos / {stats.negativeMonths} negativos
             </p>
           </CardContent>
         </Card>
@@ -370,8 +415,8 @@ const OperationsDashboard = ({ userId }: OperationsDashboardProps) => {
       {/* Performance Mensal */}
       <Card>
         <CardHeader>
-          <CardTitle>Performance Mensal</CardTitle>
-          <CardDescription>Comparativo de resultados mês a mês</CardDescription>
+          <CardTitle>Performance por Mês do Ano</CardTitle>
+          <CardDescription>Soma de todos os resultados de cada mês (ex: todos os janeiros somados)</CardDescription>
         </CardHeader>
         <CardContent>
           <ResponsiveContainer width="100%" height={300}>
@@ -432,7 +477,7 @@ const OperationsDashboard = ({ userId }: OperationsDashboardProps) => {
       </div>
 
       {/* Additional Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">Melhor Resultado</CardTitle>
@@ -451,6 +496,18 @@ const OperationsDashboard = ({ userId }: OperationsDashboardProps) => {
           <CardContent>
             <div className="text-xl font-bold text-destructive">
               {stats.worstResult.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Média Mensal</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className={`text-xl font-bold ${stats.averageMonthlyResult >= 0 ? "text-success" : "text-destructive"}`}>
+              {stats.averageMonthlyResult >= 0 ? "+" : ""}
+              {stats.averageMonthlyResult.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
             </div>
           </CardContent>
         </Card>
