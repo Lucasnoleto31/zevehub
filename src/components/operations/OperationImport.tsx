@@ -61,6 +61,16 @@ const OperationImport = ({ userId }: OperationImportProps) => {
     if (typeof excelDate === 'string') {
       const trimmed = excelDate.trim();
       
+      // Formato YYYY.MM.DD HH:MM:SS (formato Zeus) - extrair apenas a data
+      if (/^\d{4}\.\d{1,2}\.\d{1,2}\s+\d{1,2}:\d{1,2}:\d{1,2}$/.test(trimmed)) {
+        const [datePart] = trimmed.split(' ');
+        const parts = datePart.split('.');
+        const year = parts[0];
+        const month = parts[1].padStart(2, '0');
+        const day = parts[2].padStart(2, '0');
+        return `${year}-${month}-${day}`;
+      }
+      
       // Formato YYYY-MM-DD (ISO)
       if (/^\d{4}-\d{1,2}-\d{1,2}$/.test(trimmed)) {
         const parts = trimmed.split('-');
@@ -140,6 +150,13 @@ const OperationImport = ({ userId }: OperationImportProps) => {
     if (typeof excelTime === 'string') {
       let timeStr = excelTime.trim();
       
+      // Formato YYYY.MM.DD HH:MM:SS (formato Zeus) - extrair apenas o horário
+      if (/^\d{4}\.\d{1,2}\.\d{1,2}\s+\d{1,2}:\d{1,2}:\d{1,2}$/.test(timeStr)) {
+        const [, timePart] = timeStr.split(' ');
+        const parts = timePart.split(':');
+        return `${parts[0].padStart(2, '0')}:${parts[1].padStart(2, '0')}:${parts[2].padStart(2, '0')}`;
+      }
+      
       // Converter AM/PM para 24h
       if (timeStr.includes('AM') || timeStr.includes('PM')) {
         const isPM = timeStr.includes('PM');
@@ -205,8 +222,14 @@ const OperationImport = ({ userId }: OperationImportProps) => {
       jsonData.forEach((row: any, index: number) => {
         try {
           // Mapear colunas do Excel para o formato esperado
-          const rawDate = row.data_operacao || row.data || row.date;
-          const rawTime = row.horario || row.time || row.hora;
+          let rawDate = row.data_operacao || row.data || row.date;
+          let rawTime = row.horario || row.time || row.hora;
+          
+          // Se data_operacao contém data e hora juntas, usar para ambos
+          if (rawDate && !rawTime && typeof rawDate === 'string' && rawDate.includes(' ')) {
+            rawTime = rawDate;
+          }
+          
           const asset = row.ativo || row.asset || row.ticker;
           const contracts = Number(row.contratos || row.contracts || row.qtd);
           const costs = Number(row.custos || row.costs || row.custo || 0);
