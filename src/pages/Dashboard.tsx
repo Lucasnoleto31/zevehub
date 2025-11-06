@@ -17,10 +17,12 @@ import {
   User as UserIcon,
   Shield,
   Settings,
+  Bell,
 } from "lucide-react";
 import StatsCard from "@/components/dashboard/StatsCard";
 import BotsList from "@/components/dashboard/BotsList";
 import MessagesList from "@/components/dashboard/MessagesList";
+import { useRealtimeNotifications } from "@/hooks/useRealtimeNotifications";
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -28,6 +30,7 @@ const Dashboard = () => {
   const [profile, setProfile] = useState<any>(null);
   const [roles, setRoles] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
+  const { unreadCount } = useRealtimeNotifications(user?.id);
 
   useEffect(() => {
     checkUser();
@@ -178,10 +181,17 @@ const Dashboard = () => {
           />
           <StatsCard
             title="Mensagens"
-            value="0"
-            icon={<MessageSquare className="w-5 h-5" />}
-            description="Nenhuma mensagem nova"
-            trend="--"
+            value={unreadCount.toString()}
+            icon={
+              <div className="relative">
+                <MessageSquare className="w-5 h-5" />
+                {unreadCount > 0 && (
+                  <span className="absolute -top-1 -right-1 w-2 h-2 bg-destructive rounded-full animate-pulse" />
+                )}
+              </div>
+            }
+            description={unreadCount > 0 ? `${unreadCount} não lida(s)` : "Nenhuma mensagem nova"}
+            trend={unreadCount > 0 ? "🔔" : "--"}
           />
         </div>
 

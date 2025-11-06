@@ -3,15 +3,17 @@ import { supabase } from "@/integrations/supabase/client";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Settings, Eye } from "lucide-react";
+import { Settings, Eye, Pencil } from "lucide-react";
 import { toast } from "sonner";
 import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import ClientEditDialog from "./ClientEditDialog";
 
 interface Client {
   id: string;
   email: string;
   full_name: string;
+  phone: string | null;
   status: string;
   created_at: string;
   last_login: string | null;
@@ -25,6 +27,7 @@ interface ClientsTableProps {
 const ClientsTable = ({ onUpdate }: ClientsTableProps) => {
   const [clients, setClients] = useState<Client[]>([]);
   const [loading, setLoading] = useState(true);
+  const [editingClient, setEditingClient] = useState<Client | null>(null);
 
   useEffect(() => {
     loadClients();
@@ -96,8 +99,19 @@ const ClientsTable = ({ onUpdate }: ClientsTableProps) => {
   }
 
   return (
-    <div className="rounded-md border">
-      <Table>
+    <>
+      <ClientEditDialog
+        client={editingClient}
+        open={!!editingClient}
+        onClose={() => setEditingClient(null)}
+        onUpdate={() => {
+          loadClients();
+          onUpdate();
+        }}
+      />
+      
+      <div className="rounded-md border">
+        <Table>
         <TableHeader>
           <TableRow>
             <TableHead>Cliente</TableHead>
@@ -135,11 +149,13 @@ const ClientsTable = ({ onUpdate }: ClientsTableProps) => {
               </TableCell>
               <TableCell className="text-right">
                 <div className="flex justify-end gap-2">
-                  <Button variant="ghost" size="sm">
-                    <Eye className="w-4 h-4" />
-                  </Button>
-                  <Button variant="ghost" size="sm">
-                    <Settings className="w-4 h-4" />
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setEditingClient(client)}
+                    title="Editar cliente"
+                  >
+                    <Pencil className="w-4 h-4" />
                   </Button>
                 </div>
               </TableCell>
@@ -148,6 +164,7 @@ const ClientsTable = ({ onUpdate }: ClientsTableProps) => {
         </TableBody>
       </Table>
     </div>
+    </>
   );
 };
 

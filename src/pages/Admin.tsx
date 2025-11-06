@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { ArrowLeft, Users, Shield, Activity, Settings } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import ClientsTable from "@/components/admin/ClientsTable";
+import CreateMessageDialog from "@/components/admin/CreateMessageDialog";
 
 const Admin = () => {
   const navigate = useNavigate();
@@ -17,6 +18,7 @@ const Admin = () => {
     activeClients: 0,
     totalBots: 0,
   });
+  const [clients, setClients] = useState<Array<{ id: string; full_name: string; email: string }>>([]);
 
   useEffect(() => {
     checkAdminAccess();
@@ -72,6 +74,14 @@ const Admin = () => {
         .from("client_bots")
         .select("*", { count: "exact", head: true });
 
+      // Lista de clientes para mensagens
+      const { data: clientsData } = await supabase
+        .from("profiles")
+        .select("id, full_name, email")
+        .order("full_name");
+
+      setClients(clientsData || []);
+      
       setStats({
         totalClients: totalClients || 0,
         activeClients: activeClients || 0,
@@ -169,10 +179,15 @@ const Admin = () => {
           <TabsContent value="clients" className="space-y-4">
             <Card>
               <CardHeader>
-                <CardTitle>Clientes Cadastrados</CardTitle>
-                <CardDescription>
-                  Gerencie permissões, status e informações dos clientes
-                </CardDescription>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle>Clientes Cadastrados</CardTitle>
+                    <CardDescription>
+                      Gerencie permissões, status e informações dos clientes
+                    </CardDescription>
+                  </div>
+                  <CreateMessageDialog clients={clients} onMessageCreated={loadStats} />
+                </div>
               </CardHeader>
               <CardContent>
                 <ClientsTable onUpdate={loadStats} />
