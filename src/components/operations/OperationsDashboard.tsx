@@ -54,6 +54,9 @@ const OperationsDashboard = ({ userId }: OperationsDashboardProps) => {
   const [availableStrategies, setAvailableStrategies] = useState<string[]>([]);
   const [customStartDate, setCustomStartDate] = useState<Date>();
   const [customEndDate, setCustomEndDate] = useState<Date>();
+  const [hourFilter, setHourFilter] = useState<string>("all");
+  const [weekdayFilter, setWeekdayFilter] = useState<string[]>([]);
+  const [monthFilter, setMonthFilter] = useState<string[]>([]);
   const [stats, setStats] = useState<Stats>({
     totalOperations: 0,
     positiveDays: 0,
@@ -89,7 +92,7 @@ const OperationsDashboard = ({ userId }: OperationsDashboardProps) => {
 
   useEffect(() => {
     applyDateFilter();
-  }, [operations, dateFilter, strategyFilter, customStartDate, customEndDate]);
+  }, [operations, dateFilter, strategyFilter, customStartDate, customEndDate, hourFilter, weekdayFilter, monthFilter]);
 
   useEffect(() => {
     if (filteredOperations.length > 0) {
@@ -195,6 +198,42 @@ const OperationsDashboard = ({ userId }: OperationsDashboardProps) => {
     // Apply strategy filter
     if (strategyFilter !== "all") {
       filtered = filtered.filter(op => op.strategy === strategyFilter);
+    }
+
+    // Apply hour filter
+    if (hourFilter !== "all") {
+      filtered = filtered.filter(op => {
+        const hour = parseInt(op.operation_time.split(":")[0]);
+        switch (hourFilter) {
+          case "morning": // 9:00 - 12:00
+            return hour >= 9 && hour < 12;
+          case "afternoon": // 12:00 - 15:00
+            return hour >= 12 && hour < 15;
+          case "late": // 15:00 - 18:00
+            return hour >= 15 && hour < 18;
+          default:
+            return true;
+        }
+      });
+    }
+
+    // Apply weekday filter
+    if (weekdayFilter.length > 0) {
+      filtered = filtered.filter(op => {
+        const [year, month, day] = op.operation_date.split('-').map(Number);
+        const date = new Date(year, month - 1, day);
+        const dayOfWeek = date.getDay();
+        return weekdayFilter.includes(dayOfWeek.toString());
+      });
+    }
+
+    // Apply month filter
+    if (monthFilter.length > 0) {
+      filtered = filtered.filter(op => {
+        const date = new Date(op.operation_date);
+        const month = date.getMonth();
+        return monthFilter.includes(month.toString());
+      });
     }
 
     setFilteredOperations(filtered);
@@ -713,6 +752,141 @@ const OperationsDashboard = ({ userId }: OperationsDashboardProps) => {
           </CardContent>
         </Card>
       )}
+
+      {/* Hour Filter */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Clock className="w-5 h-5" />
+            Filtro de Horário
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              variant={hourFilter === "all" ? "default" : "outline"}
+              size="sm"
+              onClick={() => setHourFilter("all")}
+            >
+              Todos
+            </Button>
+            <Button
+              variant={hourFilter === "morning" ? "default" : "outline"}
+              size="sm"
+              onClick={() => setHourFilter("morning")}
+            >
+              Manhã (09:00-12:00)
+            </Button>
+            <Button
+              variant={hourFilter === "afternoon" ? "default" : "outline"}
+              size="sm"
+              onClick={() => setHourFilter("afternoon")}
+            >
+              Tarde (12:00-15:00)
+            </Button>
+            <Button
+              variant={hourFilter === "late" ? "default" : "outline"}
+              size="sm"
+              onClick={() => setHourFilter("late")}
+            >
+              Final (15:00-18:00)
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Weekday Filter */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Calendar className="w-5 h-5" />
+            Filtro de Dias da Semana
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              variant={weekdayFilter.length === 0 ? "default" : "outline"}
+              size="sm"
+              onClick={() => setWeekdayFilter([])}
+            >
+              Todos
+            </Button>
+            {[
+              { label: "Segunda", value: "1" },
+              { label: "Terça", value: "2" },
+              { label: "Quarta", value: "3" },
+              { label: "Quinta", value: "4" },
+              { label: "Sexta", value: "5" },
+            ].map((day) => (
+              <Button
+                key={day.value}
+                variant={weekdayFilter.includes(day.value) ? "default" : "outline"}
+                size="sm"
+                onClick={() => {
+                  if (weekdayFilter.includes(day.value)) {
+                    setWeekdayFilter(weekdayFilter.filter(d => d !== day.value));
+                  } else {
+                    setWeekdayFilter([...weekdayFilter, day.value]);
+                  }
+                }}
+              >
+                {day.label}
+              </Button>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Month Filter */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Calendar className="w-5 h-5" />
+            Filtro de Meses
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              variant={monthFilter.length === 0 ? "default" : "outline"}
+              size="sm"
+              onClick={() => setMonthFilter([])}
+            >
+              Todos
+            </Button>
+            {[
+              { label: "Jan", value: "0" },
+              { label: "Fev", value: "1" },
+              { label: "Mar", value: "2" },
+              { label: "Abr", value: "3" },
+              { label: "Mai", value: "4" },
+              { label: "Jun", value: "5" },
+              { label: "Jul", value: "6" },
+              { label: "Ago", value: "7" },
+              { label: "Set", value: "8" },
+              { label: "Out", value: "9" },
+              { label: "Nov", value: "10" },
+              { label: "Dez", value: "11" },
+            ].map((month) => (
+              <Button
+                key={month.value}
+                variant={monthFilter.includes(month.value) ? "default" : "outline"}
+                size="sm"
+                onClick={() => {
+                  if (monthFilter.includes(month.value)) {
+                    setMonthFilter(monthFilter.filter(m => m !== month.value));
+                  } else {
+                    setMonthFilter([...monthFilter, month.value]);
+                  }
+                }}
+              >
+                {month.label}
+              </Button>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
