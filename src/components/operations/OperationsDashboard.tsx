@@ -13,7 +13,6 @@ import { cn } from "@/lib/utils";
 import PerformanceHeatmap from "@/components/dashboard/PerformanceHeatmap";
 import TopPerformanceDays from "@/components/dashboard/TopPerformanceDays";
 import AdvancedMetrics from "@/components/dashboard/AdvancedMetrics";
-import StrategyCorrelationAnalysis from "./StrategyCorrelationAnalysis";
 
 interface OperationsDashboardProps {
   userId: string;
@@ -1413,9 +1412,6 @@ const OperationsDashboard = ({ userId }: OperationsDashboardProps) => {
 
       {/* Métricas Avançadas */}
       <AdvancedMetrics operations={filteredOperations} />
-
-      {/* Análise de Correlação de Estratégias */}
-      <StrategyCorrelationAnalysis operations={filteredOperations} />
 
       {/* Performance Analysis Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
