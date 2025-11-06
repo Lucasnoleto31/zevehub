@@ -23,6 +23,7 @@ import {
 import StatsCard from "@/components/dashboard/StatsCard";
 import BotsList from "@/components/dashboard/BotsList";
 import MessagesList from "@/components/dashboard/MessagesList";
+import BotsPerformanceChart from "@/components/dashboard/BotsPerformanceChart";
 import { useRealtimeNotifications } from "@/hooks/useRealtimeNotifications";
 
 const Dashboard = () => {
@@ -125,25 +126,27 @@ const Dashboard = () => {
             </div>
             
             <div className="flex items-center gap-4">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => navigate("/operations")}
-                className="gap-2"
-              >
-                <LineChart className="w-4 h-4" />
-                Operações
-              </Button>
               {isAdmin && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => navigate("/admin")}
-                  className="gap-2"
-                >
-                  <Settings className="w-4 h-4" />
-                  Admin
-                </Button>
+                <>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => navigate("/operations")}
+                    className="gap-2"
+                  >
+                    <LineChart className="w-4 h-4" />
+                    Operações
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => navigate("/admin")}
+                    className="gap-2"
+                  >
+                    <Settings className="w-4 h-4" />
+                    Admin
+                  </Button>
+                </>
               )}
               <Button
                 variant="ghost"
@@ -224,9 +227,14 @@ const Dashboard = () => {
           />
         </div>
 
+        {/* Performance Chart */}
+        <div className="mb-8 animate-slide-up" style={{ animationDelay: "0.1s" }}>
+          <BotsPerformanceChart />
+        </div>
+
         {/* Content Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <div className="animate-slide-up" style={{ animationDelay: "0.1s" }}>
+          <div className="animate-slide-up" style={{ animationDelay: "0.2s" }}>
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
@@ -243,7 +251,7 @@ const Dashboard = () => {
             </Card>
           </div>
 
-          <div className="animate-slide-up" style={{ animationDelay: "0.2s" }}>
+          <div className="animate-slide-up" style={{ animationDelay: "0.3s" }}>
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">

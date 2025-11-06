@@ -17,6 +17,7 @@ const Operations = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState<any>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
     checkUser();
@@ -32,6 +33,22 @@ const Operations = () => {
       }
 
       setUser(session.user);
+
+      // Verificar se usuário é admin
+      const { data: rolesData } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", session.user.id);
+
+      const hasAdminRole = rolesData?.some(r => r.role === "admin");
+      setIsAdmin(hasAdminRole || false);
+
+      // Se não for admin, redirecionar para dashboard
+      if (!hasAdminRole) {
+        toast.error("Acesso negado. Apenas administradores podem lançar operações.");
+        navigate("/dashboard");
+        return;
+      }
     } catch (error) {
       console.error("Erro ao verificar usuário:", error);
     } finally {
