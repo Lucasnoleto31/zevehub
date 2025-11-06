@@ -10,6 +10,9 @@ import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
+import PerformanceHeatmap from "@/components/dashboard/PerformanceHeatmap";
+import TopPerformanceDays from "@/components/dashboard/TopPerformanceDays";
+import AdvancedMetrics from "@/components/dashboard/AdvancedMetrics";
 
 interface OperationsDashboardProps {
   userId: string;
@@ -1400,6 +1403,15 @@ const OperationsDashboard = ({ userId }: OperationsDashboardProps) => {
               </div>
             </CardContent>
           </Card>
+
+          {/* Métricas Avançadas */}
+          <AdvancedMetrics />
+
+          {/* Performance Analysis Grid */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <PerformanceHeatmap />
+            <TopPerformanceDays />
+          </div>
         </>
       )}
     </div>
