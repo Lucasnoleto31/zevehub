@@ -30,6 +30,8 @@ const OperationImport = ({ userId }: OperationImportProps) => {
   const [results, setResults] = useState<{ success: number; errors: number } | null>(null);
   const [previewData, setPreviewData] = useState<ImportedOperation[]>([]);
   const [pendingOperations, setPendingOperations] = useState<ImportedOperation[]>([]);
+  const [errorList, setErrorList] = useState<string[]>([]);
+  const [showErrors, setShowErrors] = useState(false);
 
   const downloadTemplate = () => {
     const template = [
@@ -171,6 +173,8 @@ const OperationImport = ({ userId }: OperationImportProps) => {
     setResults(null);
     setPreviewData([]);
     setPendingOperations([]);
+    setErrorList([]);
+    setShowErrors(false);
     setProgress(0);
 
     try {
@@ -224,8 +228,8 @@ const OperationImport = ({ userId }: OperationImportProps) => {
       });
 
       if (errors.length > 0) {
-        toast.warning(`${errors.length} linha(s) com erro serão ignoradas.`);
-        console.error("Erros:", errors);
+        setErrorList(errors);
+        toast.warning(`${errors.length} linha(s) com erro serão ignoradas. Clique em "Ver Erros" para detalhes.`);
       }
 
       if (operations.length === 0) {
@@ -310,6 +314,8 @@ const OperationImport = ({ userId }: OperationImportProps) => {
   const cancelImport = () => {
     setPreviewData([]);
     setPendingOperations([]);
+    setErrorList([]);
+    setShowErrors(false);
     setProgress(0);
   };
 
@@ -426,6 +432,31 @@ const OperationImport = ({ userId }: OperationImportProps) => {
                 Cancelar
               </Button>
             </div>
+          </div>
+        )}
+
+        {errorList.length > 0 && (
+          <div className="space-y-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowErrors(!showErrors)}
+              className="w-full"
+            >
+              {showErrors ? 'Ocultar' : 'Ver'} Erros ({errorList.length})
+            </Button>
+            
+            {showErrors && (
+              <ScrollArea className="h-[200px] rounded-md border p-3">
+                <div className="space-y-1">
+                  {errorList.map((error, index) => (
+                    <div key={index} className="text-xs text-destructive font-mono bg-destructive/10 p-2 rounded">
+                      {error}
+                    </div>
+                  ))}
+                </div>
+              </ScrollArea>
+            )}
           </div>
         )}
 
