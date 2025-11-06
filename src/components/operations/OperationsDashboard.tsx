@@ -107,7 +107,6 @@ const OperationsDashboard = ({ userId }: OperationsDashboardProps) => {
         const { data, error } = await supabase
           .from("trading_operations")
           .select("operation_date, operation_time, result, strategy")
-          .eq("user_id", userId)
           .order("operation_date", { ascending: true })
           .range(from, from + batchSize - 1);
 

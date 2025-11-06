@@ -127,27 +127,25 @@ const Dashboard = () => {
             </div>
             
             <div className="flex items-center gap-4">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => navigate("/operations")}
+                className="gap-2"
+              >
+                <LineChart className="w-4 h-4" />
+                Operações
+              </Button>
               {isAdmin && (
-                <>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => navigate("/operations")}
-                    className="gap-2"
-                  >
-                    <LineChart className="w-4 h-4" />
-                    Operações
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => navigate("/admin")}
-                    className="gap-2"
-                  >
-                    <Settings className="w-4 h-4" />
-                    Admin
-                  </Button>
-                </>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => navigate("/admin")}
+                  className="gap-2"
+                >
+                  <Settings className="w-4 h-4" />
+                  Admin
+                </Button>
               )}
               <Button
                 variant="ghost"

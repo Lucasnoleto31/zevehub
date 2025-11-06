@@ -21,9 +21,10 @@ interface Operation {
 
 interface OperationsTableProps {
   userId: string;
+  isAdmin?: boolean;
 }
 
-const OperationsTable = ({ userId }: OperationsTableProps) => {
+const OperationsTable = ({ userId, isAdmin = false }: OperationsTableProps) => {
   const [operations, setOperations] = useState<Operation[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -39,7 +40,6 @@ const OperationsTable = ({ userId }: OperationsTableProps) => {
           event: "*",
           schema: "public",
           table: "trading_operations",
-          filter: `user_id=eq.${userId}`,
         },
         () => {
           loadOperations();
@@ -57,7 +57,6 @@ const OperationsTable = ({ userId }: OperationsTableProps) => {
       const { data, error } = await supabase
         .from("trading_operations")
         .select("*")
-        .eq("user_id", userId)
         .order("operation_date", { ascending: false })
         .order("operation_time", { ascending: false })
         .limit(10);
@@ -111,7 +110,7 @@ const OperationsTable = ({ userId }: OperationsTableProps) => {
             <TableHead>Ativo</TableHead>
             <TableHead className="text-right">Contratos</TableHead>
             <TableHead className="text-right">Resultado</TableHead>
-            <TableHead className="text-right">Ações</TableHead>
+            {isAdmin && <TableHead className="text-right">Ações</TableHead>}
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -138,15 +137,17 @@ const OperationsTable = ({ userId }: OperationsTableProps) => {
                   })}
                 </span>
               </TableCell>
-              <TableCell className="text-right">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => handleDelete(operation.id)}
-                >
-                  <Trash2 className="w-4 h-4 text-destructive" />
-                </Button>
-              </TableCell>
+              {isAdmin && (
+                <TableCell className="text-right">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleDelete(operation.id)}
+                  >
+                    <Trash2 className="w-4 h-4 text-destructive" />
+                  </Button>
+                </TableCell>
+              )}
             </TableRow>
           ))}
         </TableBody>

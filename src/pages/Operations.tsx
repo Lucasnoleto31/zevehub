@@ -42,13 +42,6 @@ const Operations = () => {
 
       const hasAdminRole = rolesData?.some(r => r.role === "admin");
       setIsAdmin(hasAdminRole || false);
-
-      // Se não for admin, redirecionar para dashboard
-      if (!hasAdminRole) {
-        toast.error("Acesso negado. Apenas administradores podem lançar operações.");
-        navigate("/dashboard");
-        return;
-      }
     } catch (error) {
       console.error("Erro ao verificar usuário:", error);
     } finally {
@@ -85,7 +78,7 @@ const Operations = () => {
                 <h1 className="text-xl font-bold text-foreground">Registro de Operações</h1>
               </div>
             </div>
-            <DeleteAllOperations userId={user?.id} />
+            {isAdmin && <DeleteAllOperations userId={user?.id} />}
           </div>
         </div>
       </header>
@@ -99,40 +92,54 @@ const Operations = () => {
           </TabsList>
 
           <TabsContent value="register" className="space-y-6">
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              <div className="lg:col-span-1 space-y-6">
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <Plus className="w-5 h-5" />
-                      Nova Operação
-                    </CardTitle>
-                    <CardDescription>
-                      Registre os detalhes da sua operação
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <OperationForm userId={user?.id} />
-                  </CardContent>
-                </Card>
+            {isAdmin ? (
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div className="lg:col-span-1 space-y-6">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2">
+                        <Plus className="w-5 h-5" />
+                        Nova Operação
+                      </CardTitle>
+                      <CardDescription>
+                        Registre os detalhes da sua operação
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <OperationForm userId={user?.id} />
+                    </CardContent>
+                  </Card>
 
-                <OperationImport userId={user?.id} />
-              </div>
+                  <OperationImport userId={user?.id} />
+                </div>
 
-              <div className="lg:col-span-2">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Histórico de Operações</CardTitle>
-                    <CardDescription>
-                      Últimas operações registradas
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <OperationsTable userId={user?.id} />
-                  </CardContent>
-                </Card>
+                <div className="lg:col-span-2">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Histórico de Operações</CardTitle>
+                      <CardDescription>
+                        Últimas operações registradas
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <OperationsTable userId={user?.id} isAdmin={isAdmin} />
+                    </CardContent>
+                  </Card>
+                </div>
               </div>
-            </div>
+            ) : (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Histórico de Operações</CardTitle>
+                  <CardDescription>
+                    Todas as operações registradas (visualização apenas)
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <OperationsTable userId={user?.id} isAdmin={isAdmin} />
+                </CardContent>
+              </Card>
+            )}
           </TabsContent>
 
           <TabsContent value="strategies">
