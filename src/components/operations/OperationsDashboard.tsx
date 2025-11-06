@@ -27,6 +27,9 @@ interface Stats {
   payoff: number;
   averageWin: number;
   averageLoss: number;
+  maxDrawdown: number;
+  maxDrawdownDays: number;
+  currentDrawdown: number;
 }
 
 const OperationsDashboard = ({ userId }: OperationsDashboardProps) => {
@@ -44,8 +47,12 @@ const OperationsDashboard = ({ userId }: OperationsDashboardProps) => {
     payoff: 0,
     averageWin: 0,
     averageLoss: 0,
+    maxDrawdown: 0,
+    maxDrawdownDays: 0,
+    currentDrawdown: 0,
   });
   const [performanceCurve, setPerformanceCurve] = useState<any[]>([]);
+  const [drawdownCurve, setDrawdownCurve] = useState<any[]>([]);
   const [weekdayStats, setWeekdayStats] = useState<any[]>([]);
   const [monthStats, setMonthStats] = useState<any[]>([]);
   const [hourStats, setHourStats] = useState<any[]>([]);
@@ -108,6 +115,9 @@ const OperationsDashboard = ({ userId }: OperationsDashboardProps) => {
         payoff: 0,
         averageWin: 0,
         averageLoss: 0,
+        maxDrawdown: 0,
+        maxDrawdownDays: 0,
+        currentDrawdown: 0,
       });
       return;
     }
@@ -171,6 +181,9 @@ const OperationsDashboard = ({ userId }: OperationsDashboardProps) => {
       payoff,
       averageWin,
       averageLoss,
+      maxDrawdown: 0, // será calculado no generateCharts
+      maxDrawdownDays: 0,
+      currentDrawdown: 0,
     });
   };
 
@@ -184,22 +197,76 @@ const OperationsDashboard = ({ userId }: OperationsDashboardProps) => {
     }, {} as Record<string, number>);
 
     let accumulated = 0;
-    const curve = Object.entries(dailyResults)
+    let peak = 0;
+    let maxDrawdown = 0;
+    let maxDrawdownDays = 0;
+    let drawdownStartDate = null;
+    let currentDrawdownDays = 0;
+    
+    const curve: any[] = [];
+    const drawdown: any[] = [];
+    
+    Object.entries(dailyResults)
       .sort(([dateA], [dateB]) => dateA.localeCompare(dateB))
-      .map(([date, result]) => {
+      .forEach(([date, result]) => {
         accumulated += result;
-        return {
+        
+        // Atualizar pico
+        if (accumulated > peak) {
+          peak = accumulated;
+          drawdownStartDate = null;
+          currentDrawdownDays = 0;
+        }
+        
+        // Calcular drawdown atual
+        const currentDrawdown = accumulated - peak;
+        
+        // Registrar maior drawdown
+        if (currentDrawdown < maxDrawdown) {
+          maxDrawdown = currentDrawdown;
+        }
+        
+        // Contar dias em drawdown
+        if (currentDrawdown < 0) {
+          if (drawdownStartDate === null) {
+            drawdownStartDate = date;
+            currentDrawdownDays = 1;
+          } else {
+            currentDrawdownDays++;
+          }
+          maxDrawdownDays = Math.max(maxDrawdownDays, currentDrawdownDays);
+        }
+        
+        curve.push({
           date: new Date(date).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" }),
           value: accumulated,
-        };
+        });
+        
+        drawdown.push({
+          date: new Date(date).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" }),
+          drawdown: currentDrawdown,
+        });
       });
+    
     setPerformanceCurve(curve);
+    setDrawdownCurve(drawdown);
+    
+    // Atualizar stats com drawdown
+    setStats(prev => ({
+      ...prev,
+      maxDrawdown,
+      maxDrawdownDays,
+      currentDrawdown: drawdown.length > 0 ? drawdown[drawdown.length - 1].drawdown : 0,
+    }));
 
-    // Melhores dias da semana
-    const weekdays = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
+    // Melhores dias da semana (Segunda a Sexta apenas)
+    const weekdays = ["Seg", "Ter", "Qua", "Qui", "Sex"];
     const weekdayData = ops.reduce((acc, op) => {
       const day = new Date(op.operation_date).getDay();
-      const dayName = weekdays[day];
+      // Ignorar domingo (0) e sábado (6)
+      if (day === 0 || day === 6) return acc;
+      
+      const dayName = weekdays[day - 1]; // -1 porque segunda é 1, não 0
       if (!acc[dayName]) acc[dayName] = 0;
       acc[dayName] += parseFloat(op.result.toString());
       return acc;
@@ -315,19 +382,15 @@ const OperationsDashboard = ({ userId }: OperationsDashboardProps) => {
 
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Sequências</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">Drawdown Máximo</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <TrendingUp className="w-4 h-4 text-success" />
-                <span className="text-lg font-bold text-success">{stats.positiveStreak}</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <TrendingDown className="w-4 h-4 text-destructive" />
-                <span className="text-lg font-bold text-destructive">{stats.negativeStreak}</span>
-              </div>
+            <div className="text-2xl font-bold text-destructive">
+              {stats.maxDrawdown.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
             </div>
+            <p className="text-xs text-muted-foreground mt-1">
+              {stats.maxDrawdownDays} dias para recuperar
+            </p>
           </CardContent>
         </Card>
       </div>
@@ -346,6 +409,25 @@ const OperationsDashboard = ({ userId }: OperationsDashboardProps) => {
               <YAxis />
               <Tooltip formatter={(value: number) => value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })} />
               <Line type="monotone" dataKey="value" stroke="hsl(var(--primary))" strokeWidth={2} />
+            </LineChart>
+          </ResponsiveContainer>
+        </CardContent>
+      </Card>
+
+      {/* Drawdown Chart */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Análise de Drawdown</CardTitle>
+          <CardDescription>Queda desde o pico mais alto - quanto mais negativo, maior o risco</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <ResponsiveContainer width="100%" height={300}>
+            <LineChart data={drawdownCurve}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="date" />
+              <YAxis />
+              <Tooltip formatter={(value: number) => value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })} />
+              <Line type="monotone" dataKey="drawdown" stroke="hsl(var(--destructive))" strokeWidth={2} />
             </LineChart>
           </ResponsiveContainer>
         </CardContent>
