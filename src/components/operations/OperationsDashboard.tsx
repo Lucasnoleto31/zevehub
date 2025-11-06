@@ -1407,16 +1407,17 @@ const OperationsDashboard = ({ userId }: OperationsDashboardProps) => {
             </CardContent>
           </Card>
 
-          {/* Métricas Avançadas */}
-          <AdvancedMetrics operations={filteredOperations} />
-
-          {/* Performance Analysis Grid */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <PerformanceHeatmap operations={filteredOperations} />
-            <TopPerformanceDays operations={filteredOperations} />
-          </div>
         </>
       )}
+
+      {/* Métricas Avançadas */}
+      <AdvancedMetrics operations={filteredOperations} />
+
+      {/* Performance Analysis Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <PerformanceHeatmap operations={filteredOperations} />
+        <TopPerformanceDays operations={filteredOperations} />
+      </div>
     </div>
   );
 };
