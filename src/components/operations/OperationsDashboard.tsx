@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, AreaChart, Area, PieChart, Pie, Cell } from "recharts";
-import { TrendingUp, TrendingDown, Target, Award, Calendar, Clock, Filter, Bot, Info } from "lucide-react";
+import { TrendingUp, TrendingDown, Target, Award, Calendar, Clock, Filter, Bot, Info, Trophy } from "lucide-react";
 import { Tooltip as TooltipComponent, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -1038,61 +1038,242 @@ const OperationsDashboard = ({ userId }: OperationsDashboardProps) => {
       {/* Análise Comparativa por Estratégia */}
       {strategyStats.length > 1 && (
         <>
-          {/* Gráfico de Pizza - Distribuição de Operações */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Bot className="w-5 h-5" />
-                Distribuição de Operações por Estratégia
-              </CardTitle>
-              <CardDescription>
-                Percentual de operações realizadas com cada estratégia
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <ResponsiveContainer width="100%" height={400}>
-                <PieChart>
-                  <Pie
-                    data={strategyStats}
-                    dataKey="totalOps"
-                    nameKey="strategy"
-                    cx="50%"
-                    cy="50%"
-                    outerRadius={120}
-                    label={({ strategy, totalOps, percent }) => 
-                      `${strategy}: ${totalOps} (${(percent * 100).toFixed(1)}%)`
+          {/* Grid com Gráfico de Pizza e Ranking */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Gráfico de Pizza - Distribuição de Operações */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Bot className="w-5 h-5" />
+                  Distribuição de Operações por Estratégia
+                </CardTitle>
+                <CardDescription>
+                  Percentual de operações realizadas com cada estratégia
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <ResponsiveContainer width="100%" height={400}>
+                  <PieChart>
+                    <Pie
+                      data={strategyStats}
+                      dataKey="totalOps"
+                      nameKey="strategy"
+                      cx="50%"
+                      cy="50%"
+                      outerRadius={120}
+                      label={({ strategy, totalOps, percent }) => 
+                        `${strategy}: ${totalOps} (${(percent * 100).toFixed(1)}%)`
+                      }
+                      labelLine={true}
+                    >
+                      {strategyStats.map((entry, index) => {
+                        const colors = [
+                          'hsl(var(--primary))',
+                          'hsl(var(--success))',
+                          'hsl(var(--destructive))',
+                          'hsl(var(--warning))',
+                          'hsl(var(--info))',
+                          '#8884d8',
+                          '#82ca9d',
+                          '#ffc658',
+                          '#ff8042',
+                          '#a4de6c'
+                        ];
+                        return (
+                          <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />
+                        );
+                      })}
+                    </Pie>
+                    <Tooltip 
+                      formatter={(value: number, name: string) => [
+                        `${value} operações`,
+                        name
+                      ]}
+                    />
+                    <Legend />
+                  </PieChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
+
+            {/* Ranking de Estratégias */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Trophy className="w-5 h-5" />
+                  Ranking de Estratégias
+                </CardTitle>
+                <CardDescription>Pontuação baseada em múltiplos critérios</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {strategyStats
+                    .map((stat) => {
+                      // Cálculo de score composto (0-100)
+                      const winRateScore = stat.winRate;
+                      const payoffScore = Math.min(stat.payoff * 20, 100);
+                      const drawdownScore = Math.max(100 - Math.abs(stat.maxDrawdown) / 100, 0);
+                      const profitScore = stat.totalResult > 0 ? Math.min((stat.totalResult / 10000) * 100, 100) : 0;
+                      
+                      const compositeScore = (
+                        winRateScore * 0.3 +
+                        payoffScore * 0.25 +
+                        drawdownScore * 0.25 +
+                        profitScore * 0.2
+                      ).toFixed(1);
+
+                      return { 
+                        strategy: stat.strategy, 
+                        score: parseFloat(compositeScore), 
+                        totalResult: stat.totalResult,
+                        winRate: stat.winRate,
+                        payoff: stat.payoff,
+                      };
+                    })
+                    .sort((a, b) => b.score - a.score)
+                    .map((item, index) => (
+                      <div key={item.strategy} className="flex items-center gap-3 p-3 rounded-lg bg-muted/50">
+                        <div className="flex items-center justify-center w-8 h-8 rounded-full bg-primary/10 text-primary font-bold">
+                          {index + 1}
+                        </div>
+                        <div className="flex-1">
+                          <div className="font-semibold">{item.strategy}</div>
+                          <div className="text-xs text-muted-foreground">
+                            Score: {item.score}/100 • WR: {item.winRate.toFixed(1)}% • Payoff: {item.payoff.toFixed(2)}
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <div className={`text-sm font-medium ${item.totalResult >= 0 ? 'text-success' : 'text-destructive'}`}>
+                            {item.totalResult >= 0 ? '+' : ''}
+                            {item.totalResult.toLocaleString("pt-BR", {
+                              style: "currency",
+                              currency: "BRL",
+                            })}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Análise de Correlação */}
+          {strategyStats.length >= 2 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <TrendingUp className="w-5 h-5" />
+                  Análise de Correlação entre Estratégias
+                </CardTitle>
+                <CardDescription>
+                  Identifica estratégias que se complementam ou funcionam bem juntas
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {(() => {
+                    // Agrupar operações por data para cada estratégia
+                    const strategiesByDate: Record<string, Record<string, number>> = {};
+                    
+                    filteredOperations.forEach((op) => {
+                      const dateKey = op.operation_date;
+                      if (!strategiesByDate[dateKey]) {
+                        strategiesByDate[dateKey] = {};
+                      }
+                      const strategyName = op.strategy || "Sem Estratégia";
+                      if (!strategiesByDate[dateKey][strategyName]) {
+                        strategiesByDate[dateKey][strategyName] = 0;
+                      }
+                      strategiesByDate[dateKey][strategyName] += op.result;
+                    });
+
+                    // Calcular correlação entre pares de estratégias
+                    const strategies = strategyStats.map(s => s.strategy);
+                    const correlations: Array<{
+                      pair: string;
+                      correlation: number;
+                      diversification: string;
+                      recommendation: string;
+                    }> = [];
+
+                    for (let i = 0; i < strategies.length; i++) {
+                      for (let j = i + 1; j < strategies.length; j++) {
+                        const strat1 = strategies[i];
+                        const strat2 = strategies[j];
+
+                        let sameDayWins = 0;
+                        let sameDayLosses = 0;
+                        let oppositeResults = 0;
+                        let totalDays = 0;
+
+                        Object.entries(strategiesByDate).forEach(([date, strategies]) => {
+                          const result1 = strategies[strat1];
+                          const result2 = strategies[strat2];
+
+                          if (result1 !== undefined && result2 !== undefined) {
+                            totalDays++;
+                            if (result1 > 0 && result2 > 0) {
+                              sameDayWins++;
+                            } else if (result1 < 0 && result2 < 0) {
+                              sameDayLosses++;
+                            } else {
+                              oppositeResults++;
+                            }
+                          }
+                        });
+
+                        if (totalDays > 0) {
+                          // Score de diversificação (quanto maior, mais complementares)
+                          const diversificationScore = (oppositeResults / totalDays) * 100;
+                          
+                          let diversification = "";
+                          let recommendation = "";
+
+                          if (diversificationScore > 60) {
+                            diversification = "Alta Complementaridade";
+                            recommendation = "Excelente combinação para diversificação de risco";
+                          } else if (diversificationScore > 40) {
+                            diversification = "Moderada Complementaridade";
+                            recommendation = "Boa combinação, equilibra riscos";
+                          } else {
+                            diversification = "Baixa Complementaridade";
+                            recommendation = "Estratégias similares, considere diversificar";
+                          }
+
+                          correlations.push({
+                            pair: `${strat1} + ${strat2}`,
+                            correlation: diversificationScore,
+                            diversification,
+                            recommendation,
+                          });
+                        }
+                      }
                     }
-                    labelLine={true}
-                  >
-                    {strategyStats.map((entry, index) => {
-                      const colors = [
-                        'hsl(var(--primary))',
-                        'hsl(var(--success))',
-                        'hsl(var(--destructive))',
-                        'hsl(var(--warning))',
-                        'hsl(var(--info))',
-                        '#8884d8',
-                        '#82ca9d',
-                        '#ffc658',
-                        '#ff8042',
-                        '#a4de6c'
-                      ];
-                      return (
-                        <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />
-                      );
-                    })}
-                  </Pie>
-                  <Tooltip 
-                    formatter={(value: number, name: string) => [
-                      `${value} operações`,
-                      name
-                    ]}
-                  />
-                  <Legend />
-                </PieChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
+
+                    correlations.sort((a, b) => b.correlation - a.correlation);
+
+                    return correlations.map((corr) => (
+                      <div key={corr.pair} className="p-4 rounded-lg border bg-card">
+                        <div className="flex items-start justify-between mb-2">
+                          <div className="font-semibold">{corr.pair}</div>
+                          <div className="text-sm px-2 py-1 rounded-full bg-primary/10 text-primary">
+                            {corr.correlation.toFixed(1)}% complementaridade
+                          </div>
+                        </div>
+                        <div className="text-sm text-muted-foreground mb-1">
+                          <span className="font-medium">{corr.diversification}</span>
+                        </div>
+                        <div className="text-sm text-muted-foreground">
+                          {corr.recommendation}
+                        </div>
+                      </div>
+                    ));
+                  })()}
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
           {/* Análise Detalhada por Estratégia */}
           <Card>
