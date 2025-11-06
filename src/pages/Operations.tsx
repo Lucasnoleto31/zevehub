@@ -10,6 +10,7 @@ import OperationForm from "@/components/operations/OperationForm";
 import OperationsTable from "@/components/operations/OperationsTable";
 import OperationsDashboard from "@/components/operations/OperationsDashboard";
 import OperationImport from "@/components/operations/OperationImport";
+import DeleteAllOperations from "@/components/operations/DeleteAllOperations";
 
 const Operations = () => {
   const navigate = useNavigate();
@@ -66,6 +67,7 @@ const Operations = () => {
                 <h1 className="text-xl font-bold text-foreground">Registro de Operações</h1>
               </div>
             </div>
+            <DeleteAllOperations userId={user?.id} />
           </div>
         </div>
       </header>

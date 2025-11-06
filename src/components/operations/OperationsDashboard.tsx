@@ -57,6 +57,7 @@ const OperationsDashboard = ({ userId }: OperationsDashboardProps) => {
   const [weekdayStats, setWeekdayStats] = useState<any[]>([]);
   const [monthStats, setMonthStats] = useState<any[]>([]);
   const [hourStats, setHourStats] = useState<any[]>([]);
+  const [yearlyStats, setYearlyStats] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -233,12 +234,14 @@ const OperationsDashboard = ({ userId }: OperationsDashboardProps) => {
 
     // Melhores dias da semana (Segunda a Sexta apenas)
     const weekdays = ["Seg", "Ter", "Qua", "Qui", "Sex"];
+    const weekdayMapping = [null, "Seg", "Ter", "Qua", "Qui", "Sex", null]; // 0=Dom, 1=Seg...6=Sáb
+    
     const weekdayData = ops.reduce((acc, op) => {
       const day = new Date(op.operation_date).getDay();
       // Ignorar domingo (0) e sábado (6)
       if (day === 0 || day === 6) return acc;
       
-      const dayName = weekdays[day - 1]; // -1 porque segunda é 1, não 0
+      const dayName = weekdayMapping[day]!;
       if (!acc[dayName]) acc[dayName] = 0;
       acc[dayName] += parseFloat(op.result.toString());
       return acc;
@@ -285,6 +288,23 @@ const OperationsDashboard = ({ userId }: OperationsDashboardProps) => {
           result,
         }))
         .sort((a, b) => parseInt(a.hour) - parseInt(b.hour))
+    );
+
+    // Comparativo ano a ano
+    const yearlyData = ops.reduce((acc, op) => {
+      const year = new Date(op.operation_date).getFullYear().toString();
+      if (!acc[year]) acc[year] = 0;
+      acc[year] += parseFloat(op.result.toString());
+      return acc;
+    }, {} as Record<string, number>);
+
+    setYearlyStats(
+      Object.entries(yearlyData)
+        .sort(([yearA], [yearB]) => yearA.localeCompare(yearB))
+        .map(([year, result]) => ({
+          year,
+          result,
+        }))
     );
   };
 
@@ -426,6 +446,25 @@ const OperationsDashboard = ({ userId }: OperationsDashboardProps) => {
               <YAxis />
               <Tooltip formatter={(value: number) => value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })} />
               <Bar dataKey="result" fill="hsl(var(--primary))" />
+            </BarChart>
+          </ResponsiveContainer>
+        </CardContent>
+      </Card>
+
+      {/* Comparativo Ano a Ano */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Evolução Anual</CardTitle>
+          <CardDescription>Comparativo de performance entre diferentes anos</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <ResponsiveContainer width="100%" height={300}>
+            <BarChart data={yearlyStats}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="year" />
+              <YAxis />
+              <Tooltip formatter={(value: number) => value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })} />
+              <Bar dataKey="result" fill="hsl(var(--success))" />
             </BarChart>
           </ResponsiveContainer>
         </CardContent>
