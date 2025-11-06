@@ -25,6 +25,7 @@ import BotsList from "@/components/dashboard/BotsList";
 import MessagesList from "@/components/dashboard/MessagesList";
 import BotsPerformanceChart from "@/components/dashboard/BotsPerformanceChart";
 import RecentOperations from "@/components/dashboard/RecentOperations";
+import ProfileSelector from "@/components/dashboard/ProfileSelector";
 import { useRealtimeNotifications } from "@/hooks/useRealtimeNotifications";
 
 const Dashboard = () => {
@@ -196,6 +197,11 @@ const Dashboard = () => {
           </Card>
         </div>
 
+        {/* Profile Selector */}
+        <div className="mb-8 animate-slide-up">
+          <ProfileSelector userId={user?.id || ""} />
+        </div>
+
         {/* Stats Grid */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8 animate-slide-up">
           <StatsCard
@@ -235,7 +241,7 @@ const Dashboard = () => {
 
         {/* Operations Section */}
         <div className="mb-8 animate-slide-up" style={{ animationDelay: "0.15s" }}>
-          <RecentOperations />
+          <RecentOperations userId={user?.id || ""} />
         </div>
 
         {/* Content Grid */}

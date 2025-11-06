@@ -119,6 +119,9 @@ export type Database = {
           email: string
           full_name: string | null
           id: string
+          investment_profile:
+            | Database["public"]["Enums"]["investment_profile"]
+            | null
           last_login: string | null
           phone: string | null
           status: string | null
@@ -129,6 +132,9 @@ export type Database = {
           email: string
           full_name?: string | null
           id: string
+          investment_profile?:
+            | Database["public"]["Enums"]["investment_profile"]
+            | null
           last_login?: string | null
           phone?: string | null
           status?: string | null
@@ -139,6 +145,9 @@ export type Database = {
           email?: string
           full_name?: string | null
           id?: string
+          investment_profile?:
+            | Database["public"]["Enums"]["investment_profile"]
+            | null
           last_login?: string | null
           phone?: string | null
           status?: string | null
@@ -290,6 +299,12 @@ export type Database = {
       is_admin: { Args: { _user_id: string }; Returns: boolean }
     }
     Enums: {
+      investment_profile:
+        | "start"
+        | "perfil_1"
+        | "perfil_2"
+        | "perfil_5"
+        | "perfil_10"
       user_role: "admin" | "vip" | "trader_ativo" | "parceiro" | "iniciante"
     }
     CompositeTypes: {
@@ -418,6 +433,13 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      investment_profile: [
+        "start",
+        "perfil_1",
+        "perfil_2",
+        "perfil_5",
+        "perfil_10",
+      ],
       user_role: ["admin", "vip", "trader_ativo", "parceiro", "iniciante"],
     },
   },

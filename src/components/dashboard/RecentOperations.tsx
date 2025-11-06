@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { TrendingUp, TrendingDown, Calendar, Clock, Target } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { useInvestmentProfile } from "@/hooks/useInvestmentProfile";
 
 interface Operation {
   id: string;
@@ -24,7 +25,11 @@ interface OperationsStats {
   avgResult: number;
 }
 
-const RecentOperations = () => {
+interface RecentOperationsProps {
+  userId: string;
+}
+
+const RecentOperations = ({ userId }: RecentOperationsProps) => {
   const [operations, setOperations] = useState<Operation[]>([]);
   const [stats, setStats] = useState<OperationsStats>({
     totalOperations: 0,
@@ -33,10 +38,11 @@ const RecentOperations = () => {
     avgResult: 0,
   });
   const [loading, setLoading] = useState(true);
+  const { applyMultiplier } = useInvestmentProfile(userId);
 
   useEffect(() => {
     loadOperations();
-  }, []);
+  }, [userId]);
 
   const loadOperations = async () => {
     try {
@@ -112,7 +118,7 @@ const RecentOperations = () => {
         <Card>
           <CardContent className="pt-6">
             <div className={`text-2xl font-bold ${stats.totalResult >= 0 ? 'text-success' : 'text-destructive'}`}>
-              {stats.totalResult >= 0 ? '+' : ''}{stats.totalResult.toFixed(2)}
+              {stats.totalResult >= 0 ? '+' : ''}{applyMultiplier(stats.totalResult).toFixed(2)}
             </div>
             <p className="text-xs text-muted-foreground mt-1">Resultado Total</p>
           </CardContent>
@@ -130,7 +136,7 @@ const RecentOperations = () => {
         <Card>
           <CardContent className="pt-6">
             <div className={`text-2xl font-bold ${stats.avgResult >= 0 ? 'text-success' : 'text-destructive'}`}>
-              {stats.avgResult >= 0 ? '+' : ''}{stats.avgResult.toFixed(2)}
+              {stats.avgResult >= 0 ? '+' : ''}{applyMultiplier(stats.avgResult).toFixed(2)}
             </div>
             <p className="text-xs text-muted-foreground mt-1">Resultado Médio</p>
           </CardContent>
@@ -196,11 +202,11 @@ const RecentOperations = () => {
                         ) : (
                           <TrendingDown className="w-4 h-4" />
                         )}
-                        {operation.result >= 0 ? '+' : ''}{operation.result.toFixed(2)}
+                        {operation.result >= 0 ? '+' : ''}{applyMultiplier(operation.result).toFixed(2)}
                       </div>
                       {operation.costs > 0 && (
                         <div className="text-xs text-muted-foreground">
-                          Custos: {operation.costs.toFixed(2)}
+                          Custos: {applyMultiplier(operation.costs).toFixed(2)}
                         </div>
                       )}
                     </div>
