@@ -31,6 +31,7 @@ const OperationForm = ({ userId }: OperationFormProps) => {
     costs: "",
     result: "",
     notes: "",
+    strategy: "",
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -56,6 +57,7 @@ const OperationForm = ({ userId }: OperationFormProps) => {
         costs: validatedData.costs,
         result: validatedData.result,
         notes: formData.notes,
+        strategy: formData.strategy || null,
       }]);
 
       if (error) throw error;
@@ -71,6 +73,7 @@ const OperationForm = ({ userId }: OperationFormProps) => {
         costs: "",
         result: "",
         notes: "",
+        strategy: "",
       });
     } catch (error: any) {
       if (error instanceof z.ZodError) {
@@ -117,6 +120,17 @@ const OperationForm = ({ userId }: OperationFormProps) => {
           value={formData.asset}
           onChange={(e) => setFormData({ ...formData, asset: e.target.value.toUpperCase() })}
           required
+        />
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="strategy">Estratégia/Robô</Label>
+        <Input
+          id="strategy"
+          type="text"
+          placeholder="Ex: Bot WIN v1.0, Estratégia XYZ"
+          value={formData.strategy}
+          onChange={(e) => setFormData({ ...formData, strategy: e.target.value })}
         />
       </div>
 

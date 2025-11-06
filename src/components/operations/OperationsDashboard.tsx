@@ -71,6 +71,7 @@ const OperationsDashboard = ({ userId }: OperationsDashboardProps) => {
   const [weekdayStats, setWeekdayStats] = useState<any[]>([]);
   const [monthStats, setMonthStats] = useState<any[]>([]);
   const [hourStats, setHourStats] = useState<any[]>([]);
+  const [hourDistribution, setHourDistribution] = useState<any[]>([]);
   const [yearlyStats, setYearlyStats] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -381,6 +382,41 @@ const OperationsDashboard = ({ userId }: OperationsDashboardProps) => {
         }))
         .sort((a, b) => parseInt(a.hour) - parseInt(b.hour))
     );
+
+    // Distribuição de horários com taxa de acerto
+    const hourDistData = ops.reduce((acc, op) => {
+      const hour = parseInt(op.operation_time.split(":")[0]);
+      if (!acc[hour]) {
+        acc[hour] = {
+          total: 0,
+          positive: 0,
+          negative: 0,
+          totalResult: 0,
+        };
+      }
+      acc[hour].total++;
+      const result = parseFloat(op.result.toString());
+      if (result > 0) {
+        acc[hour].positive++;
+      } else if (result < 0) {
+        acc[hour].negative++;
+      }
+      acc[hour].totalResult += result;
+      return acc;
+    }, {} as Record<number, { total: number; positive: number; negative: number; totalResult: number }>);
+
+    const hourDistArray = Object.entries(hourDistData)
+      .map(([hour, data]) => ({
+        hour: `${hour}h`,
+        operacoes: data.total,
+        positivas: data.positive,
+        negativas: data.negative,
+        winRate: (data.positive / data.total) * 100,
+        resultado: data.totalResult,
+      }))
+      .sort((a, b) => parseInt(a.hour) - parseInt(b.hour));
+
+    setHourDistribution(hourDistArray);
 
     // Comparativo ano a ano
     const yearlyData = ops.reduce((acc, op) => {
@@ -777,6 +813,53 @@ const OperationsDashboard = ({ userId }: OperationsDashboardProps) => {
           </CardContent>
         </Card>
       </div>
+
+      {/* Distribuição de Horários Mais Lucrativos */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Clock className="w-5 h-5" />
+            Distribuição de Horários - Análise Detalhada
+          </CardTitle>
+          <CardDescription>
+            Identifique os melhores horários para operar com base na taxa de acerto e resultado
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <ResponsiveContainer width="100%" height={400}>
+            <BarChart data={hourDistribution}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="hour" />
+              <YAxis yAxisId="left" />
+              <YAxis yAxisId="right" orientation="right" />
+              <Tooltip 
+                content={({ active, payload }) => {
+                  if (active && payload && payload.length) {
+                    const data = payload[0].payload;
+                    return (
+                      <div className="bg-card border rounded-lg p-3 shadow-lg">
+                        <p className="font-semibold mb-2">{data.hour}</p>
+                        <p className="text-sm">Operações: {data.operacoes}</p>
+                        <p className="text-sm text-success">Positivas: {data.positivas}</p>
+                        <p className="text-sm text-destructive">Negativas: {data.negativas}</p>
+                        <p className="text-sm font-semibold">Taxa de Acerto: {data.winRate.toFixed(1)}%</p>
+                        <p className={`text-sm font-bold ${data.resultado >= 0 ? 'text-success' : 'text-destructive'}`}>
+                          Resultado: {data.resultado.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
+                        </p>
+                      </div>
+                    );
+                  }
+                  return null;
+                }}
+              />
+              <Legend />
+              <Bar yAxisId="left" dataKey="positivas" stackId="a" fill="hsl(var(--success))" name="Operações Positivas" />
+              <Bar yAxisId="left" dataKey="negativas" stackId="a" fill="hsl(var(--destructive))" name="Operações Negativas" />
+              <Bar yAxisId="right" dataKey="resultado" fill="hsl(var(--primary))" name="Resultado Total (R$)" />
+            </BarChart>
+          </ResponsiveContainer>
+        </CardContent>
+      </Card>
 
       {/* Additional Stats */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">

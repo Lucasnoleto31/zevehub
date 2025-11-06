@@ -157,6 +157,7 @@ export type Database = {
           operation_date: string
           operation_time: string
           result: number
+          strategy: string | null
           updated_at: string
           user_id: string
         }
@@ -170,6 +171,7 @@ export type Database = {
           operation_date: string
           operation_time: string
           result: number
+          strategy?: string | null
           updated_at?: string
           user_id: string
         }
@@ -183,6 +185,7 @@ export type Database = {
           operation_date?: string
           operation_time?: string
           result?: number
+          strategy?: string | null
           updated_at?: string
           user_id?: string
         }

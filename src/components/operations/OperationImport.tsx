@@ -21,6 +21,7 @@ interface ImportedOperation {
   costs: number;
   result: number;
   notes?: string;
+  strategy?: string;
 }
 
 const OperationImport = ({ userId }: OperationImportProps) => {
@@ -39,7 +40,8 @@ const OperationImport = ({ userId }: OperationImportProps) => {
         contratos: 1,
         custos: 2.50,
         resultado: 150.00,
-        observacoes: "Operação de exemplo"
+        observacoes: "Operação de exemplo",
+        estrategia: "Bot WIN v1.0"
       }
     ];
 
@@ -190,6 +192,7 @@ const OperationImport = ({ userId }: OperationImportProps) => {
           const costs = Number(row.custos || row.costs || row.custo || 0);
           const result = Number(row.resultado || row.result || row.lucro);
           const notes = row.observacoes || row.notes || row.obs || "";
+          const strategy = row.estrategia || row.strategy || row.robo || row.bot || "";
 
           // Validação básica
           if (!rawDate || !rawTime || !asset) {
@@ -210,7 +213,8 @@ const OperationImport = ({ userId }: OperationImportProps) => {
             contracts,
             costs,
             result,
-            notes: notes.toString()
+            notes: notes.toString(),
+            strategy: strategy.toString()
           };
 
           operations.push(operation);
@@ -450,6 +454,7 @@ const OperationImport = ({ userId }: OperationImportProps) => {
             <li>custos: número (opcional)</li>
             <li>resultado: número</li>
             <li>observacoes: texto (opcional)</li>
+            <li>estrategia: texto (opcional - nome do robô/estratégia)</li>
           </ul>
         </div>
       </CardContent>
