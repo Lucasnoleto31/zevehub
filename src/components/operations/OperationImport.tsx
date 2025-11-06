@@ -44,6 +44,86 @@ const OperationImport = ({ userId }: OperationImportProps) => {
     toast.success("Modelo baixado com sucesso!");
   };
 
+  const parseExcelDate = (excelDate: any): string => {
+    // Se já é uma string de data, processar
+    if (typeof excelDate === 'string') {
+      if (excelDate.includes('/')) {
+        const parts = excelDate.split('/');
+        // Formato M/D/YY ou M/D/YYYY
+        const month = parts[0].padStart(2, '0');
+        const day = parts[1].padStart(2, '0');
+        let year = parts[2];
+        
+        // Converter YY para YYYY
+        if (year.length === 2) {
+          const numYear = parseInt(year);
+          year = numYear >= 50 ? `19${year}` : `20${year}`;
+        }
+        
+        return `${year}-${month}-${day}`;
+      }
+      return excelDate;
+    }
+    
+    // Se é número serial do Excel (dias desde 1900-01-01)
+    if (typeof excelDate === 'number') {
+      const excelEpoch = new Date(1899, 11, 30);
+      const date = new Date(excelEpoch.getTime() + excelDate * 86400000);
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    }
+    
+    return excelDate.toString();
+  };
+
+  const parseExcelTime = (excelTime: any): string => {
+    if (typeof excelTime === 'string') {
+      let timeStr = excelTime.trim();
+      
+      // Converter AM/PM para 24h
+      if (timeStr.includes('AM') || timeStr.includes('PM')) {
+        const isPM = timeStr.includes('PM');
+        timeStr = timeStr.replace(/\s*(AM|PM)/i, '');
+        
+        const [time] = timeStr.split(' ');
+        const parts = time.split(':');
+        let hours = parseInt(parts[0]);
+        const minutes = parts[1] || '00';
+        const seconds = parts[2] || '00';
+        
+        // Ajustar horas para formato 24h
+        if (isPM && hours !== 12) hours += 12;
+        if (!isPM && hours === 12) hours = 0;
+        
+        return `${hours.toString().padStart(2, '0')}:${minutes}:${seconds}`;
+      }
+      
+      // Se já está em formato HH:MM ou HH:MM:SS
+      const parts = timeStr.split(':');
+      if (parts.length === 2) {
+        return `${parts[0].padStart(2, '0')}:${parts[1].padStart(2, '0')}:00`;
+      }
+      if (parts.length === 3) {
+        return `${parts[0].padStart(2, '0')}:${parts[1].padStart(2, '0')}:${parts[2].padStart(2, '0')}`;
+      }
+      
+      return timeStr;
+    }
+    
+    // Se é fração decimal do Excel (fração de 24h)
+    if (typeof excelTime === 'number') {
+      const totalSeconds = Math.round(excelTime * 86400);
+      const hours = Math.floor(totalSeconds / 3600);
+      const minutes = Math.floor((totalSeconds % 3600) / 60);
+      const seconds = totalSeconds % 60;
+      return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+    }
+    
+    return excelTime.toString();
+  };
+
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -63,40 +143,39 @@ const OperationImport = ({ userId }: OperationImportProps) => {
       jsonData.forEach((row: any, index: number) => {
         try {
           // Mapear colunas do Excel para o formato esperado
-          const operation: ImportedOperation = {
-            operation_date: row.data_operacao || row.data || row.date,
-            operation_time: row.horario || row.time || row.hora,
-            asset: row.ativo || row.asset || row.ticker,
-            contracts: Number(row.contratos || row.contracts || row.qtd),
-            costs: Number(row.custos || row.costs || row.custo || 0),
-            result: Number(row.resultado || row.result || row.lucro),
-            notes: row.observacoes || row.notes || row.obs || ""
-          };
+          const rawDate = row.data_operacao || row.data || row.date;
+          const rawTime = row.horario || row.time || row.hora;
+          const asset = row.ativo || row.asset || row.ticker;
+          const contracts = Number(row.contratos || row.contracts || row.qtd);
+          const costs = Number(row.custos || row.costs || row.custo || 0);
+          const result = Number(row.resultado || row.result || row.lucro);
+          const notes = row.observacoes || row.notes || row.obs || "";
 
           // Validação básica
-          if (!operation.operation_date || !operation.operation_time || !operation.asset) {
+          if (!rawDate || !rawTime || !asset) {
             errors.push(`Linha ${index + 2}: dados obrigatórios faltando`);
             return;
           }
 
-          // Validar formato de data (aceita YYYY-MM-DD ou DD/MM/YYYY)
-          let dateStr = operation.operation_date.toString();
-          if (dateStr.includes("/")) {
-            const [day, month, year] = dateStr.split("/");
-            dateStr = `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`;
-          }
-          operation.operation_date = dateStr;
-
-          // Validar formato de horário
-          let timeStr = operation.operation_time.toString();
-          if (!timeStr.includes(":")) {
-            errors.push(`Linha ${index + 2}: formato de horário inválido`);
+          if (isNaN(contracts) || isNaN(result)) {
+            errors.push(`Linha ${index + 2}: valores numéricos inválidos`);
             return;
           }
 
+          // Processar data e hora
+          const operation: ImportedOperation = {
+            operation_date: parseExcelDate(rawDate),
+            operation_time: parseExcelTime(rawTime),
+            asset: asset.toString().trim(),
+            contracts,
+            costs,
+            result,
+            notes: notes.toString()
+          };
+
           operations.push(operation);
         } catch (error) {
-          errors.push(`Linha ${index + 2}: erro ao processar dados`);
+          errors.push(`Linha ${index + 2}: erro ao processar dados - ${error}`);
         }
       });
 
