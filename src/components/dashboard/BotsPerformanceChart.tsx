@@ -34,7 +34,8 @@ const BotsPerformanceChart = () => {
         operationsData.forEach((op) => {
           const date = new Date(op.operation_date).toLocaleDateString("pt-BR", {
             day: "2-digit",
-            month: "short"
+            month: "2-digit",
+            year: "2-digit"
           });
           
           if (!dataByDate[date]) {

@@ -139,7 +139,7 @@ const OperationDetail = () => {
                 <div>
                   <p className="text-sm text-muted-foreground">Data</p>
                   <p className="font-semibold">
-                    {format(new Date(operation.operation_date), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
+                    {format(new Date(operation.operation_date), "dd/MM/yyyy", { locale: ptBR })}
                   </p>
                 </div>
               </div>
