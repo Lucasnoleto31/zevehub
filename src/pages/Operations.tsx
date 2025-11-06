@@ -9,6 +9,7 @@ import { toast } from "sonner";
 import OperationForm from "@/components/operations/OperationForm";
 import OperationsTable from "@/components/operations/OperationsTable";
 import OperationsDashboard from "@/components/operations/OperationsDashboard";
+import OperationImport from "@/components/operations/OperationImport";
 
 const Operations = () => {
   const navigate = useNavigate();
@@ -78,7 +79,7 @@ const Operations = () => {
 
           <TabsContent value="register" className="space-y-6">
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              <div className="lg:col-span-1">
+              <div className="lg:col-span-1 space-y-6">
                 <Card>
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2">
@@ -93,6 +94,8 @@ const Operations = () => {
                     <OperationForm userId={user?.id} />
                   </CardContent>
                 </Card>
+
+                <OperationImport userId={user?.id} />
               </div>
 
               <div className="lg:col-span-2">
