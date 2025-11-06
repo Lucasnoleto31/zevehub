@@ -24,6 +24,7 @@ import StatsCard from "@/components/dashboard/StatsCard";
 import BotsList from "@/components/dashboard/BotsList";
 import MessagesList from "@/components/dashboard/MessagesList";
 import BotsPerformanceChart from "@/components/dashboard/BotsPerformanceChart";
+import RecentOperations from "@/components/dashboard/RecentOperations";
 import { useRealtimeNotifications } from "@/hooks/useRealtimeNotifications";
 
 const Dashboard = () => {
@@ -230,6 +231,11 @@ const Dashboard = () => {
         {/* Performance Chart */}
         <div className="mb-8 animate-slide-up" style={{ animationDelay: "0.1s" }}>
           <BotsPerformanceChart />
+        </div>
+
+        {/* Operations Section */}
+        <div className="mb-8 animate-slide-up" style={{ animationDelay: "0.15s" }}>
+          <RecentOperations />
         </div>
 
         {/* Content Grid */}
