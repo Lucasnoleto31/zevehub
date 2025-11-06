@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, AreaChart, Area } from "recharts";
-import { TrendingUp, TrendingDown, Target, Award, Calendar, Clock, Filter } from "lucide-react";
+import { TrendingUp, TrendingDown, Target, Award, Calendar, Clock, Filter, Bot } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
@@ -18,6 +18,7 @@ interface Operation {
   operation_date: string;
   operation_time: string;
   result: number;
+  strategy: string | null;
 }
 
 interface Stats {
@@ -45,6 +46,8 @@ const OperationsDashboard = ({ userId }: OperationsDashboardProps) => {
   const [operations, setOperations] = useState<Operation[]>([]);
   const [filteredOperations, setFilteredOperations] = useState<Operation[]>([]);
   const [dateFilter, setDateFilter] = useState<string>("all");
+  const [strategyFilter, setStrategyFilter] = useState<string>("all");
+  const [availableStrategies, setAvailableStrategies] = useState<string[]>([]);
   const [customStartDate, setCustomStartDate] = useState<Date>();
   const [customEndDate, setCustomEndDate] = useState<Date>();
   const [stats, setStats] = useState<Stats>({
@@ -73,6 +76,7 @@ const OperationsDashboard = ({ userId }: OperationsDashboardProps) => {
   const [hourStats, setHourStats] = useState<any[]>([]);
   const [hourDistribution, setHourDistribution] = useState<any[]>([]);
   const [yearlyStats, setYearlyStats] = useState<any[]>([]);
+  const [strategyStats, setStrategyStats] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -81,7 +85,7 @@ const OperationsDashboard = ({ userId }: OperationsDashboardProps) => {
 
   useEffect(() => {
     applyDateFilter();
-  }, [operations, dateFilter, customStartDate, customEndDate]);
+  }, [operations, dateFilter, strategyFilter, customStartDate, customEndDate]);
 
   useEffect(() => {
     if (filteredOperations.length > 0) {
@@ -101,7 +105,7 @@ const OperationsDashboard = ({ userId }: OperationsDashboardProps) => {
       while (hasMore) {
         const { data, error } = await supabase
           .from("trading_operations")
-          .select("operation_date, operation_time, result")
+          .select("operation_date, operation_time, result, strategy")
           .eq("user_id", userId)
           .order("operation_date", { ascending: true })
           .range(from, from + batchSize - 1);
@@ -119,6 +123,14 @@ const OperationsDashboard = ({ userId }: OperationsDashboardProps) => {
 
       console.log(`Carregadas ${allOperations.length} operações`);
       setOperations(allOperations);
+      
+      // Extract unique strategies
+      const strategies = Array.from(new Set(
+        allOperations
+          .map(op => op.strategy)
+          .filter(s => s && s.trim() !== '')
+      )) as string[];
+      setAvailableStrategies(strategies.sort());
     } catch (error) {
       console.error("Erro ao carregar operações:", error);
     } finally {
@@ -135,30 +147,31 @@ const OperationsDashboard = ({ userId }: OperationsDashboardProps) => {
     const now = new Date();
     let filtered = [...operations];
 
+    // Apply date filter
     switch (dateFilter) {
       case "7days":
         const last7Days = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-        filtered = operations.filter(op => new Date(op.operation_date) >= last7Days);
+        filtered = filtered.filter(op => new Date(op.operation_date) >= last7Days);
         break;
       
       case "30days":
         const last30Days = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-        filtered = operations.filter(op => new Date(op.operation_date) >= last30Days);
+        filtered = filtered.filter(op => new Date(op.operation_date) >= last30Days);
         break;
       
       case "currentMonth":
         const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-        filtered = operations.filter(op => new Date(op.operation_date) >= startOfMonth);
+        filtered = filtered.filter(op => new Date(op.operation_date) >= startOfMonth);
         break;
       
       case "currentYear":
         const startOfYear = new Date(now.getFullYear(), 0, 1);
-        filtered = operations.filter(op => new Date(op.operation_date) >= startOfYear);
+        filtered = filtered.filter(op => new Date(op.operation_date) >= startOfYear);
         break;
       
       case "custom":
         if (customStartDate || customEndDate) {
-          filtered = operations.filter(op => {
+          filtered = filtered.filter(op => {
             const opDate = new Date(op.operation_date);
             if (customStartDate && customEndDate) {
               return opDate >= customStartDate && opDate <= customEndDate;
@@ -173,7 +186,12 @@ const OperationsDashboard = ({ userId }: OperationsDashboardProps) => {
         break;
       
       default: // "all"
-        filtered = operations;
+        break;
+    }
+
+    // Apply strategy filter
+    if (strategyFilter !== "all") {
+      filtered = filtered.filter(op => op.strategy === strategyFilter);
     }
 
     setFilteredOperations(filtered);
@@ -434,6 +452,82 @@ const OperationsDashboard = ({ userId }: OperationsDashboardProps) => {
           result,
         }))
     );
+
+    // Análise comparativa por estratégia
+    const strategyData = ops.reduce((acc, op) => {
+      const strategy = op.strategy || 'Sem Estratégia';
+      if (!acc[strategy]) {
+        acc[strategy] = {
+          operations: [],
+          totalOps: 0,
+          positive: 0,
+          negative: 0,
+          totalResult: 0,
+          wins: 0,
+          losses: 0,
+          totalWinAmount: 0,
+          totalLossAmount: 0,
+          results: [],
+        };
+      }
+      
+      acc[strategy].operations.push(op);
+      acc[strategy].totalOps++;
+      
+      const result = parseFloat(op.result.toString());
+      acc[strategy].totalResult += result;
+      acc[strategy].results.push(result);
+      
+      if (result > 0) {
+        acc[strategy].positive++;
+        acc[strategy].wins++;
+        acc[strategy].totalWinAmount += result;
+      } else if (result < 0) {
+        acc[strategy].negative++;
+        acc[strategy].losses++;
+        acc[strategy].totalLossAmount += Math.abs(result);
+      }
+      
+      return acc;
+    }, {} as Record<string, any>);
+
+    const strategyStatsArray = Object.entries(strategyData).map(([strategy, data]) => {
+      const winRate = (data.wins / data.totalOps) * 100;
+      const averageWin = data.wins > 0 ? data.totalWinAmount / data.wins : 0;
+      const averageLoss = data.losses > 0 ? data.totalLossAmount / data.losses : 0;
+      const payoff = averageLoss > 0 ? averageWin / averageLoss : 0;
+      
+      // Calcular drawdown (maior perda acumulada)
+      let accumulated = 0;
+      let peak = 0;
+      let maxDrawdown = 0;
+      
+      data.results.forEach((result: number) => {
+        accumulated += result;
+        if (accumulated > peak) {
+          peak = accumulated;
+        }
+        const drawdown = peak - accumulated;
+        if (drawdown > maxDrawdown) {
+          maxDrawdown = drawdown;
+        }
+      });
+      
+      return {
+        strategy,
+        totalOps: data.totalOps,
+        totalResult: data.totalResult,
+        winRate,
+        payoff,
+        averageWin,
+        averageLoss,
+        maxDrawdown,
+        positive: data.positive,
+        negative: data.negative,
+      };
+    }).sort((a, b) => b.totalResult - a.totalResult);
+
+    setStrategyStats(strategyStatsArray);
   };
 
   if (loading) {
@@ -580,6 +674,39 @@ const OperationsDashboard = ({ userId }: OperationsDashboardProps) => {
           </p>
         </CardContent>
       </Card>
+
+      {/* Strategy Filter */}
+      {availableStrategies.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Bot className="w-5 h-5" />
+              Filtro de Estratégia
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex flex-wrap gap-2">
+              <Button
+                variant={strategyFilter === "all" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setStrategyFilter("all")}
+              >
+                Todas
+              </Button>
+              {availableStrategies.map((strategy) => (
+                <Button
+                  key={strategy}
+                  variant={strategyFilter === strategy ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setStrategyFilter(strategy)}
+                >
+                  {strategy}
+                </Button>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
@@ -906,6 +1033,86 @@ const OperationsDashboard = ({ userId }: OperationsDashboardProps) => {
           </CardContent>
         </Card>
       </div>
+
+      {/* Análise Comparativa por Estratégia */}
+      {strategyStats.length > 1 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Bot className="w-5 h-5" />
+              Análise Comparativa por Estratégia
+            </CardTitle>
+            <CardDescription>
+              Métricas detalhadas de performance para cada estratégia (Win Rate, Payoff, Drawdown)
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {strategyStats.map((stat) => (
+                <div key={stat.strategy} className="border rounded-lg p-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="font-semibold text-lg">{stat.strategy}</h3>
+                    <div className={`text-xl font-bold ${stat.totalResult >= 0 ? 'text-success' : 'text-destructive'}`}>
+                      {stat.totalResult >= 0 ? '+' : ''}
+                      {stat.totalResult.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
+                    </div>
+                  </div>
+                  
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div>
+                      <p className="text-sm text-muted-foreground">Operações</p>
+                      <p className="text-lg font-semibold">{stat.totalOps}</p>
+                    </div>
+                    
+                    <div>
+                      <p className="text-sm text-muted-foreground">Win Rate</p>
+                      <p className="text-lg font-semibold text-primary">{stat.winRate.toFixed(1)}%</p>
+                      <p className="text-xs text-muted-foreground">
+                        {stat.positive}W / {stat.negative}L
+                      </p>
+                    </div>
+                    
+                    <div>
+                      <p className="text-sm text-muted-foreground">Payoff</p>
+                      <p className={`text-lg font-semibold ${stat.payoff >= 1 ? 'text-success' : 'text-destructive'}`}>
+                        {stat.payoff.toFixed(2)}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        Ganho/Perda médio
+                      </p>
+                    </div>
+                    
+                    <div>
+                      <p className="text-sm text-muted-foreground">Max Drawdown</p>
+                      <p className="text-lg font-semibold text-destructive">
+                        {stat.maxDrawdown.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        Maior queda
+                      </p>
+                    </div>
+                  </div>
+                  
+                  <div className="grid grid-cols-2 gap-4 mt-3 pt-3 border-t">
+                    <div>
+                      <p className="text-xs text-muted-foreground">Ganho Médio</p>
+                      <p className="text-sm font-medium text-success">
+                        +{stat.averageWin.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground">Perda Média</p>
+                      <p className="text-sm font-medium text-destructive">
+                        -{stat.averageLoss.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 };

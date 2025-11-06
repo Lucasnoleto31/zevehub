@@ -1,9 +1,10 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { Loader2, Save } from "lucide-react";
 import { z } from "zod";
@@ -21,8 +22,14 @@ interface OperationFormProps {
   userId: string;
 }
 
+interface Strategy {
+  id: string;
+  name: string;
+}
+
 const OperationForm = ({ userId }: OperationFormProps) => {
   const [loading, setLoading] = useState(false);
+  const [strategies, setStrategies] = useState<Strategy[]>([]);
   const [formData, setFormData] = useState({
     operation_date: new Date().toISOString().split("T")[0],
     operation_time: new Date().toTimeString().slice(0, 5),
@@ -33,6 +40,26 @@ const OperationForm = ({ userId }: OperationFormProps) => {
     notes: "",
     strategy: "",
   });
+
+  useEffect(() => {
+    loadStrategies();
+  }, [userId]);
+
+  const loadStrategies = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('strategies')
+        .select('id, name')
+        .eq('user_id', userId)
+        .eq('is_active', true)
+        .order('name');
+
+      if (error) throw error;
+      setStrategies(data || []);
+    } catch (error) {
+      console.error('Erro ao carregar estratégias:', error);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -125,13 +152,19 @@ const OperationForm = ({ userId }: OperationFormProps) => {
 
       <div className="space-y-2">
         <Label htmlFor="strategy">Estratégia/Robô</Label>
-        <Input
-          id="strategy"
-          type="text"
-          placeholder="Ex: Bot WIN v1.0, Estratégia XYZ"
-          value={formData.strategy}
-          onChange={(e) => setFormData({ ...formData, strategy: e.target.value })}
-        />
+        <Select value={formData.strategy} onValueChange={(value) => setFormData({ ...formData, strategy: value })}>
+          <SelectTrigger id="strategy">
+            <SelectValue placeholder="Selecione uma estratégia" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="">Nenhuma</SelectItem>
+            {strategies.map((strategy) => (
+              <SelectItem key={strategy.id} value={strategy.name}>
+                {strategy.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
       <div className="space-y-2">
