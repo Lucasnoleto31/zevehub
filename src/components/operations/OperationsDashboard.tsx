@@ -351,11 +351,14 @@ const OperationsDashboard = ({ userId }: OperationsDashboardProps) => {
     const weekdayMapping = [null, "Seg", "Ter", "Qua", "Qui", "Sex", null]; // 0=Dom, 1=Seg...6=Sáb
     
     const weekdayData = ops.reduce((acc, op) => {
-      const day = new Date(op.operation_date).getDay();
+      // Parse date mais confiável para evitar problemas de timezone
+      const [year, month, day] = op.operation_date.split('-').map(Number);
+      const date = new Date(year, month - 1, day);
+      const dayOfWeek = date.getDay();
       // Ignorar domingo (0) e sábado (6)
-      if (day === 0 || day === 6) return acc;
+      if (dayOfWeek === 0 || dayOfWeek === 6) return acc;
       
-      const dayName = weekdayMapping[day]!;
+      const dayName = weekdayMapping[dayOfWeek]!;
       if (!acc[dayName]) acc[dayName] = 0;
       acc[dayName] += parseFloat(op.result.toString());
       return acc;
