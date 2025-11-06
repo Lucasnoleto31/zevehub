@@ -22,6 +22,7 @@ interface ImportedOperation {
   result: number;
   notes?: string;
   strategy?: string;
+  _index?: number; // Para rastrear a linha original
 }
 
 const OperationImport = ({ userId }: OperationImportProps) => {
@@ -32,6 +33,7 @@ const OperationImport = ({ userId }: OperationImportProps) => {
   const [pendingOperations, setPendingOperations] = useState<ImportedOperation[]>([]);
   const [errorList, setErrorList] = useState<string[]>([]);
   const [showErrors, setShowErrors] = useState(false);
+  const [editingCell, setEditingCell] = useState<{ index: number; field: string } | null>(null);
 
   const downloadTemplate = () => {
     const template = [
@@ -57,10 +59,21 @@ const OperationImport = ({ userId }: OperationImportProps) => {
   const parseExcelDate = (excelDate: any): string => {
     // Se já é uma string de data, processar
     if (typeof excelDate === 'string') {
+      const trimmed = excelDate.trim();
+      
+      // Formato YYYY-MM-DD (ISO)
+      if (/^\d{4}-\d{1,2}-\d{1,2}$/.test(trimmed)) {
+        const parts = trimmed.split('-');
+        const year = parts[0];
+        const month = parts[1].padStart(2, '0');
+        const day = parts[2].padStart(2, '0');
+        return `${year}-${month}-${day}`;
+      }
+      
       // Formato longo em inglês: "Wednesday, January 03, 2018"
-      if (excelDate.includes(',')) {
+      if (trimmed.includes(',')) {
         try {
-          const date = new Date(excelDate);
+          const date = new Date(trimmed);
           if (!isNaN(date.getTime())) {
             const year = date.getFullYear();
             const month = String(date.getMonth() + 1).padStart(2, '0');
@@ -73,14 +86,29 @@ const OperationImport = ({ userId }: OperationImportProps) => {
       }
       
       // Formato DD/MM/YYYY ou DD-MM-YYYY (brasileiro)
-      if (excelDate.includes('/') || excelDate.includes('-')) {
-        const separator = excelDate.includes('/') ? '/' : '-';
-        const parts = excelDate.split(separator);
+      if (trimmed.includes('/') || trimmed.includes('-')) {
+        const separator = trimmed.includes('/') ? '/' : '-';
+        const parts = trimmed.split(separator);
         
-        // Se primeiro valor é maior que 12, é DD/MM/YYYY
-        if (parseInt(parts[0]) > 12) {
-          const day = parts[0].padStart(2, '0');
-          const month = parts[1].padStart(2, '0');
+        if (parts.length === 3) {
+          // Se primeiro valor é maior que 12 ou igual a 0, é DD/MM/YYYY
+          const firstNum = parseInt(parts[0]);
+          if (firstNum > 12 || firstNum === 0 || parts[0].length > 2) {
+            const day = parts[0].padStart(2, '0');
+            const month = parts[1].padStart(2, '0');
+            let year = parts[2];
+            
+            if (year.length === 2) {
+              const numYear = parseInt(year);
+              year = numYear >= 50 ? `19${year}` : `20${year}`;
+            }
+            
+            return `${year}-${month}-${day}`;
+          }
+          
+          // Caso contrário, assume M/D/YYYY (americano)
+          const month = parts[0].padStart(2, '0');
+          const day = parts[1].padStart(2, '0');
           let year = parts[2];
           
           if (year.length === 2) {
@@ -90,21 +118,9 @@ const OperationImport = ({ userId }: OperationImportProps) => {
           
           return `${year}-${month}-${day}`;
         }
-        
-        // Caso contrário, assume M/D/YYYY (americano)
-        const month = parts[0].padStart(2, '0');
-        const day = parts[1].padStart(2, '0');
-        let year = parts[2];
-        
-        if (year.length === 2) {
-          const numYear = parseInt(year);
-          year = numYear >= 50 ? `19${year}` : `20${year}`;
-        }
-        
-        return `${year}-${month}-${day}`;
       }
       
-      return excelDate;
+      return trimmed;
     }
     
     // Se é número serial do Excel (dias desde 1900-01-01)
@@ -218,7 +234,8 @@ const OperationImport = ({ userId }: OperationImportProps) => {
             costs,
             result,
             notes: notes.toString(),
-            strategy: strategy.toString()
+            strategy: strategy.toString(),
+            _index: index
           };
 
           operations.push(operation);
@@ -316,7 +333,35 @@ const OperationImport = ({ userId }: OperationImportProps) => {
     setPendingOperations([]);
     setErrorList([]);
     setShowErrors(false);
+    setEditingCell(null);
     setProgress(0);
+  };
+
+  const handleCellEdit = (index: number, field: keyof ImportedOperation, value: any) => {
+    const updatedPreview = [...previewData];
+    const updatedPending = [...pendingOperations];
+    
+    // Encontrar índice no array completo
+    const fullIndex = updatedPending.findIndex(op => op._index === previewData[index]._index);
+    
+    if (field === 'contracts' || field === 'costs' || field === 'result') {
+      const numValue = Number(value);
+      if (!isNaN(numValue)) {
+        updatedPreview[index] = { ...updatedPreview[index], [field]: numValue };
+        if (fullIndex !== -1) {
+          updatedPending[fullIndex] = { ...updatedPending[fullIndex], [field]: numValue };
+        }
+      }
+    } else {
+      updatedPreview[index] = { ...updatedPreview[index], [field]: value };
+      if (fullIndex !== -1) {
+        updatedPending[fullIndex] = { ...updatedPending[fullIndex], [field]: value };
+      }
+    }
+    
+    setPreviewData(updatedPreview);
+    setPendingOperations(updatedPending);
+    setEditingCell(null);
   };
 
   return (
@@ -398,13 +443,113 @@ const OperationImport = ({ userId }: OperationImportProps) => {
                     const formattedDate = `${day}/${month}/${year}`;
                     
                     return (
-                      <TableRow key={index}>
-                        <TableCell className="text-xs">{formattedDate}</TableCell>
-                        <TableCell className="text-xs">{op.operation_time}</TableCell>
-                        <TableCell className="text-xs">{op.asset}</TableCell>
-                        <TableCell className="text-xs text-right">{op.contracts}</TableCell>
-                        <TableCell className={`text-xs text-right font-medium ${op.result >= 0 ? 'text-success' : 'text-destructive'}`}>
-                          {op.result >= 0 ? '+' : ''}{op.result.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                      <TableRow key={index} className="hover:bg-accent/50">
+                        <TableCell 
+                          className="text-xs cursor-pointer hover:bg-accent p-1"
+                          onClick={() => setEditingCell({ index, field: 'operation_date' })}
+                        >
+                          {editingCell?.index === index && editingCell?.field === 'operation_date' ? (
+                            <input
+                              type="date"
+                              defaultValue={op.operation_date}
+                              onBlur={(e) => handleCellEdit(index, 'operation_date', e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                  handleCellEdit(index, 'operation_date', e.currentTarget.value);
+                                }
+                              }}
+                              autoFocus
+                              className="w-full px-2 py-1 text-xs border rounded"
+                            />
+                          ) : (
+                            formattedDate
+                          )}
+                        </TableCell>
+                        <TableCell 
+                          className="text-xs cursor-pointer hover:bg-accent p-1"
+                          onClick={() => setEditingCell({ index, field: 'operation_time' })}
+                        >
+                          {editingCell?.index === index && editingCell?.field === 'operation_time' ? (
+                            <input
+                              type="time"
+                              step="1"
+                              defaultValue={op.operation_time}
+                              onBlur={(e) => handleCellEdit(index, 'operation_time', e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                  handleCellEdit(index, 'operation_time', e.currentTarget.value);
+                                }
+                              }}
+                              autoFocus
+                              className="w-full px-2 py-1 text-xs border rounded"
+                            />
+                          ) : (
+                            op.operation_time
+                          )}
+                        </TableCell>
+                        <TableCell 
+                          className="text-xs cursor-pointer hover:bg-accent p-1"
+                          onClick={() => setEditingCell({ index, field: 'asset' })}
+                        >
+                          {editingCell?.index === index && editingCell?.field === 'asset' ? (
+                            <input
+                              type="text"
+                              defaultValue={op.asset}
+                              onBlur={(e) => handleCellEdit(index, 'asset', e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                  handleCellEdit(index, 'asset', e.currentTarget.value);
+                                }
+                              }}
+                              autoFocus
+                              className="w-full px-2 py-1 text-xs border rounded"
+                            />
+                          ) : (
+                            op.asset
+                          )}
+                        </TableCell>
+                        <TableCell 
+                          className="text-xs text-right cursor-pointer hover:bg-accent p-1"
+                          onClick={() => setEditingCell({ index, field: 'contracts' })}
+                        >
+                          {editingCell?.index === index && editingCell?.field === 'contracts' ? (
+                            <input
+                              type="number"
+                              defaultValue={op.contracts}
+                              onBlur={(e) => handleCellEdit(index, 'contracts', e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                  handleCellEdit(index, 'contracts', e.currentTarget.value);
+                                }
+                              }}
+                              autoFocus
+                              className="w-full px-2 py-1 text-xs border rounded text-right"
+                            />
+                          ) : (
+                            op.contracts
+                          )}
+                        </TableCell>
+                        <TableCell 
+                          className={`text-xs text-right font-medium cursor-pointer hover:bg-accent p-1 ${op.result >= 0 ? 'text-success' : 'text-destructive'}`}
+                          onClick={() => setEditingCell({ index, field: 'result' })}
+                        >
+                          {editingCell?.index === index && editingCell?.field === 'result' ? (
+                            <input
+                              type="number"
+                              step="0.01"
+                              defaultValue={op.result}
+                              onBlur={(e) => handleCellEdit(index, 'result', e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                  handleCellEdit(index, 'result', e.currentTarget.value);
+                                }
+                              }}
+                              autoFocus
+                              className="w-full px-2 py-1 text-xs border rounded text-right"
+                            />
+                          ) : (
+                            `${op.result >= 0 ? '+' : ''}${op.result.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}`
+                          )}
                         </TableCell>
                       </TableRow>
                     );
@@ -476,17 +621,18 @@ const OperationImport = ({ userId }: OperationImportProps) => {
         )}
 
         <div className="text-xs text-muted-foreground space-y-1">
-          <p className="font-semibold">Formato esperado:</p>
+          <p className="font-semibold">Formatos aceitos:</p>
           <ul className="list-disc list-inside space-y-1 ml-2">
-            <li>data_operacao: DD/MM/YYYY ou formato longo do Excel</li>
-            <li>horario: HH:MM:SS ou HH:MM AM/PM</li>
-            <li>ativo: texto (ex: WIN, WDO)</li>
-            <li>contratos: número</li>
-            <li>custos: número (opcional)</li>
-            <li>resultado: número</li>
-            <li>observacoes: texto (opcional)</li>
-            <li>estrategia: texto (opcional - nome do robô/estratégia)</li>
+            <li><strong>data_operacao:</strong> DD/MM/YYYY, DD-MM-YYYY, YYYY-MM-DD, ou formato longo do Excel (ex: 15/01/2024, 2024-01-15)</li>
+            <li><strong>horario:</strong> HH:MM, HH:MM:SS, HH:MM AM/PM (ex: 10:30, 14:30:00, 2:30 PM)</li>
+            <li><strong>ativo:</strong> texto (ex: WIN, WDO, PETR4)</li>
+            <li><strong>contratos:</strong> número inteiro (ex: 1, 2, 5)</li>
+            <li><strong>custos:</strong> número decimal (opcional, ex: 2.50)</li>
+            <li><strong>resultado:</strong> número decimal (ex: 150.00, -75.50)</li>
+            <li><strong>observacoes:</strong> texto livre (opcional)</li>
+            <li><strong>estrategia:</strong> nome do robô/estratégia (opcional, ex: Bot WIN v1.0)</li>
           </ul>
+          <p className="text-xs text-primary mt-2">💡 Dica: Clique em qualquer célula do preview para editar antes de importar</p>
         </div>
       </CardContent>
     </Card>

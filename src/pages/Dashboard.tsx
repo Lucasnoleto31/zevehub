@@ -31,6 +31,7 @@ const Dashboard = () => {
   const [profile, setProfile] = useState<any>(null);
   const [roles, setRoles] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
+  const [botsStats, setBotsStats] = useState({ total: 0, active: 0, avgPerformance: 0 });
   const { unreadCount } = useRealtimeNotifications(user?.id);
 
   useEffect(() => {
@@ -65,6 +66,24 @@ const Dashboard = () => {
 
       if (rolesData) {
         setRoles(rolesData.map((r) => r.role));
+      }
+
+      // Buscar estatísticas dos robôs
+      const { data: botsData } = await supabase
+        .from("client_bots")
+        .select("status, performance_percentage");
+
+      if (botsData) {
+        const total = botsData.length;
+        const active = botsData.filter(b => b.status === 'active').length;
+        const validPerformances = botsData
+          .filter(b => b.performance_percentage !== null)
+          .map(b => b.performance_percentage);
+        const avgPerformance = validPerformances.length > 0
+          ? validPerformances.reduce((a, b) => a + b, 0) / validPerformances.length
+          : 0;
+        
+        setBotsStats({ total, active, avgPerformance });
       }
     } catch (error) {
       console.error("Erro ao carregar dados:", error);
@@ -176,18 +195,18 @@ const Dashboard = () => {
         {/* Stats Grid */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8 animate-slide-up">
           <StatsCard
-            title="Robôs Ativos"
-            value="0"
+            title="Robôs Cadastrados"
+            value={botsStats.total.toString()}
             icon={<Bot className="w-5 h-5" />}
-            description="Nenhum robô configurado ainda"
-            trend="+0%"
+            description={botsStats.active > 0 ? `${botsStats.active} ativo(s)` : "Nenhum robô ativo"}
+            trend={botsStats.active > 0 ? `${botsStats.active}/${botsStats.total}` : "--"}
           />
           <StatsCard
             title="Performance Média"
-            value="0%"
+            value={botsStats.avgPerformance > 0 ? `${botsStats.avgPerformance.toFixed(1)}%` : "0%"}
             icon={<Activity className="w-5 h-5" />}
-            description="Aguardando dados"
-            trend="--"
+            description={botsStats.avgPerformance > 0 ? "Dos robôs cadastrados" : "Aguardando dados"}
+            trend={botsStats.avgPerformance > 0 ? `+${botsStats.avgPerformance.toFixed(1)}%` : "--"}
           />
           <StatsCard
             title="Mensagens"
@@ -212,10 +231,10 @@ const Dashboard = () => {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Bot className="w-5 h-5" />
-                  Meus Robôs
+                  Robôs Cadastrados
                 </CardTitle>
                 <CardDescription>
-                  Acompanhe a performance dos seus robôs em tempo real
+                  Visualize todos os robôs cadastrados pela assessoria
                 </CardDescription>
               </CardHeader>
               <CardContent>

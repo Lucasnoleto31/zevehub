@@ -25,11 +25,11 @@ const BotsList = ({ userId }: BotsListProps) => {
 
   const loadBots = async () => {
     try {
+      // Carregar TODOS os robôs (não apenas do usuário)
       const { data, error } = await supabase
         .from("client_bots")
         .select("*")
-        .eq("user_id", userId)
-        .order("created_at", { ascending: false });
+        .order("performance_percentage", { ascending: false, nullsFirst: false });
 
       if (error) throw error;
       setBots(data || []);
@@ -48,9 +48,9 @@ const BotsList = ({ userId }: BotsListProps) => {
     return (
       <div className="text-center py-8">
         <Bot className="w-12 h-12 mx-auto mb-4 text-muted-foreground opacity-50" />
-        <p className="text-muted-foreground">Nenhum robô configurado ainda</p>
+        <p className="text-muted-foreground">Nenhum robô cadastrado ainda</p>
         <p className="text-sm text-muted-foreground mt-1">
-          Entre em contato com a assessoria para configurar seus robôs
+          Aguardando cadastro de robôs pela assessoria
         </p>
       </div>
     );
