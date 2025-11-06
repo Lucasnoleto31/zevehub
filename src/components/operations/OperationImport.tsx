@@ -53,14 +53,45 @@ const OperationImport = ({ userId }: OperationImportProps) => {
   const parseExcelDate = (excelDate: any): string => {
     // Se já é uma string de data, processar
     if (typeof excelDate === 'string') {
-      if (excelDate.includes('/')) {
-        const parts = excelDate.split('/');
-        // Formato M/D/YY ou M/D/YYYY
+      // Formato longo em inglês: "Wednesday, January 03, 2018"
+      if (excelDate.includes(',')) {
+        try {
+          const date = new Date(excelDate);
+          if (!isNaN(date.getTime())) {
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+          }
+        } catch (e) {
+          console.error('Erro ao processar data:', excelDate);
+        }
+      }
+      
+      // Formato DD/MM/YYYY ou DD-MM-YYYY (brasileiro)
+      if (excelDate.includes('/') || excelDate.includes('-')) {
+        const separator = excelDate.includes('/') ? '/' : '-';
+        const parts = excelDate.split(separator);
+        
+        // Se primeiro valor é maior que 12, é DD/MM/YYYY
+        if (parseInt(parts[0]) > 12) {
+          const day = parts[0].padStart(2, '0');
+          const month = parts[1].padStart(2, '0');
+          let year = parts[2];
+          
+          if (year.length === 2) {
+            const numYear = parseInt(year);
+            year = numYear >= 50 ? `19${year}` : `20${year}`;
+          }
+          
+          return `${year}-${month}-${day}`;
+        }
+        
+        // Caso contrário, assume M/D/YYYY (americano)
         const month = parts[0].padStart(2, '0');
         const day = parts[1].padStart(2, '0');
         let year = parts[2];
         
-        // Converter YY para YYYY
         if (year.length === 2) {
           const numYear = parseInt(year);
           year = numYear >= 50 ? `19${year}` : `20${year}`;
@@ -68,6 +99,7 @@ const OperationImport = ({ userId }: OperationImportProps) => {
         
         return `${year}-${month}-${day}`;
       }
+      
       return excelDate;
     }
     
@@ -411,8 +443,8 @@ const OperationImport = ({ userId }: OperationImportProps) => {
         <div className="text-xs text-muted-foreground space-y-1">
           <p className="font-semibold">Formato esperado:</p>
           <ul className="list-disc list-inside space-y-1 ml-2">
-            <li>data_operacao: YYYY-MM-DD ou DD/MM/YYYY</li>
-            <li>horario: HH:MM:SS</li>
+            <li>data_operacao: DD/MM/YYYY ou formato longo do Excel</li>
+            <li>horario: HH:MM:SS ou HH:MM AM/PM</li>
             <li>ativo: texto (ex: WIN, WDO)</li>
             <li>contratos: número</li>
             <li>custos: número (opcional)</li>
