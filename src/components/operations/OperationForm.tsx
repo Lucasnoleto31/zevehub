@@ -152,12 +152,12 @@ const OperationForm = ({ userId }: OperationFormProps) => {
 
       <div className="space-y-2">
         <Label htmlFor="strategy">Estratégia/Robô</Label>
-        <Select value={formData.strategy} onValueChange={(value) => setFormData({ ...formData, strategy: value })}>
+        <Select value={formData.strategy} onValueChange={(value) => setFormData({ ...formData, strategy: value === "none" ? "" : value })}>
           <SelectTrigger id="strategy">
             <SelectValue placeholder="Selecione uma estratégia" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">Nenhuma</SelectItem>
+            <SelectItem value="none">Nenhuma</SelectItem>
             {strategies.map((strategy) => (
               <SelectItem key={strategy.id} value={strategy.name}>
                 {strategy.name}
