@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts";
+import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, AreaChart, Area } from "recharts";
 import { TrendingUp, TrendingDown, Target, Award, Calendar, Clock } from "lucide-react";
 
 interface OperationsDashboardProps {
@@ -31,6 +31,8 @@ interface Stats {
   negativeMonths: number;
   monthlyConsistency: number;
   averageMonthlyResult: number;
+  volatility: number;
+  standardDeviation: number;
 }
 
 const OperationsDashboard = ({ userId }: OperationsDashboardProps) => {
@@ -52,6 +54,8 @@ const OperationsDashboard = ({ userId }: OperationsDashboardProps) => {
     negativeMonths: 0,
     monthlyConsistency: 0,
     averageMonthlyResult: 0,
+    volatility: 0,
+    standardDeviation: 0,
   });
   const [performanceCurve, setPerformanceCurve] = useState<any[]>([]);
   const [weekdayStats, setWeekdayStats] = useState<any[]>([]);
@@ -121,6 +125,8 @@ const OperationsDashboard = ({ userId }: OperationsDashboardProps) => {
         negativeMonths: 0,
         monthlyConsistency: 0,
         averageMonthlyResult: 0,
+        volatility: 0,
+        standardDeviation: 0,
       });
       return;
     }
@@ -172,6 +178,18 @@ const OperationsDashboard = ({ userId }: OperationsDashboardProps) => {
       ? monthlyResultsArray.reduce((sum, r) => sum + r, 0) / monthlyResultsArray.length
       : 0;
 
+    // Calcular volatilidade (desvio padrão) usando dailyResultsArray já existente
+    const avgDailyResult = dailyResultsArray.length > 0
+      ? dailyResultsArray.reduce((sum, r) => sum + r, 0) / dailyResultsArray.length
+      : 0;
+    
+    const variance = dailyResultsArray.length > 0
+      ? dailyResultsArray.reduce((sum, r) => sum + Math.pow(r - avgDailyResult, 2), 0) / dailyResultsArray.length
+      : 0;
+    
+    const standardDeviation = Math.sqrt(variance);
+    const volatility = avgDailyResult !== 0 ? (standardDeviation / Math.abs(avgDailyResult)) * 100 : 0;
+
     // Calcular sequências
     let currentStreak = 0;
     let maxPositiveStreak = 0;
@@ -208,6 +226,8 @@ const OperationsDashboard = ({ userId }: OperationsDashboardProps) => {
       negativeMonths,
       monthlyConsistency,
       averageMonthlyResult,
+      volatility,
+      standardDeviation,
     });
   };
 
@@ -421,16 +441,67 @@ const OperationsDashboard = ({ userId }: OperationsDashboardProps) => {
         </CardHeader>
         <CardContent>
           <ResponsiveContainer width="100%" height={300}>
-            <LineChart data={performanceCurve}>
+            <AreaChart data={performanceCurve}>
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="date" />
               <YAxis />
               <Tooltip formatter={(value: number) => value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })} />
-              <Line type="monotone" dataKey="value" stroke="hsl(var(--primary))" strokeWidth={2} />
-            </LineChart>
+              <defs>
+                <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="hsl(var(--success))" stopOpacity={0.3}/>
+                  <stop offset="95%" stopColor="hsl(var(--success))" stopOpacity={0}/>
+                </linearGradient>
+              </defs>
+              <Area type="monotone" dataKey="value" stroke="hsl(var(--success))" strokeWidth={2} fillOpacity={1} fill="url(#colorValue)" />
+            </AreaChart>
           </ResponsiveContainer>
         </CardContent>
       </Card>
+
+      {/* Volatility Analysis */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Desvio Padrão</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {stats.standardDeviation.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">
+              Variação média dos resultados diários
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Volatilidade</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {stats.volatility.toFixed(1)}%
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">
+              {stats.volatility < 30 ? "Baixa" : stats.volatility < 60 ? "Moderada" : "Alta"} - Risco relativo
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Consistência</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-success">
+              {stats.monthlyConsistency.toFixed(1)}%
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">
+              Meses positivos vs total
+            </p>
+          </CardContent>
+        </Card>
+      </div>
 
       {/* Performance Mensal */}
       <Card>
