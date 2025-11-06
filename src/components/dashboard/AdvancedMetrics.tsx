@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { TrendingUp, TrendingDown, Activity, Target, Info } from "lucide-react";
+import { TrendingUp, TrendingDown, Activity, Target, Info, Clock } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
@@ -16,6 +16,7 @@ interface Metrics {
   profitFactor: number;
   expectancy: number;
   recoveryFactor: number;
+  drawdownDuration: number;
 }
 
 interface AdvancedMetricsProps {
@@ -67,6 +68,7 @@ const AdvancedMetrics = ({ operations }: AdvancedMetricsProps) => {
         profitFactor: 0,
         expectancy: 0,
         recoveryFactor: 0,
+        drawdownDuration: 0,
       };
     }
     // Agrupar por dia
@@ -124,12 +126,49 @@ const AdvancedMetrics = ({ operations }: AdvancedMetricsProps) => {
     const totalProfit = ops.reduce((sum, op) => sum + op.result, 0);
     const recoveryFactor = maxDrawdown !== 0 ? totalProfit / maxDrawdown : 0;
 
+    // Calcular Drawdown Duration (duração média de drawdowns em dias)
+    const sortedDates = Array.from(dailyResults.keys()).sort();
+    let drawdownDurations: number[] = [];
+    let currentDrawdownStart: string | null = null;
+    let peakValue = 0;
+    let accumulatedValue = 0;
+
+    sortedDates.forEach((date, index) => {
+      accumulatedValue += dailyResults.get(date) || 0;
+      
+      if (accumulatedValue > peakValue) {
+        // Novo pico - se estava em drawdown, terminou
+        if (currentDrawdownStart !== null) {
+          const startIndex = sortedDates.indexOf(currentDrawdownStart);
+          const duration = index - startIndex;
+          drawdownDurations.push(duration);
+          currentDrawdownStart = null;
+        }
+        peakValue = accumulatedValue;
+      } else if (accumulatedValue < peakValue && currentDrawdownStart === null) {
+        // Começou um drawdown
+        currentDrawdownStart = date;
+      }
+    });
+
+    // Se terminou em drawdown, conta até o último dia
+    if (currentDrawdownStart !== null) {
+      const startIndex = sortedDates.indexOf(currentDrawdownStart);
+      const duration = sortedDates.length - 1 - startIndex;
+      drawdownDurations.push(duration);
+    }
+
+    const avgDrawdownDuration = drawdownDurations.length > 0
+      ? drawdownDurations.reduce((a, b) => a + b, 0) / drawdownDurations.length
+      : 0;
+
     return {
       sharpeRatio: isFinite(sharpeRatio) ? sharpeRatio : 0,
       maxDrawdown,
       profitFactor: isFinite(profitFactor) ? profitFactor : 0,
       expectancy,
       recoveryFactor: isFinite(recoveryFactor) ? recoveryFactor : 0,
+      drawdownDuration: avgDrawdownDuration,
     };
   };
 
@@ -258,6 +297,23 @@ const AdvancedMetrics = ({ operations }: AdvancedMetricsProps) => {
         }
         tooltip="Relação entre lucro total e drawdown máximo. Valores acima de 2 são bons."
         isPositive={metrics.recoveryFactor > 1}
+      />
+
+      <MetricCard
+        title="Drawdown Duration"
+        value={`${metrics.drawdownDuration.toFixed(1)} dias`}
+        icon={Clock}
+        description={
+          metrics.drawdownDuration < 5
+            ? "Recuperação muito rápida"
+            : metrics.drawdownDuration < 10
+            ? "Recuperação rápida"
+            : metrics.drawdownDuration < 20
+            ? "Recuperação moderada"
+            : "Recuperação lenta"
+        }
+        tooltip="Tempo médio em dias para recuperar de um período de drawdown. Valores menores indicam recuperação mais rápida."
+        isPositive={metrics.drawdownDuration < 10}
       />
     </div>
   );
