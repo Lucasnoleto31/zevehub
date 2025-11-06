@@ -26,6 +26,9 @@ import MessagesList from "@/components/dashboard/MessagesList";
 import BotsPerformanceChart from "@/components/dashboard/BotsPerformanceChart";
 import RecentOperations from "@/components/dashboard/RecentOperations";
 import NotificationsPopover from "@/components/dashboard/NotificationsPopover";
+import PerformanceHeatmap from "@/components/dashboard/PerformanceHeatmap";
+import TopPerformanceDays from "@/components/dashboard/TopPerformanceDays";
+import AdvancedMetrics from "@/components/dashboard/AdvancedMetrics";
 import { useRealtimeNotifications } from "@/hooks/useRealtimeNotifications";
 
 const Dashboard = () => {
@@ -233,8 +236,23 @@ const Dashboard = () => {
           <BotsPerformanceChart />
         </div>
 
+        {/* Advanced Metrics */}
+        <div className="mb-8 animate-slide-up" style={{ animationDelay: "0.12s" }}>
+          <AdvancedMetrics />
+        </div>
+
+        {/* Performance Analysis Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+          <div className="animate-slide-up" style={{ animationDelay: "0.14s" }}>
+            <PerformanceHeatmap />
+          </div>
+          <div className="animate-slide-up" style={{ animationDelay: "0.16s" }}>
+            <TopPerformanceDays />
+          </div>
+        </div>
+
         {/* Operations Section */}
-        <div className="mb-8 animate-slide-up" style={{ animationDelay: "0.15s" }}>
+        <div className="mb-8 animate-slide-up" style={{ animationDelay: "0.18s" }}>
           <RecentOperations userId={user?.id || ""} />
         </div>
 
