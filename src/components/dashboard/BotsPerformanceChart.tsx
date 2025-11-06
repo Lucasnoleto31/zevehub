@@ -1,17 +1,17 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Area, AreaChart } from "recharts";
 import { TrendingUp } from "lucide-react";
 
-interface BotPerformanceData {
-  bot_name: string;
-  performance_percentage: number;
-  updated_at: string;
+interface PerformancePoint {
+  date: string;
+  accumulated: number;
+  operations: number;
 }
 
 const BotsPerformanceChart = () => {
-  const [performanceData, setPerformanceData] = useState<any[]>([]);
+  const [performanceData, setPerformanceData] = useState<PerformancePoint[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -20,28 +20,42 @@ const BotsPerformanceChart = () => {
 
   const loadPerformanceData = async () => {
     try {
-      const { data: botsData, error } = await supabase
-        .from("client_bots")
-        .select("bot_name, performance_percentage, updated_at, created_at")
-        .order("updated_at", { ascending: true });
+      const { data: operationsData, error } = await supabase
+        .from("trading_operations")
+        .select("operation_date, result")
+        .order("operation_date", { ascending: true });
 
       if (error) throw error;
 
-      if (botsData && botsData.length > 0) {
-        // Agrupar dados por data para criar pontos no gráfico
-        const dataByDate: { [key: string]: any } = {};
+      if (operationsData && operationsData.length > 0) {
+        // Agrupar operações por data e calcular resultado acumulado
+        const dataByDate: { [key: string]: { result: number; count: number } } = {};
 
-        botsData.forEach((bot) => {
-          const date = new Date(bot.updated_at).toLocaleDateString("pt-BR");
+        operationsData.forEach((op) => {
+          const date = new Date(op.operation_date).toLocaleDateString("pt-BR", {
+            day: "2-digit",
+            month: "short"
+          });
           
           if (!dataByDate[date]) {
-            dataByDate[date] = { date };
+            dataByDate[date] = { result: 0, count: 0 };
           }
           
-          dataByDate[date][bot.bot_name] = bot.performance_percentage || 0;
+          dataByDate[date].result += op.result || 0;
+          dataByDate[date].count += 1;
         });
 
-        const chartData = Object.values(dataByDate);
+        // Criar array com valores acumulados
+        let accumulated = 0;
+        const chartData: PerformancePoint[] = Object.entries(dataByDate).map(([date, data]) => {
+          accumulated += data.result;
+          return {
+            date,
+            accumulated: Number(accumulated.toFixed(2)),
+            operations: data.count,
+          };
+        });
+
         setPerformanceData(chartData);
       }
     } catch (error) {
@@ -87,74 +101,72 @@ const BotsPerformanceChart = () => {
     );
   }
 
-  // Extrair nomes únicos dos robôs para criar as linhas do gráfico
-  const botNames = Array.from(
-    new Set(
-      performanceData.flatMap((data) =>
-        Object.keys(data).filter((key) => key !== "date")
-      )
-    )
-  );
-
-  const colors = [
-    "hsl(var(--primary))",
-    "hsl(var(--accent))",
-    "#8b5cf6",
-    "#10b981",
-    "#f59e0b",
-    "#ef4444",
-  ];
+  const CustomTooltip = ({ active, payload }: any) => {
+    if (active && payload && payload.length) {
+      return (
+        <div className="bg-card border border-border rounded-lg p-3 shadow-lg">
+          <p className="text-sm font-semibold text-foreground mb-1">{payload[0].payload.date}</p>
+          <p className="text-sm text-muted-foreground">
+            Operações: <span className="font-medium text-foreground">{payload[0].payload.operations}</span>
+          </p>
+          <p className={`text-sm font-bold ${payload[0].value >= 0 ? 'text-success' : 'text-destructive'}`}>
+            Resultado: R$ {payload[0].value >= 0 ? '+' : ''}{payload[0].value.toFixed(2)}
+          </p>
+        </div>
+      );
+    }
+    return null;
+  };
 
   return (
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <TrendingUp className="w-5 h-5" />
-          Evolução de Performance dos Robôs
+          Evolução de Performance
         </CardTitle>
         <CardDescription>
-          Acompanhe a performance de cada robô ao longo do tempo
+          Resultado acumulado de todas as operações ao longo do tempo
         </CardDescription>
       </CardHeader>
       <CardContent>
         <ResponsiveContainer width="100%" height={300}>
-          <LineChart data={performanceData}>
+          <AreaChart data={performanceData}>
+            <defs>
+              <linearGradient id="colorAccumulated" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.3}/>
+                <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0}/>
+              </linearGradient>
+            </defs>
             <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
             <XAxis 
               dataKey="date" 
               className="text-xs"
-              tick={{ fill: "hsl(var(--muted-foreground))" }}
+              tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }}
+              angle={-45}
+              textAnchor="end"
+              height={80}
             />
             <YAxis 
               className="text-xs"
-              tick={{ fill: "hsl(var(--muted-foreground))" }}
+              tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }}
               label={{ 
-                value: "Performance (%)", 
+                value: "Resultado Acumulado (R$)", 
                 angle: -90, 
                 position: "insideLeft",
-                style: { fill: "hsl(var(--muted-foreground))" }
+                style: { fill: "hsl(var(--muted-foreground))", fontSize: 12 }
               }}
             />
-            <Tooltip 
-              contentStyle={{
-                backgroundColor: "hsl(var(--card))",
-                border: "1px solid hsl(var(--border))",
-                borderRadius: "var(--radius)",
-              }}
+            <Tooltip content={<CustomTooltip />} />
+            <Area
+              type="monotone"
+              dataKey="accumulated"
+              stroke="hsl(var(--primary))"
+              strokeWidth={3}
+              fill="url(#colorAccumulated)"
+              name="Resultado Acumulado"
             />
-            <Legend />
-            {botNames.map((botName, index) => (
-              <Line
-                key={botName}
-                type="monotone"
-                dataKey={botName}
-                stroke={colors[index % colors.length]}
-                strokeWidth={2}
-                dot={{ r: 4 }}
-                activeDot={{ r: 6 }}
-              />
-            ))}
-          </LineChart>
+          </AreaChart>
         </ResponsiveContainer>
       </CardContent>
     </Card>
