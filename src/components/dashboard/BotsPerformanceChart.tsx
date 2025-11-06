@@ -118,6 +118,8 @@ const BotsPerformanceChart = () => {
     return null;
   };
 
+  const isPositive = performanceData.length > 0 && performanceData[performanceData.length - 1].accumulated >= 0;
+
   return (
     <Card>
       <CardHeader>
@@ -133,12 +135,15 @@ const BotsPerformanceChart = () => {
         <ResponsiveContainer width="100%" height={300}>
           <AreaChart data={performanceData}>
             <defs>
-              <linearGradient id="colorAccumulated" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.3}/>
-                <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0}/>
+              <linearGradient id="colorPositive" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%" stopColor="hsl(var(--success))" stopOpacity={0.3}/>
+                <stop offset="95%" stopColor="hsl(var(--success))" stopOpacity={0}/>
+              </linearGradient>
+              <linearGradient id="colorNegative" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%" stopColor="hsl(var(--destructive))" stopOpacity={0.3}/>
+                <stop offset="95%" stopColor="hsl(var(--destructive))" stopOpacity={0}/>
               </linearGradient>
             </defs>
-            <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
             <XAxis 
               dataKey="date" 
               className="text-xs"
@@ -161,9 +166,9 @@ const BotsPerformanceChart = () => {
             <Area
               type="monotone"
               dataKey="accumulated"
-              stroke="hsl(var(--primary))"
+              stroke={isPositive ? "hsl(var(--success))" : "hsl(var(--destructive))"}
               strokeWidth={3}
-              fill="url(#colorAccumulated)"
+              fill={isPositive ? "url(#colorPositive)" : "url(#colorNegative)"}
               name="Resultado Acumulado"
             />
           </AreaChart>
