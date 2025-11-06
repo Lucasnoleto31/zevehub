@@ -55,7 +55,7 @@ const OperationsDashboard = ({ userId }: OperationsDashboardProps) => {
   const [availableStrategies, setAvailableStrategies] = useState<string[]>([]);
   const [customStartDate, setCustomStartDate] = useState<Date>();
   const [customEndDate, setCustomEndDate] = useState<Date>();
-  const [hourFilter, setHourFilter] = useState<string>("all");
+  const [hourFilter, setHourFilter] = useState<string[]>([]);
   const [weekdayFilter, setWeekdayFilter] = useState<string[]>([]);
   const [monthFilter, setMonthFilter] = useState<string[]>([]);
   const [stats, setStats] = useState<Stats>({
@@ -202,10 +202,10 @@ const OperationsDashboard = ({ userId }: OperationsDashboardProps) => {
     }
 
     // Apply hour filter
-    if (hourFilter !== "all") {
+    if (hourFilter.length > 0) {
       filtered = filtered.filter(op => {
         const hour = parseInt(op.operation_time.split(":")[0]);
-        return hour === parseInt(hourFilter);
+        return hourFilter.includes(hour.toString());
       });
     }
 
@@ -759,25 +759,47 @@ const OperationsDashboard = ({ userId }: OperationsDashboardProps) => {
             <div className="space-y-2">
               <label className="text-sm font-medium flex items-center gap-2">
                 <Clock className="w-4 h-4" />
-                Horário
+                Horários
               </label>
-              <Select value={hourFilter} onValueChange={setHourFilter}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Todos os horários" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos os horários</SelectItem>
-                  <SelectItem value="9">09:00 - 10:00</SelectItem>
-                  <SelectItem value="10">10:00 - 11:00</SelectItem>
-                  <SelectItem value="11">11:00 - 12:00</SelectItem>
-                  <SelectItem value="12">12:00 - 13:00</SelectItem>
-                  <SelectItem value="13">13:00 - 14:00</SelectItem>
-                  <SelectItem value="14">14:00 - 15:00</SelectItem>
-                  <SelectItem value="15">15:00 - 16:00</SelectItem>
-                  <SelectItem value="16">16:00 - 17:00</SelectItem>
-                  <SelectItem value="17">17:00 - 18:00</SelectItem>
-                </SelectContent>
-              </Select>
+              <div className="flex flex-wrap gap-1">
+                {[
+                  { label: "09h", value: "9" },
+                  { label: "10h", value: "10" },
+                  { label: "11h", value: "11" },
+                  { label: "12h", value: "12" },
+                  { label: "13h", value: "13" },
+                  { label: "14h", value: "14" },
+                  { label: "15h", value: "15" },
+                  { label: "16h", value: "16" },
+                  { label: "17h", value: "17" },
+                ].map((hour) => (
+                  <Button
+                    key={hour.value}
+                    variant={hourFilter.includes(hour.value) ? "default" : "outline"}
+                    size="sm"
+                    className="h-8 px-2"
+                    onClick={() => {
+                      if (hourFilter.includes(hour.value)) {
+                        setHourFilter(hourFilter.filter(h => h !== hour.value));
+                      } else {
+                        setHourFilter([...hourFilter, hour.value]);
+                      }
+                    }}
+                  >
+                    {hour.label}
+                  </Button>
+                ))}
+                {hourFilter.length > 0 && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-8 px-2"
+                    onClick={() => setHourFilter([])}
+                  >
+                    Limpar
+                  </Button>
+                )}
+              </div>
             </div>
 
             {/* Weekday Filter */}
