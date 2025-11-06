@@ -1,10 +1,13 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Upload, FileSpreadsheet, CheckCircle, XCircle, Download } from "lucide-react";
+import { Upload, FileSpreadsheet, CheckCircle, XCircle, Download, Eye } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import * as XLSX from "xlsx";
+import { Progress } from "@/components/ui/progress";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface OperationImportProps {
   userId: string;
@@ -22,7 +25,10 @@ interface ImportedOperation {
 
 const OperationImport = ({ userId }: OperationImportProps) => {
   const [importing, setImporting] = useState(false);
+  const [progress, setProgress] = useState(0);
   const [results, setResults] = useState<{ success: number; errors: number } | null>(null);
+  const [previewData, setPreviewData] = useState<ImportedOperation[]>([]);
+  const [pendingOperations, setPendingOperations] = useState<ImportedOperation[]>([]);
 
   const downloadTemplate = () => {
     const template = [
@@ -128,8 +134,10 @@ const OperationImport = ({ userId }: OperationImportProps) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
-    setImporting(true);
     setResults(null);
+    setPreviewData([]);
+    setPendingOperations([]);
+    setProgress(0);
 
     try {
       const data = await file.arrayBuffer();
@@ -180,7 +188,7 @@ const OperationImport = ({ userId }: OperationImportProps) => {
       });
 
       if (errors.length > 0) {
-        toast.error(`${errors.length} linha(s) com erro. Verifique o formato.`);
+        toast.warning(`${errors.length} linha(s) com erro serão ignoradas.`);
         console.error("Erros:", errors);
       }
 
@@ -190,30 +198,83 @@ const OperationImport = ({ userId }: OperationImportProps) => {
         return;
       }
 
-      // Inserir operações no banco
-      const operationsWithUserId = operations.map(op => ({
-        ...op,
-        user_id: userId
-      }));
-
-      const { error } = await supabase
-        .from("trading_operations")
-        .insert(operationsWithUserId);
-
-      if (error) throw error;
-
-      setResults({ success: operations.length, errors: errors.length });
-      toast.success(`${operations.length} operação(ões) importada(s) com sucesso!`);
+      // Mostrar preview das primeiras 10 linhas
+      setPreviewData(operations.slice(0, 10));
+      setPendingOperations(operations);
+      toast.success(`${operations.length} operação(ões) encontrada(s). Revise o preview antes de importar.`);
       
       // Limpar input
       event.target.value = "";
     } catch (error: any) {
+      console.error("Erro ao processar arquivo:", error);
+      toast.error(error.message || "Erro ao processar arquivo");
+    }
+  };
+
+  const confirmImport = async () => {
+    if (pendingOperations.length === 0) return;
+
+    setImporting(true);
+    setProgress(0);
+
+    try {
+      const batchSize = 100;
+      const batches = Math.ceil(pendingOperations.length / batchSize);
+      let successCount = 0;
+      let errorCount = 0;
+
+      for (let i = 0; i < batches; i++) {
+        const start = i * batchSize;
+        const end = Math.min(start + batchSize, pendingOperations.length);
+        const batch = pendingOperations.slice(start, end);
+
+        const operationsWithUserId = batch.map(op => ({
+          ...op,
+          user_id: userId
+        }));
+
+        const { error } = await supabase
+          .from("trading_operations")
+          .insert(operationsWithUserId);
+
+        if (error) {
+          console.error(`Erro no lote ${i + 1}:`, error);
+          errorCount += batch.length;
+        } else {
+          successCount += batch.length;
+        }
+
+        // Atualizar progresso
+        const currentProgress = Math.round(((i + 1) / batches) * 100);
+        setProgress(currentProgress);
+      }
+
+      setResults({ success: successCount, errors: errorCount });
+      
+      if (successCount > 0) {
+        toast.success(`${successCount} operação(ões) importada(s) com sucesso!`);
+      }
+      if (errorCount > 0) {
+        toast.error(`${errorCount} operação(ões) falharam na importação`);
+      }
+
+      // Limpar preview
+      setPreviewData([]);
+      setPendingOperations([]);
+    } catch (error: any) {
       console.error("Erro ao importar:", error);
       toast.error(error.message || "Erro ao importar planilha");
-      setResults({ success: 0, errors: 1 });
+      setResults({ success: 0, errors: pendingOperations.length });
     } finally {
       setImporting(false);
+      setProgress(0);
     }
+  };
+
+  const cancelImport = () => {
+    setPreviewData([]);
+    setPendingOperations([]);
+    setProgress(0);
   };
 
   return (
@@ -243,13 +304,13 @@ const OperationImport = ({ userId }: OperationImportProps) => {
               type="file"
               accept=".xlsx,.xls,.csv"
               onChange={handleFileUpload}
-              disabled={importing}
+              disabled={importing || previewData.length > 0}
               className="absolute inset-0 w-full h-full opacity-0 cursor-pointer disabled:cursor-not-allowed"
               id="file-upload"
             />
             <Button
               variant="default"
-              disabled={importing}
+              disabled={importing || previewData.length > 0}
               className="w-full gap-2"
               asChild
             >
@@ -260,6 +321,72 @@ const OperationImport = ({ userId }: OperationImportProps) => {
             </Button>
           </div>
         </div>
+
+        {importing && (
+          <div className="space-y-2">
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-muted-foreground">Importando...</span>
+              <span className="font-medium">{progress}%</span>
+            </div>
+            <Progress value={progress} className="h-2" />
+          </div>
+        )}
+
+        {previewData.length > 0 && (
+          <div className="space-y-3">
+            <div className="flex items-center gap-2 text-sm font-medium">
+              <Eye className="w-4 h-4" />
+              Preview - Primeiras 10 operações de {pendingOperations.length}
+            </div>
+            
+            <ScrollArea className="h-[300px] rounded-md border">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Data</TableHead>
+                    <TableHead>Horário</TableHead>
+                    <TableHead>Ativo</TableHead>
+                    <TableHead className="text-right">Contratos</TableHead>
+                    <TableHead className="text-right">Resultado</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {previewData.map((op, index) => (
+                    <TableRow key={index}>
+                      <TableCell className="text-xs">{op.operation_date}</TableCell>
+                      <TableCell className="text-xs">{op.operation_time}</TableCell>
+                      <TableCell className="text-xs">{op.asset}</TableCell>
+                      <TableCell className="text-xs text-right">{op.contracts}</TableCell>
+                      <TableCell className={`text-xs text-right font-medium ${op.result >= 0 ? 'text-success' : 'text-destructive'}`}>
+                        {op.result >= 0 ? '+' : ''}{op.result.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </ScrollArea>
+
+            <div className="flex gap-2">
+              <Button
+                onClick={confirmImport}
+                disabled={importing}
+                className="flex-1 gap-2"
+              >
+                <CheckCircle className="w-4 h-4" />
+                Confirmar Importação ({pendingOperations.length} ops)
+              </Button>
+              <Button
+                onClick={cancelImport}
+                disabled={importing}
+                variant="outline"
+                className="gap-2"
+              >
+                <XCircle className="w-4 h-4" />
+                Cancelar
+              </Button>
+            </div>
+          </div>
+        )}
 
         {results && (
           <div className="space-y-2 p-4 rounded-lg bg-muted/50">
