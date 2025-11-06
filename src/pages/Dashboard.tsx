@@ -25,6 +25,7 @@ import BotsList from "@/components/dashboard/BotsList";
 import MessagesList from "@/components/dashboard/MessagesList";
 import BotsPerformanceChart from "@/components/dashboard/BotsPerformanceChart";
 import RecentOperations from "@/components/dashboard/RecentOperations";
+import NotificationsPopover from "@/components/dashboard/NotificationsPopover";
 import { useRealtimeNotifications } from "@/hooks/useRealtimeNotifications";
 
 const Dashboard = () => {
@@ -127,6 +128,7 @@ const Dashboard = () => {
             </div>
             
             <div className="flex items-center gap-4">
+              <NotificationsPopover userId={user?.id || ""} />
               <Button
                 variant="outline"
                 size="sm"
