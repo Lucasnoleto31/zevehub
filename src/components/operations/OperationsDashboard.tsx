@@ -51,7 +51,7 @@ const OperationsDashboard = ({ userId }: OperationsDashboardProps) => {
   const [operations, setOperations] = useState<Operation[]>([]);
   const [filteredOperations, setFilteredOperations] = useState<Operation[]>([]);
   const [dateFilter, setDateFilter] = useState<string>("all");
-  const [strategyFilter, setStrategyFilter] = useState<string>("all");
+  const [strategyFilter, setStrategyFilter] = useState<string[]>([]);
   const [availableStrategies, setAvailableStrategies] = useState<string[]>([]);
   const [customStartDate, setCustomStartDate] = useState<Date>();
   const [customEndDate, setCustomEndDate] = useState<Date>();
@@ -159,6 +159,15 @@ const OperationsDashboard = ({ userId }: OperationsDashboardProps) => {
 
     // Apply date filter
     switch (dateFilter) {
+      case "today":
+        filtered = filtered.filter(op => {
+          const [year, month, day] = op.operation_date.split('-').map(Number);
+          const opDate = new Date(year, month - 1, day);
+          opDate.setHours(0, 0, 0, 0);
+          return opDate.getTime() === now.getTime();
+        });
+        break;
+      
       case "7days":
         const last7Days = new Date(now);
         last7Days.setDate(last7Days.getDate() - 7);
@@ -235,8 +244,10 @@ const OperationsDashboard = ({ userId }: OperationsDashboardProps) => {
     }
 
     // Apply strategy filter
-    if (strategyFilter !== "all") {
-      filtered = filtered.filter(op => op.strategy === strategyFilter);
+    if (strategyFilter.length > 0) {
+      filtered = filtered.filter(op => 
+        op.strategy && strategyFilter.includes(op.strategy)
+      );
     }
 
     // Apply hour filter
@@ -645,6 +656,13 @@ const OperationsDashboard = ({ userId }: OperationsDashboardProps) => {
               Todos
             </Button>
             <Button
+              variant={dateFilter === "today" ? "default" : "outline"}
+              size="sm"
+              onClick={() => setDateFilter("today")}
+            >
+              Hoje
+            </Button>
+            <Button
               variant={dateFilter === "7days" ? "default" : "outline"}
               size="sm"
               onClick={() => setDateFilter("7days")}
@@ -760,23 +778,50 @@ const OperationsDashboard = ({ userId }: OperationsDashboardProps) => {
           <CardContent>
             <div className="flex flex-wrap gap-2">
               <Button
-                variant={strategyFilter === "all" ? "default" : "outline"}
+                variant={strategyFilter.length === 0 ? "default" : "outline"}
                 size="sm"
-                onClick={() => setStrategyFilter("all")}
+                onClick={() => setStrategyFilter([])}
               >
                 Todas
+              </Button>
+              <Button
+                variant={strategyFilter.length === availableStrategies.length && strategyFilter.length > 0 ? "default" : "outline"}
+                size="sm"
+                onClick={() => setStrategyFilter([...availableStrategies])}
+              >
+                Selecionar Todas
               </Button>
               {availableStrategies.map((strategy) => (
                 <Button
                   key={strategy}
-                  variant={strategyFilter === strategy ? "default" : "outline"}
+                  variant={strategyFilter.includes(strategy) ? "default" : "outline"}
                   size="sm"
-                  onClick={() => setStrategyFilter(strategy)}
+                  onClick={() => {
+                    if (strategyFilter.includes(strategy)) {
+                      setStrategyFilter(strategyFilter.filter(s => s !== strategy));
+                    } else {
+                      setStrategyFilter([...strategyFilter, strategy]);
+                    }
+                  }}
                 >
                   {strategy}
                 </Button>
               ))}
+              {strategyFilter.length > 0 && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setStrategyFilter([])}
+                >
+                  Limpar
+                </Button>
+              )}
             </div>
+            {strategyFilter.length > 0 && (
+              <p className="text-sm text-muted-foreground mt-3">
+                {strategyFilter.length} estratégia(s) selecionada(s)
+              </p>
+            )}
           </CardContent>
         </Card>
       )}
