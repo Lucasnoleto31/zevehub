@@ -152,40 +152,78 @@ const OperationsDashboard = ({ userId }: OperationsDashboardProps) => {
     }
 
     const now = new Date();
+    // Resetar horas para comparar apenas datas
+    now.setHours(0, 0, 0, 0);
+    
     let filtered = [...operations];
 
     // Apply date filter
     switch (dateFilter) {
       case "7days":
-        const last7Days = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-        filtered = filtered.filter(op => new Date(op.operation_date) >= last7Days);
+        const last7Days = new Date(now);
+        last7Days.setDate(last7Days.getDate() - 7);
+        filtered = filtered.filter(op => {
+          const [year, month, day] = op.operation_date.split('-').map(Number);
+          const opDate = new Date(year, month - 1, day);
+          opDate.setHours(0, 0, 0, 0);
+          return opDate >= last7Days;
+        });
         break;
       
       case "30days":
-        const last30Days = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-        filtered = filtered.filter(op => new Date(op.operation_date) >= last30Days);
+        const last30Days = new Date(now);
+        last30Days.setDate(last30Days.getDate() - 30);
+        filtered = filtered.filter(op => {
+          const [year, month, day] = op.operation_date.split('-').map(Number);
+          const opDate = new Date(year, month - 1, day);
+          opDate.setHours(0, 0, 0, 0);
+          return opDate >= last30Days;
+        });
         break;
       
       case "currentMonth":
         const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-        filtered = filtered.filter(op => new Date(op.operation_date) >= startOfMonth);
+        startOfMonth.setHours(0, 0, 0, 0);
+        filtered = filtered.filter(op => {
+          const [year, month, day] = op.operation_date.split('-').map(Number);
+          const opDate = new Date(year, month - 1, day);
+          opDate.setHours(0, 0, 0, 0);
+          return opDate >= startOfMonth;
+        });
         break;
       
       case "currentYear":
         const startOfYear = new Date(now.getFullYear(), 0, 1);
-        filtered = filtered.filter(op => new Date(op.operation_date) >= startOfYear);
+        startOfYear.setHours(0, 0, 0, 0);
+        filtered = filtered.filter(op => {
+          const [year, month, day] = op.operation_date.split('-').map(Number);
+          const opDate = new Date(year, month - 1, day);
+          opDate.setHours(0, 0, 0, 0);
+          return opDate >= startOfYear;
+        });
         break;
       
       case "custom":
         if (customStartDate || customEndDate) {
           filtered = filtered.filter(op => {
-            const opDate = new Date(op.operation_date);
+            const [year, month, day] = op.operation_date.split('-').map(Number);
+            const opDate = new Date(year, month - 1, day);
+            opDate.setHours(0, 0, 0, 0);
+            
             if (customStartDate && customEndDate) {
-              return opDate >= customStartDate && opDate <= customEndDate;
+              const start = new Date(customStartDate);
+              const end = new Date(customEndDate);
+              start.setHours(0, 0, 0, 0);
+              end.setHours(0, 0, 0, 0);
+              return opDate >= start && opDate <= end;
             } else if (customStartDate) {
-              return opDate >= customStartDate;
+              const start = new Date(customStartDate);
+              start.setHours(0, 0, 0, 0);
+              return opDate >= start;
             } else if (customEndDate) {
-              return opDate <= customEndDate;
+              const end = new Date(customEndDate);
+              end.setHours(0, 0, 0, 0);
+              return opDate <= end;
             }
             return true;
           });
