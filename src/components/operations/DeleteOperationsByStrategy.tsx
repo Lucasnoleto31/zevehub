@@ -29,6 +29,7 @@ const DeleteOperationsByStrategy = ({ userId }: DeleteOperationsByStrategyProps)
         .from("trading_operations")
         .select("strategy")
         .not("strategy", "is", null)
+        .limit(10000)
         .order("strategy");
 
       if (error) throw error;
