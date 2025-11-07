@@ -95,9 +95,7 @@ const TopPerformanceDays = ({ operations }: TopPerformanceDaysProps) => {
             <div className="flex items-center gap-2">
               <Calendar className="w-4 h-4 text-muted-foreground" />
               <p className="font-semibold">
-                {format(new Date(day.date), "dd 'de' MMMM 'de' yyyy", {
-                  locale: ptBR,
-                })}
+                {(() => { const [y,m,d] = day.date.split('-'); return `${d} de ${['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'][parseInt(m,10)-1]} de ${y}`; })()}
               </p>
             </div>
             <p className="text-xs text-muted-foreground">

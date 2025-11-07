@@ -139,7 +139,7 @@ const OperationDetail = () => {
                 <div>
                   <p className="text-sm text-muted-foreground">Data</p>
                   <p className="font-semibold">
-                    {format(new Date(operation.operation_date), "dd/MM/yyyy", { locale: ptBR })}
+                    {(() => { const [y,m,d] = operation.operation_date.split('-'); return `${d}/${m}/${y}`; })()}
                   </p>
                 </div>
               </div>
@@ -268,7 +268,7 @@ const OperationDetail = () => {
                         )}
                       </div>
                       <p className="text-sm text-muted-foreground">
-                        {format(new Date(op.operation_date), "dd/MM/yyyy", { locale: ptBR })} às {op.operation_time}
+                        {(() => { const [y,m,d] = op.operation_date.split('-'); return `${d}/${m}/${y}`; })()} às {op.operation_time}
                       </p>
                     </div>
                     <p className={`text-lg font-bold ${op.result >= 0 ? 'text-success' : 'text-destructive'}`}>

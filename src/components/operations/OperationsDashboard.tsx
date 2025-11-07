@@ -260,8 +260,7 @@ const OperationsDashboard = ({ userId }: OperationsDashboardProps) => {
     // Apply month filter
     if (monthFilter.length > 0) {
       filtered = filtered.filter(op => {
-        const date = new Date(op.operation_date);
-        const month = date.getMonth();
+        const month = parseInt(op.operation_date.split('-')[1], 10) - 1;
         return monthFilter.includes(month.toString());
       });
     }
@@ -323,8 +322,8 @@ const OperationsDashboard = ({ userId }: OperationsDashboardProps) => {
 
     // Calcular consistência mensal
     const monthlyResults = ops.reduce((acc, op) => {
-      const date = new Date(op.operation_date);
-      const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+      const [yearStr, monthStr] = op.operation_date.split('-');
+      const monthKey = `${yearStr}-${monthStr}`;
       
       if (!acc[monthKey]) acc[monthKey] = 0;
       acc[monthKey] += parseFloat(op.result.toString());
@@ -409,7 +408,7 @@ const OperationsDashboard = ({ userId }: OperationsDashboardProps) => {
       .map(([date, result]) => {
         accumulated += result;
         return {
-          date: new Date(date).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" }),
+          date: (() => { const [yy, mm, dd] = date.split('-'); return `${dd}/${mm}`; })(),
           value: accumulated,
         };
       });
@@ -443,8 +442,7 @@ const OperationsDashboard = ({ userId }: OperationsDashboardProps) => {
     // Performance mensal (agrupado por mês, somando todos os anos)
     const monthNames = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
     const monthData = ops.reduce((acc, op) => {
-      const date = new Date(op.operation_date);
-      const monthIndex = date.getMonth();
+      const monthIndex = parseInt(op.operation_date.split('-')[1], 10) - 1;
       const monthName = monthNames[monthIndex];
       
       if (!acc[monthName]) acc[monthName] = 0;
@@ -513,7 +511,7 @@ const OperationsDashboard = ({ userId }: OperationsDashboardProps) => {
 
     // Comparativo ano a ano
     const yearlyData = ops.reduce((acc, op) => {
-      const year = new Date(op.operation_date).getFullYear().toString();
+      const year = op.operation_date.split('-')[0];
       if (!acc[year]) acc[year] = 0;
       acc[year] += parseFloat(op.result.toString());
       return acc;

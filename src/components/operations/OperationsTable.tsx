@@ -5,7 +5,6 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Trash2 } from "lucide-react";
 import { toast } from "sonner";
-import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
 interface Operation {
@@ -119,7 +118,7 @@ const OperationsTable = ({ userId, isAdmin = false }: OperationsTableProps) => {
           {operations.map((operation) => (
             <TableRow key={operation.id}>
               <TableCell>
-                {format(new Date(operation.operation_date), "dd/MM/yyyy", { locale: ptBR })}
+                {(() => { const [y,m,d] = operation.operation_date.split('-'); return `${d}/${m}/${y}`; })()}
               </TableCell>
               <TableCell>{operation.operation_time}</TableCell>
               <TableCell>

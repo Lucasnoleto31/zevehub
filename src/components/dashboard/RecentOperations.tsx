@@ -3,7 +3,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { TrendingUp, TrendingDown, Calendar, Clock, Target } from "lucide-react";
-import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
 interface Operation {
@@ -182,7 +181,7 @@ const RecentOperations = ({ userId }: RecentOperationsProps) => {
                     <div className="flex items-center gap-3 text-xs text-muted-foreground">
                       <span className="flex items-center gap-1">
                         <Calendar className="w-3 h-3" />
-                        {format(new Date(operation.operation_date), "dd/MM/yyyy", { locale: ptBR })}
+                        {(() => { const [y,m,d] = operation.operation_date.split('-'); return `${d}/${m}/${y}`; })()}
                       </span>
                       <span className="flex items-center gap-1">
                         <Clock className="w-3 h-3" />
