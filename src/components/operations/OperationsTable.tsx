@@ -13,6 +13,7 @@ interface Operation {
   operation_date: string;
   operation_time: string;
   asset: string;
+  strategy: string | null;
   contracts: number;
   costs: number;
   result: number;
@@ -108,6 +109,7 @@ const OperationsTable = ({ userId, isAdmin = false }: OperationsTableProps) => {
             <TableHead>Data</TableHead>
             <TableHead>Horário</TableHead>
             <TableHead>Ativo</TableHead>
+            <TableHead>Estratégia</TableHead>
             <TableHead className="text-right">Contratos</TableHead>
             <TableHead className="text-right">Resultado</TableHead>
             {isAdmin && <TableHead className="text-right">Ações</TableHead>}
@@ -122,6 +124,13 @@ const OperationsTable = ({ userId, isAdmin = false }: OperationsTableProps) => {
               <TableCell>{operation.operation_time}</TableCell>
               <TableCell>
                 <Badge variant="outline">{operation.asset}</Badge>
+              </TableCell>
+              <TableCell>
+                {operation.strategy ? (
+                  <Badge variant="secondary">{operation.strategy}</Badge>
+                ) : (
+                  <span className="text-muted-foreground text-sm">-</span>
+                )}
               </TableCell>
               <TableCell className="text-right">{operation.contracts}</TableCell>
               <TableCell className="text-right">

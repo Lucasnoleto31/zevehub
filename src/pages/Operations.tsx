@@ -11,6 +11,7 @@ import OperationsTable from "@/components/operations/OperationsTable";
 import OperationsDashboard from "@/components/operations/OperationsDashboard";
 import OperationImport from "@/components/operations/OperationImport";
 import DeleteAllOperations from "@/components/operations/DeleteAllOperations";
+import DeleteOperationsByStrategy from "@/components/operations/DeleteOperationsByStrategy";
 import StrategyManager from "@/components/operations/StrategyManager";
 
 const Operations = () => {
@@ -78,7 +79,12 @@ const Operations = () => {
                 <h1 className="text-xl font-bold text-foreground">Registro de Operações</h1>
               </div>
             </div>
-            {isAdmin && <DeleteAllOperations userId={user?.id} />}
+            {isAdmin && (
+              <div className="flex gap-2">
+                <DeleteOperationsByStrategy userId={user?.id} />
+                <DeleteAllOperations userId={user?.id} />
+              </div>
+            )}
           </div>
         </div>
       </header>
