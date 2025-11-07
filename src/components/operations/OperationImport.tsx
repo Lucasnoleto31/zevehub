@@ -308,10 +308,13 @@ const OperationImport = ({ userId }: OperationImportProps) => {
         const end = Math.min(start + batchSize, pendingOperations.length);
         const batch = pendingOperations.slice(start, end);
 
-        const operationsWithUserId = batch.map(op => ({
-          ...op,
-          user_id: userId
-        }));
+        const operationsWithUserId = batch.map(op => {
+          const { _index, ...operationData } = op;
+          return {
+            ...operationData,
+            user_id: userId
+          };
+        });
 
         const { error } = await supabase
           .from("trading_operations")
