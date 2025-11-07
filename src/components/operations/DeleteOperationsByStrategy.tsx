@@ -25,20 +25,22 @@ const DeleteOperationsByStrategy = ({ userId }: DeleteOperationsByStrategyProps)
 
   const loadStrategies = async () => {
     try {
+      // Buscar todas as operações e extrair estratégias únicas no cliente
       const { data, error } = await supabase
         .from("trading_operations")
         .select("strategy")
-        .not("strategy", "is", null)
-        .limit(10000)
-        .order("strategy");
+        .not("strategy", "is", null);
 
       if (error) throw error;
 
-      // Obter estratégias únicas
-      const uniqueStrategies = [...new Set(data?.map(op => op.strategy).filter(Boolean) as string[])];
+      // Obter estratégias únicas e ordenar
+      const uniqueStrategies = [...new Set(data?.map(op => op.strategy).filter(Boolean) as string[])].sort();
       setStrategies(uniqueStrategies);
+      
+      console.log(`${uniqueStrategies.length} estratégias encontradas:`, uniqueStrategies);
     } catch (error) {
       console.error("Erro ao carregar estratégias:", error);
+      toast.error("Erro ao carregar estratégias");
     }
   };
 
