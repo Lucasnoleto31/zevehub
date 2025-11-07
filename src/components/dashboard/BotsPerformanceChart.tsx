@@ -32,11 +32,9 @@ const BotsPerformanceChart = () => {
         const dataByDate: { [key: string]: { result: number; count: number } } = {};
 
         operationsData.forEach((op) => {
-          const date = new Date(op.operation_date).toLocaleDateString("pt-BR", {
-            day: "2-digit",
-            month: "2-digit",
-            year: "2-digit"
-          });
+          // Parse da data sem conversão de timezone
+          const [year, month, day] = op.operation_date.split('-').map(Number);
+          const date = `${day.toString().padStart(2, '0')}/${month.toString().padStart(2, '0')}/${year.toString().slice(-2)}`;
           
           if (!dataByDate[date]) {
             dataByDate[date] = { result: 0, count: 0 };
