@@ -8,7 +8,7 @@ All colors MUST be HSL.
 
 @layer base {
   :root {
-    /* Zeve Platform Design System - Futuristic Cyber Theme */
+    /* Zeve Platform Design System - Professional Trading Theme */
     --background: 220 20% 97%;
     --foreground: 220 40% 10%;
 
@@ -50,19 +50,10 @@ All colors MUST be HSL.
 
     --radius: 0.75rem;
 
-    /* Cyber/Tech Colors */
-    --cyber-cyan: 180 100% 50%;
-    --cyber-purple: 270 100% 65%;
-    --cyber-pink: 330 100% 70%;
-    --neon-blue: 210 100% 60%;
-    --neon-green: 140 100% 50%;
-
     /* Gradient Overlays */
     --gradient-primary: linear-gradient(135deg, hsl(220 70% 25%), hsl(220 70% 35%));
     --gradient-success: linear-gradient(135deg, hsl(142 76% 36%), hsl(142 76% 46%));
     --gradient-card: linear-gradient(145deg, hsl(0 0% 100%), hsl(220 20% 98%));
-    --gradient-cyber: linear-gradient(135deg, hsl(180 100% 50% / 0.1), hsl(270 100% 65% / 0.1));
-    --gradient-neon: linear-gradient(135deg, hsl(210 100% 60% / 0.2), hsl(330 100% 70% / 0.2));
 
     /* Glass Effect */
     --glass-bg: hsla(0, 0%, 100%, 0.7);
@@ -73,7 +64,6 @@ All colors MUST be HSL.
     --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1);
     --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1);
     --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1);
-    --shadow-neon: 0 0 20px hsl(180 100% 50% / 0.3), 0 0 40px hsl(270 100% 65% / 0.2);
 
     /* Sidebar */
     --sidebar-background: 220 25% 15%;
@@ -122,23 +112,12 @@ All colors MUST be HSL.
     --input: 220 25% 20%;
     --ring: 220 70% 50%;
 
-    /* Cyber/Tech Colors */
-    --cyber-cyan: 180 100% 50%;
-    --cyber-purple: 270 100% 65%;
-    --cyber-pink: 330 100% 70%;
-    --neon-blue: 210 100% 60%;
-    --neon-green: 140 100% 50%;
-
     --gradient-primary: linear-gradient(135deg, hsl(220 70% 40%), hsl(220 70% 50%));
     --gradient-success: linear-gradient(135deg, hsl(142 76% 36%), hsl(142 76% 46%));
     --gradient-card: linear-gradient(145deg, hsl(220 25% 10%), hsl(220 25% 12%));
-    --gradient-cyber: linear-gradient(135deg, hsl(180 100% 50% / 0.15), hsl(270 100% 65% / 0.15));
-    --gradient-neon: linear-gradient(135deg, hsl(210 100% 60% / 0.25), hsl(330 100% 70% / 0.25));
 
     --glass-bg: hsla(220, 25%, 10%, 0.7);
     --glass-border: hsla(220, 25%, 20%, 0.3);
-
-    --shadow-neon: 0 0 25px hsl(180 100% 50% / 0.4), 0 0 50px hsl(270 100% 65% / 0.25);
 
     --sidebar-background: 220 30% 5%;
     --sidebar-foreground: 220 15% 90%;
@@ -184,32 +163,6 @@ All colors MUST be HSL.
     background: var(--gradient-card);
   }
 
-  .gradient-cyber {
-    background: var(--gradient-cyber);
-  }
-
-  .gradient-neon {
-    background: var(--gradient-neon);
-  }
-
-  .cyber-glow {
-    box-shadow: var(--shadow-neon);
-  }
-
-  .cyber-grid {
-    background-image: 
-      linear-gradient(to right, hsl(var(--cyber-cyan) / 0.05) 1px, transparent 1px),
-      linear-gradient(to bottom, hsl(var(--cyber-cyan) / 0.05) 1px, transparent 1px);
-    background-size: 40px 40px;
-  }
-
-  .neon-border {
-    border: 1px solid hsl(var(--cyber-cyan) / 0.3);
-    box-shadow: 
-      inset 0 0 10px hsl(var(--cyber-cyan) / 0.1),
-      0 0 10px hsl(var(--cyber-cyan) / 0.2);
-  }
-
   .animate-fade-in {
     animation: fadeIn 0.5s ease-in;
   }
@@ -237,32 +190,6 @@ All colors MUST be HSL.
     to {
       opacity: 1;
       transform: translateY(0);
-    }
-  }
-
-  .animate-pulse-glow {
-    animation: pulseGlow 2s ease-in-out infinite;
-  }
-
-  @keyframes pulseGlow {
-    0%, 100% {
-      box-shadow: 0 0 5px hsl(var(--cyber-cyan) / 0.3);
-    }
-    50% {
-      box-shadow: 0 0 20px hsl(var(--cyber-cyan) / 0.6), 0 0 30px hsl(var(--cyber-purple) / 0.4);
-    }
-  }
-
-  .animate-float {
-    animation: float 3s ease-in-out infinite;
-  }
-
-  @keyframes float {
-    0%, 100% {
-      transform: translateY(0px);
-    }
-    50% {
-      transform: translateY(-10px);
     }
   }
 }

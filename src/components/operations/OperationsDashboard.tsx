@@ -637,34 +637,9 @@ const OperationsDashboard = ({ userId }: OperationsDashboardProps) => {
   }
 
   return (
-    <div className="space-y-6 cyber-grid animate-fade-in">
-      {/* Futuristic Header */}
-      <div className="relative overflow-hidden rounded-lg p-8 gradient-cyber neon-border">
-        <div className="absolute inset-0 opacity-10">
-          <div className="absolute inset-0 bg-gradient-to-r from-cyber-cyan/20 via-cyber-purple/20 to-cyber-pink/20 animate-pulse-glow"></div>
-        </div>
-        <div className="relative z-10 flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <div className="relative">
-              <Bot className="w-16 h-16 text-cyber-cyan animate-float" />
-              <div className="absolute -inset-1 bg-cyber-cyan/20 rounded-full blur-xl animate-pulse-glow"></div>
-            </div>
-            <div>
-              <h1 className="text-4xl font-bold bg-gradient-to-r from-cyber-cyan via-cyber-purple to-cyber-pink bg-clip-text text-transparent">
-                CENTRO DE CONTROLE
-              </h1>
-              <p className="text-muted-foreground mt-1">Sistema de Análise de Trading Automatizado</p>
-            </div>
-          </div>
-          <div className="text-right">
-            <div className="text-sm text-muted-foreground">Operações Registradas</div>
-            <div className="text-3xl font-bold text-cyber-cyan">{operations.length}</div>
-          </div>
-        </div>
-      </div>
-
+    <div className="space-y-6">
       {/* Date Filters */}
-      <Card className="neon-border animate-slide-up">
+      <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Filter className="w-5 h-5" />
@@ -793,7 +768,7 @@ const OperationsDashboard = ({ userId }: OperationsDashboardProps) => {
 
       {/* Strategy Filter */}
       {availableStrategies.length > 0 && (
-        <Card className="neon-border animate-slide-up">
+        <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Bot className="w-5 h-5" />
@@ -852,7 +827,7 @@ const OperationsDashboard = ({ userId }: OperationsDashboardProps) => {
       )}
 
       {/* Filtros Compactos */}
-      <Card className="neon-border animate-slide-up">
+      <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Filter className="w-5 h-5" />
@@ -1006,72 +981,61 @@ const OperationsDashboard = ({ userId }: OperationsDashboardProps) => {
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-        <Card className="relative overflow-hidden neon-border group hover:cyber-glow transition-all duration-300 animate-slide-up">
-          <div className="absolute inset-0 bg-gradient-to-br from-cyber-cyan/10 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+        <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">Resultado Acumulado</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className={`text-3xl font-bold ${stats.totalResult >= 0 ? "text-cyber-cyan" : "text-destructive"}`}>
+            <div className={`text-2xl font-bold ${stats.totalResult >= 0 ? "text-success" : "text-destructive"}`}>
               {stats.totalResult >= 0 ? "+" : ""}
               {stats.totalResult.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
-            </div>
-            <div className="mt-2 h-1 w-full bg-muted rounded-full overflow-hidden">
-              <div className={`h-full ${stats.totalResult >= 0 ? "bg-gradient-to-r from-cyber-cyan to-neon-green" : "bg-destructive"} animate-pulse-glow`}></div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="relative overflow-hidden neon-border group hover:cyber-glow transition-all duration-300 animate-slide-up" style={{animationDelay: '0.1s'}}>
-          <div className="absolute inset-0 bg-gradient-to-br from-cyber-purple/10 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+        <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-              <Target className="w-4 h-4 text-cyber-purple" />
+              <Target className="w-4 h-4" />
               Taxa de Acerto
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-cyber-purple">{stats.winRate.toFixed(1)}%</div>
-            <p className="text-xs text-muted-foreground mt-2">
-              <span className="text-success">{stats.positiveDays}</span> positivos / <span className="text-destructive">{stats.negativeDays}</span> negativos
+            <div className="text-2xl font-bold">{stats.winRate.toFixed(1)}%</div>
+            <p className="text-xs text-muted-foreground mt-1">
+              {stats.positiveDays} dias positivos / {stats.negativeDays} negativos
             </p>
           </CardContent>
         </Card>
 
-        <Card className="relative overflow-hidden neon-border group hover:cyber-glow transition-all duration-300 animate-slide-up" style={{animationDelay: '0.2s'}}>
-          <div className="absolute inset-0 bg-gradient-to-br from-cyber-pink/10 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+        <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-              <Award className="w-4 h-4 text-cyber-pink" />
+              <Award className="w-4 h-4" />
               Payoff
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-cyber-pink">{stats.payoff.toFixed(2)}x</div>
-            <p className="text-xs text-muted-foreground mt-2">
+            <div className="text-2xl font-bold">{stats.payoff.toFixed(2)}</div>
+            <p className="text-xs text-muted-foreground mt-1">
               Ganho médio / Perda média
             </p>
           </CardContent>
         </Card>
 
-        <Card className="relative overflow-hidden neon-border group hover:cyber-glow transition-all duration-300 animate-slide-up" style={{animationDelay: '0.3s'}}>
-          <div className="absolute inset-0 bg-gradient-to-br from-neon-blue/10 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+        <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-              <Trophy className="w-4 h-4 text-neon-blue" />
-              Consistência Mensal
-            </CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">Consistência Mensal</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-neon-blue">{stats.monthlyConsistency.toFixed(1)}%</div>
-            <p className="text-xs text-muted-foreground mt-2">
-              <span className="text-success">{stats.positiveMonths}</span> meses + / <span className="text-destructive">{stats.negativeMonths}</span> meses -
+            <div className="text-2xl font-bold">{stats.monthlyConsistency.toFixed(1)}%</div>
+            <p className="text-xs text-muted-foreground mt-1">
+              {stats.positiveMonths} meses positivos / {stats.negativeMonths} negativos
             </p>
           </CardContent>
         </Card>
 
-        <Card className="relative overflow-hidden neon-border group hover:cyber-glow transition-all duration-300 animate-slide-up" style={{animationDelay: '0.4s'}}>
-          <div className="absolute inset-0 bg-gradient-to-br from-neon-green/10 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+        <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">Sequências</CardTitle>
           </CardHeader>
@@ -1079,17 +1043,17 @@ const OperationsDashboard = ({ userId }: OperationsDashboardProps) => {
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <TrendingUp className="w-4 h-4 text-neon-green" />
-                  <span className="text-xs text-muted-foreground">Positiva</span>
+                  <TrendingUp className="w-4 h-4 text-success" />
+                  <span className="text-sm text-muted-foreground">Positiva</span>
                 </div>
-                <span className="text-xl font-bold text-neon-green">{stats.positiveStreak}</span>
+                <span className="text-xl font-bold text-success">{stats.positiveStreak} dias</span>
               </div>
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <TrendingDown className="w-4 h-4 text-destructive" />
-                  <span className="text-xs text-muted-foreground">Negativa</span>
+                  <span className="text-sm text-muted-foreground">Negativa</span>
                 </div>
-                <span className="text-xl font-bold text-destructive">{stats.negativeStreak}</span>
+                <span className="text-xl font-bold text-destructive">{stats.negativeStreak} dias</span>
               </div>
             </div>
           </CardContent>
@@ -1097,35 +1061,24 @@ const OperationsDashboard = ({ userId }: OperationsDashboardProps) => {
       </div>
 
       {/* Performance Curve */}
-      <Card className="neon-border animate-slide-up cyber-glow">
+      <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <TrendingUp className="w-5 h-5 text-cyber-cyan" />
-            Curva de Performance
-          </CardTitle>
+          <CardTitle>Curva de Performance</CardTitle>
           <CardDescription>Evolução do resultado acumulado ao longo do tempo</CardDescription>
         </CardHeader>
         <CardContent>
           <ResponsiveContainer width="100%" height={300}>
             <AreaChart data={performanceCurve}>
-              <XAxis dataKey="date" stroke="hsl(var(--muted-foreground))" />
-              <YAxis stroke="hsl(var(--muted-foreground))" />
-              <Tooltip 
-                formatter={(value: number) => value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
-                contentStyle={{
-                  backgroundColor: 'hsl(var(--card))',
-                  border: '1px solid hsl(var(--cyber-cyan) / 0.3)',
-                  borderRadius: '8px',
-                  boxShadow: '0 0 20px hsl(var(--cyber-cyan) / 0.2)'
-                }}
-              />
+              <XAxis dataKey="date" />
+              <YAxis />
+              <Tooltip formatter={(value: number) => value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })} />
               <defs>
                 <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="hsl(var(--cyber-cyan))" stopOpacity={0.4}/>
-                  <stop offset="95%" stopColor="hsl(var(--cyber-purple))" stopOpacity={0.1}/>
+                  <stop offset="5%" stopColor="hsl(var(--success))" stopOpacity={0.3}/>
+                  <stop offset="95%" stopColor="hsl(var(--success))" stopOpacity={0}/>
                 </linearGradient>
               </defs>
-              <Area type="monotone" dataKey="value" stroke="hsl(var(--cyber-cyan))" strokeWidth={3} fillOpacity={1} fill="url(#colorValue)" />
+              <Area type="monotone" dataKey="value" stroke="hsl(var(--success))" strokeWidth={2} fillOpacity={1} fill="url(#colorValue)" />
             </AreaChart>
           </ResponsiveContainer>
         </CardContent>
@@ -1133,12 +1086,12 @@ const OperationsDashboard = ({ userId }: OperationsDashboardProps) => {
 
       {/* Volatility Analysis */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card className="neon-border hover:cyber-glow transition-all duration-300 animate-slide-up">
+        <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">Desvio Padrão</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-cyber-purple">
+            <div className="text-2xl font-bold">
               {stats.standardDeviation.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
             </div>
             <p className="text-xs text-muted-foreground mt-1">
@@ -1147,28 +1100,26 @@ const OperationsDashboard = ({ userId }: OperationsDashboardProps) => {
           </CardContent>
         </Card>
 
-        <Card className="neon-border hover:cyber-glow transition-all duration-300 animate-slide-up" style={{animationDelay: '0.1s'}}>
+        <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">Volatilidade</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-cyber-pink">
+            <div className="text-2xl font-bold">
               {stats.volatility.toFixed(1)}%
             </div>
             <p className="text-xs text-muted-foreground mt-1">
-              <span className={stats.volatility < 30 ? "text-neon-green" : stats.volatility < 60 ? "text-warning" : "text-destructive"}>
-                {stats.volatility < 30 ? "Baixa" : stats.volatility < 60 ? "Moderada" : "Alta"}
-              </span> - Risco relativo
+              {stats.volatility < 30 ? "Baixa" : stats.volatility < 60 ? "Moderada" : "Alta"} - Risco relativo
             </p>
           </CardContent>
         </Card>
 
-        <Card className="neon-border hover:cyber-glow transition-all duration-300 animate-slide-up" style={{animationDelay: '0.2s'}}>
+        <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">Consistência</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-neon-blue">
+            <div className="text-2xl font-bold text-success">
               {stats.monthlyConsistency.toFixed(1)}%
             </div>
             <p className="text-xs text-muted-foreground mt-1">
@@ -1179,36 +1130,19 @@ const OperationsDashboard = ({ userId }: OperationsDashboardProps) => {
       </div>
 
       {/* Performance Mensal */}
-      <Card className="neon-border animate-slide-up">
+      <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Calendar className="w-5 h-5 text-cyber-purple" />
-            Performance por Mês do Ano
-          </CardTitle>
+          <CardTitle>Performance por Mês do Ano</CardTitle>
           <CardDescription>Soma de todos os resultados de cada mês (ex: todos os janeiros somados)</CardDescription>
         </CardHeader>
         <CardContent>
           <ResponsiveContainer width="100%" height={300}>
             <BarChart data={monthStats}>
-              <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.3} />
-              <XAxis dataKey="month" stroke="hsl(var(--muted-foreground))" />
-              <YAxis stroke="hsl(var(--muted-foreground))" />
-              <Tooltip 
-                formatter={(value: number) => value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
-                contentStyle={{
-                  backgroundColor: 'hsl(var(--card))',
-                  border: '1px solid hsl(var(--cyber-purple) / 0.3)',
-                  borderRadius: '8px',
-                  boxShadow: '0 0 20px hsl(var(--cyber-purple) / 0.2)'
-                }}
-              />
-              <defs>
-                <linearGradient id="barGradient" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="hsl(var(--cyber-purple))" stopOpacity={1}/>
-                  <stop offset="100%" stopColor="hsl(var(--cyber-cyan))" stopOpacity={0.6}/>
-                </linearGradient>
-              </defs>
-              <Bar dataKey="result" fill="url(#barGradient)" radius={[8, 8, 0, 0]} />
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="month" />
+              <YAxis />
+              <Tooltip formatter={(value: number) => value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })} />
+              <Bar dataKey="result" fill="hsl(var(--primary))" />
             </BarChart>
           </ResponsiveContainer>
         </CardContent>
