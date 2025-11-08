@@ -69,6 +69,15 @@ export default {
           border: "hsl(var(--sidebar-border))",
           ring: "hsl(var(--sidebar-ring))",
         },
+        cyber: {
+          cyan: "hsl(var(--cyber-cyan))",
+          purple: "hsl(var(--cyber-purple))",
+          pink: "hsl(var(--cyber-pink))",
+        },
+        neon: {
+          blue: "hsl(var(--neon-blue))",
+          green: "hsl(var(--neon-green))",
+        },
       },
       boxShadow: {
         'sm': 'var(--shadow-sm)',
