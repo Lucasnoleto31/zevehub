@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Trash2, Pencil } from "lucide-react";
 import { toast } from "sonner";
 import { OperationEditDialog } from "./OperationEditDialog";
+import type { FilterValues } from "./OperationsFilters";
 
 interface Operation {
   id: string;
@@ -22,11 +23,10 @@ interface Operation {
 interface OperationsTableProps {
   userId: string;
   isAdmin?: boolean;
-  dateFrom?: Date;
-  dateTo?: Date;
+  filters?: FilterValues;
 }
 
-const OperationsTable = ({ userId, isAdmin = false, dateFrom, dateTo }: OperationsTableProps) => {
+const OperationsTable = ({ userId, isAdmin = false, filters }: OperationsTableProps) => {
   const [operations, setOperations] = useState<Operation[]>([]);
   const [loading, setLoading] = useState(true);
   const [editingOperation, setEditingOperation] = useState<Operation | null>(null);
@@ -54,7 +54,7 @@ const OperationsTable = ({ userId, isAdmin = false, dateFrom, dateTo }: Operatio
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [userId, dateFrom, dateTo]);
+  }, [userId, filters]);
 
   const loadOperations = async () => {
     try {
@@ -64,23 +64,70 @@ const OperationsTable = ({ userId, isAdmin = false, dateFrom, dateTo }: Operatio
         .order("operation_date", { ascending: false })
         .order("operation_time", { ascending: false });
 
-      // Aplicar filtros de data
-      if (dateFrom) {
-        const fromStr = dateFrom.toISOString().split('T')[0];
-        query = query.gte("operation_date", fromStr);
-      }
-      if (dateTo) {
-        const toStr = dateTo.toISOString().split('T')[0];
-        query = query.lte("operation_date", toStr);
+      if (filters) {
+        // Filtros de data
+        if (filters.dateFrom) {
+          const fromStr = filters.dateFrom.toISOString().split('T')[0];
+          query = query.gte("operation_date", fromStr);
+        }
+        if (filters.dateTo) {
+          const toStr = filters.dateTo.toISOString().split('T')[0];
+          query = query.lte("operation_date", toStr);
+        }
+
+        // Filtro de ativo
+        if (filters.asset) {
+          query = query.ilike("asset", `%${filters.asset}%`);
+        }
+
+        // Filtros de contratos
+        if (filters.contractsMin) {
+          query = query.gte("contracts", parseInt(filters.contractsMin));
+        }
+        if (filters.contractsMax) {
+          query = query.lte("contracts", parseInt(filters.contractsMax));
+        }
+
+        // Filtros de horário
+        if (filters.timeFrom) {
+          query = query.gte("operation_time", filters.timeFrom);
+        }
+        if (filters.timeTo) {
+          query = query.lte("operation_time", filters.timeTo);
+        }
       }
 
-      // Limitar a 50 resultados quando houver filtro, senão 10
-      query = query.limit(dateFrom || dateTo ? 50 : 10);
+      // Limitar a 100 resultados quando houver filtro, senão 10
+      const hasFilters = filters && (
+        filters.dateFrom || filters.dateTo || filters.asset || 
+        filters.contractsMin || filters.contractsMax || 
+        filters.timeFrom || filters.timeTo || 
+        filters.strategies.length > 0 || filters.resultType !== "all"
+      );
+      query = query.limit(hasFilters ? 100 : 10);
 
       const { data, error } = await query;
 
       if (error) throw error;
-      setOperations(data || []);
+      
+      let filteredData = data || [];
+
+      // Filtros client-side (estratégias e resultado)
+      if (filters) {
+        if (filters.strategies.length > 0) {
+          filteredData = filteredData.filter((op) => 
+            op.strategy && filters.strategies.includes(op.strategy)
+          );
+        }
+
+        if (filters.resultType === "positive") {
+          filteredData = filteredData.filter((op) => op.result >= 0);
+        } else if (filters.resultType === "negative") {
+          filteredData = filteredData.filter((op) => op.result < 0);
+        }
+      }
+
+      setOperations(filteredData);
     } catch (error) {
       console.error("Erro ao carregar operações:", error);
     } finally {
