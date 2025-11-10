@@ -22,9 +22,11 @@ interface Operation {
 interface OperationsTableProps {
   userId: string;
   isAdmin?: boolean;
+  dateFrom?: Date;
+  dateTo?: Date;
 }
 
-const OperationsTable = ({ userId, isAdmin = false }: OperationsTableProps) => {
+const OperationsTable = ({ userId, isAdmin = false, dateFrom, dateTo }: OperationsTableProps) => {
   const [operations, setOperations] = useState<Operation[]>([]);
   const [loading, setLoading] = useState(true);
   const [editingOperation, setEditingOperation] = useState<Operation | null>(null);
@@ -52,16 +54,30 @@ const OperationsTable = ({ userId, isAdmin = false }: OperationsTableProps) => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [userId]);
+  }, [userId, dateFrom, dateTo]);
 
   const loadOperations = async () => {
     try {
-      const { data, error } = await supabase
+      let query = supabase
         .from("trading_operations")
         .select("*")
         .order("operation_date", { ascending: false })
-        .order("operation_time", { ascending: false })
-        .limit(10);
+        .order("operation_time", { ascending: false });
+
+      // Aplicar filtros de data
+      if (dateFrom) {
+        const fromStr = dateFrom.toISOString().split('T')[0];
+        query = query.gte("operation_date", fromStr);
+      }
+      if (dateTo) {
+        const toStr = dateTo.toISOString().split('T')[0];
+        query = query.lte("operation_date", toStr);
+      }
+
+      // Limitar a 50 resultados quando houver filtro, senão 10
+      query = query.limit(dateFrom || dateTo ? 50 : 10);
+
+      const { data, error } = await query;
 
       if (error) throw error;
       setOperations(data || []);
