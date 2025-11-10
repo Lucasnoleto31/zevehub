@@ -3,9 +3,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Trash2 } from "lucide-react";
+import { Trash2, Pencil } from "lucide-react";
 import { toast } from "sonner";
-import { ptBR } from "date-fns/locale";
+import { OperationEditDialog } from "./OperationEditDialog";
 
 interface Operation {
   id: string;
@@ -27,6 +27,8 @@ interface OperationsTableProps {
 const OperationsTable = ({ userId, isAdmin = false }: OperationsTableProps) => {
   const [operations, setOperations] = useState<Operation[]>([]);
   const [loading, setLoading] = useState(true);
+  const [editingOperation, setEditingOperation] = useState<Operation | null>(null);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
 
   useEffect(() => {
     loadOperations();
@@ -70,6 +72,11 @@ const OperationsTable = ({ userId, isAdmin = false }: OperationsTableProps) => {
     }
   };
 
+  const handleEdit = (operation: Operation) => {
+    setEditingOperation(operation);
+    setEditDialogOpen(true);
+  };
+
   const handleDelete = async (id: string) => {
     if (!confirm("Deseja realmente excluir esta operação?")) return;
 
@@ -101,8 +108,15 @@ const OperationsTable = ({ userId, isAdmin = false }: OperationsTableProps) => {
   }
 
   return (
-    <div className="rounded-md border">
-      <Table>
+    <>
+      <OperationEditDialog
+        operation={editingOperation}
+        open={editDialogOpen}
+        onOpenChange={setEditDialogOpen}
+        userId={userId}
+      />
+      <div className="rounded-md border">
+        <Table>
         <TableHeader>
           <TableRow>
             <TableHead>Data</TableHead>
@@ -147,13 +161,22 @@ const OperationsTable = ({ userId, isAdmin = false }: OperationsTableProps) => {
               </TableCell>
               {isAdmin && (
                 <TableCell className="text-right">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleDelete(operation.id)}
-                  >
-                    <Trash2 className="w-4 h-4 text-destructive" />
-                  </Button>
+                  <div className="flex justify-end gap-1">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleEdit(operation)}
+                    >
+                      <Pencil className="w-4 h-4 text-primary" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleDelete(operation.id)}
+                    >
+                      <Trash2 className="w-4 h-4 text-destructive" />
+                    </Button>
+                  </div>
                 </TableCell>
               )}
             </TableRow>
@@ -161,6 +184,7 @@ const OperationsTable = ({ userId, isAdmin = false }: OperationsTableProps) => {
         </TableBody>
       </Table>
     </div>
+    </>
   );
 };
 
