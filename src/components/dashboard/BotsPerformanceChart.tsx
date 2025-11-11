@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Area, AreaChart } from "recharts";
+import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, Area, AreaChart } from "recharts";
 import { TrendingUp } from "lucide-react";
 
 interface PerformancePoint {
@@ -132,41 +132,40 @@ const BotsPerformanceChart = () => {
       </CardHeader>
       <CardContent>
         <ResponsiveContainer width="100%" height={300}>
-          <AreaChart data={performanceData}>
+          <AreaChart data={performanceData} margin={{ top: 10, right: 10, left: 10, bottom: 60 }}>
             <defs>
               <linearGradient id="colorPositive" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="hsl(var(--success))" stopOpacity={0.3}/>
+                <stop offset="5%" stopColor="hsl(var(--success))" stopOpacity={0.4}/>
                 <stop offset="95%" stopColor="hsl(var(--success))" stopOpacity={0}/>
               </linearGradient>
               <linearGradient id="colorNegative" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="hsl(var(--destructive))" stopOpacity={0.3}/>
+                <stop offset="5%" stopColor="hsl(var(--destructive))" stopOpacity={0.4}/>
                 <stop offset="95%" stopColor="hsl(var(--destructive))" stopOpacity={0}/>
               </linearGradient>
             </defs>
             <XAxis 
               dataKey="date" 
               className="text-xs"
-              tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }}
+              tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }}
               angle={-45}
               textAnchor="end"
               height={80}
+              axisLine={false}
+              tickLine={false}
             />
             <YAxis 
               className="text-xs"
-              tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }}
-              label={{ 
-                value: "Resultado Acumulado (R$)", 
-                angle: -90, 
-                position: "insideLeft",
-                style: { fill: "hsl(var(--muted-foreground))", fontSize: 12 }
-              }}
+              tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }}
+              axisLine={false}
+              tickLine={false}
+              width={80}
             />
             <Tooltip content={<CustomTooltip />} />
             <Area
               type="monotone"
               dataKey="accumulated"
               stroke={isPositive ? "hsl(var(--success))" : "hsl(var(--destructive))"}
-              strokeWidth={3}
+              strokeWidth={2.5}
               fill={isPositive ? "url(#colorPositive)" : "url(#colorNegative)"}
               name="Resultado Acumulado"
             />
