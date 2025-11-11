@@ -120,7 +120,7 @@ const BotsPerformanceChart = () => {
   const isPositive = performanceData.length > 0 && performanceData[performanceData.length - 1].accumulated >= 0;
 
   return (
-    <Card>
+    <Card className="animate-chart-in">
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <TrendingUp className="w-5 h-5" />
@@ -131,7 +131,8 @@ const BotsPerformanceChart = () => {
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <ResponsiveContainer width="100%" height={300}>
+        <div className="animate-scale-in">
+          <ResponsiveContainer width="100%" height={300}>
           <AreaChart data={performanceData} margin={{ top: 10, right: 10, left: 10, bottom: 60 }}>
             <defs>
               <linearGradient id="colorPositive" x1="0" y1="0" x2="0" y2="1">
@@ -171,6 +172,7 @@ const BotsPerformanceChart = () => {
             />
           </AreaChart>
         </ResponsiveContainer>
+        </div>
       </CardContent>
     </Card>
   );

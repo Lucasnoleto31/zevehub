@@ -123,9 +123,9 @@ All colors MUST be HSL.
     --gradient-success: linear-gradient(135deg, hsl(142 76% 45%), hsl(142 76% 55%));
     --gradient-card: linear-gradient(145deg, hsl(222 47% 5%), hsl(222 47% 8%));
 
-    /* Glass Effect - Enhanced */
-    --glass-bg: hsla(222, 47%, 6%, 0.8);
-    --glass-border: hsla(217, 91%, 60%, 0.15);
+    /* Glass Effect - Enhanced Cinematic */
+    --glass-bg: hsla(222, 47%, 6%, 0.6);
+    --glass-border: hsla(217, 91%, 60%, 0.2);
 
     /* Shadows - Enhanced for depth */
     --shadow-sm: 0 2px 4px 0 rgb(0 0 0 / 0.3);
@@ -163,7 +163,15 @@ All colors MUST be HSL.
   .glass-card {
     background: var(--glass-bg);
     border: 1px solid var(--glass-border);
-    backdrop-filter: blur(12px);
+    backdrop-filter: blur(20px) saturate(180%);
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+  }
+
+  .glass-card-strong {
+    background: var(--glass-bg);
+    border: 1px solid var(--glass-border);
+    backdrop-filter: blur(24px) saturate(200%);
+    box-shadow: 0 12px 40px 0 rgba(0, 0, 0, 0.5);
   }
 
   .gradient-primary {
@@ -205,6 +213,36 @@ All colors MUST be HSL.
     to {
       opacity: 1;
       transform: translateY(0);
+    }
+  }
+
+  .animate-chart-in {
+    animation: chartIn 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  @keyframes chartIn {
+    from {
+      opacity: 0;
+      transform: translateY(30px) scale(0.95);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+  }
+
+  .animate-scale-in {
+    animation: scaleIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+
+  @keyframes scaleIn {
+    from {
+      opacity: 0;
+      transform: scale(0.9);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1);
     }
   }
 }
