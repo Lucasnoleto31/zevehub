@@ -26,6 +26,7 @@ import MessagesList from "@/components/dashboard/MessagesList";
 import BotsPerformanceChart from "@/components/dashboard/BotsPerformanceChart";
 import RecentOperations from "@/components/dashboard/RecentOperations";
 import NotificationsPopover from "@/components/dashboard/NotificationsPopover";
+import AdvancedTools from "@/components/dashboard/AdvancedTools";
 import { useRealtimeNotifications } from "@/hooks/useRealtimeNotifications";
 import { ThemeToggle } from "@/components/ThemeToggle";
 
@@ -238,6 +239,24 @@ const Dashboard = () => {
         {/* Operations Section */}
         <div className="mb-8 animate-slide-up" style={{ animationDelay: "0.15s" }}>
           <RecentOperations userId={user?.id || ""} />
+        </div>
+
+        {/* Advanced Tools Section */}
+        <div className="mb-8 animate-slide-up" style={{ animationDelay: "0.18s" }}>
+          <Card className="glass-card">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Activity className="w-5 h-5" />
+                Ferramentas Avançadas
+              </CardTitle>
+              <CardDescription>
+                Gestão de banca, metas, análise temporal e relatórios
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <AdvancedTools userId={user?.id || ""} />
+            </CardContent>
+          </Card>
         </div>
 
         {/* Content Grid */}
