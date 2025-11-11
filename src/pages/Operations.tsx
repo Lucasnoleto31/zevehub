@@ -14,6 +14,7 @@ import DeleteAllOperations from "@/components/operations/DeleteAllOperations";
 import DeleteOperationsByStrategy from "@/components/operations/DeleteOperationsByStrategy";
 import StrategyManager from "@/components/operations/StrategyManager";
 import { OperationsFilters, type FilterValues } from "@/components/operations/OperationsFilters";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 const Operations = () => {
   const navigate = useNavigate();
@@ -89,12 +90,15 @@ const Operations = () => {
                 <h1 className="text-xl font-bold text-foreground">Registro de Operações</h1>
               </div>
             </div>
-            {isAdmin && (
-              <div className="flex gap-2">
-                <DeleteOperationsByStrategy userId={user?.id} />
-                <DeleteAllOperations userId={user?.id} />
-              </div>
-            )}
+            <div className="flex items-center gap-2">
+              <ThemeToggle />
+              {isAdmin && (
+                <div className="flex gap-2">
+                  <DeleteOperationsByStrategy userId={user?.id} />
+                  <DeleteAllOperations userId={user?.id} />
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </header>

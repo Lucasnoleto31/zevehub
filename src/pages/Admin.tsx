@@ -8,6 +8,7 @@ import { ArrowLeft, Users, Shield, Activity, Settings } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import ClientsTable from "@/components/admin/ClientsTable";
 import CreateMessageDialog from "@/components/admin/CreateMessageDialog";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 const Admin = () => {
   const navigate = useNavigate();
@@ -125,6 +126,7 @@ const Admin = () => {
                 <h1 className="text-xl font-bold text-foreground">Painel Administrativo</h1>
               </div>
             </div>
+            <ThemeToggle />
           </div>
         </div>
       </header>
