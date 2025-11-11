@@ -124,7 +124,7 @@ const TopPerformanceDays = ({ operations }: TopPerformanceDaysProps) => {
   );
 
   return (
-    <Card className="animate-chart-in">
+    <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Trophy className="w-5 h-5" />
@@ -134,7 +134,7 @@ const TopPerformanceDays = ({ operations }: TopPerformanceDaysProps) => {
           Melhores e piores dias de trading
         </CardDescription>
       </CardHeader>
-      <CardContent className="animate-scale-in">
+      <CardContent>
         <Tabs defaultValue="best" className="w-full">
           <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="best" className="gap-2">

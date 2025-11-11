@@ -188,7 +188,7 @@ const AdvancedMetrics = ({ operations }: AdvancedMetricsProps) => {
     tooltip: string;
     isPositive?: boolean;
   }) => (
-    <Card className="glass-card-strong hover:scale-105 transition-transform duration-300">
+    <Card>
       <CardContent className="pt-6">
         <div className="flex items-start justify-between">
           <div className="space-y-2 flex-1">
@@ -320,7 +320,7 @@ const AdvancedMetrics = ({ operations }: AdvancedMetricsProps) => {
 
   if (strategies.length === 0) {
     return (
-      <Card className="animate-chart-in">
+      <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Activity className="w-5 h-5" />
@@ -335,7 +335,7 @@ const AdvancedMetrics = ({ operations }: AdvancedMetricsProps) => {
   }
 
   return (
-    <Card className="animate-chart-in">
+    <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Activity className="w-5 h-5" />
@@ -345,7 +345,7 @@ const AdvancedMetrics = ({ operations }: AdvancedMetricsProps) => {
           Indicadores de risco e performance ajustada por estratégia
         </CardDescription>
       </CardHeader>
-      <CardContent className="animate-scale-in">
+      <CardContent>
         <Tabs defaultValue={strategies[0]} className="w-full">
           <TabsList className="w-full flex flex-wrap h-auto">
             {strategies.map((strategy) => (

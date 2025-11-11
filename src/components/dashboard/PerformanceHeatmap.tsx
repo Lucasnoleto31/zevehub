@@ -99,7 +99,7 @@ const PerformanceHeatmap = ({ operations }: PerformanceHeatmapProps) => {
   const hours = Array.from({ length: 9 }, (_, i) => `${i + 9}h`);
 
   return (
-    <Card className="animate-chart-in">
+    <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <TrendingUp className="w-5 h-5" />
@@ -109,7 +109,7 @@ const PerformanceHeatmap = ({ operations }: PerformanceHeatmapProps) => {
           Horários e dias da semana mais lucrativos
         </CardDescription>
       </CardHeader>
-      <CardContent className="animate-scale-in">
+      <CardContent>
         <div className="overflow-x-auto">
           <div className="inline-block min-w-full">
             {/* Header com dias da semana */}
