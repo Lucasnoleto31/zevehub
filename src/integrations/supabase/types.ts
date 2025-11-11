@@ -44,39 +44,6 @@ export type Database = {
         }
         Relationships: []
       }
-      bankroll_management: {
-        Row: {
-          created_at: string
-          current_capital: number
-          id: string
-          initial_capital: number
-          max_daily_loss_percentage: number
-          risk_percentage: number
-          updated_at: string
-          user_id: string
-        }
-        Insert: {
-          created_at?: string
-          current_capital: number
-          id?: string
-          initial_capital: number
-          max_daily_loss_percentage?: number
-          risk_percentage?: number
-          updated_at?: string
-          user_id: string
-        }
-        Update: {
-          created_at?: string
-          current_capital?: number
-          id?: string
-          initial_capital?: number
-          max_daily_loss_percentage?: number
-          risk_percentage?: number
-          updated_at?: string
-          user_id?: string
-        }
-        Relationships: []
-      }
       client_bots: {
         Row: {
           bot_name: string
@@ -254,45 +221,6 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           name?: string
-          updated_at?: string
-          user_id?: string
-        }
-        Relationships: []
-      }
-      trading_goals: {
-        Row: {
-          created_at: string
-          end_date: string
-          goal_type: string
-          id: string
-          is_active: boolean | null
-          period_type: string
-          start_date: string
-          target_value: number
-          updated_at: string
-          user_id: string
-        }
-        Insert: {
-          created_at?: string
-          end_date: string
-          goal_type: string
-          id?: string
-          is_active?: boolean | null
-          period_type: string
-          start_date: string
-          target_value: number
-          updated_at?: string
-          user_id: string
-        }
-        Update: {
-          created_at?: string
-          end_date?: string
-          goal_type?: string
-          id?: string
-          is_active?: boolean | null
-          period_type?: string
-          start_date?: string
-          target_value?: number
           updated_at?: string
           user_id?: string
         }
