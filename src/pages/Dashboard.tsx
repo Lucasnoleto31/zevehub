@@ -245,13 +245,26 @@ const Dashboard = () => {
           <div className="animate-slide-up" style={{ animationDelay: "0.2s" }}>
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Bot className="w-5 h-5" />
-                  Robôs Cadastrados
-                </CardTitle>
-                <CardDescription>
-                  Visualize todos os robôs cadastrados pela assessoria
-                </CardDescription>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className="flex items-center gap-2">
+                      <Bot className="w-5 h-5" />
+                      Robôs Cadastrados
+                    </CardTitle>
+                    <CardDescription>
+                      Visualize todos os robôs cadastrados pela assessoria
+                    </CardDescription>
+                  </div>
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => navigate("/bots-comparison")}
+                    className="hidden md:flex"
+                  >
+                    <LineChart className="w-4 h-4 mr-2" />
+                    Comparar
+                  </Button>
+                </div>
               </CardHeader>
               <CardContent>
                 <BotsList userId={user?.id || ""} />
