@@ -12,7 +12,6 @@ import OperationsDashboard from "@/components/operations/OperationsDashboard";
 import OperationImport from "@/components/operations/OperationImport";
 import DeleteAllOperations from "@/components/operations/DeleteAllOperations";
 import DeleteOperationsByStrategy from "@/components/operations/DeleteOperationsByStrategy";
-import { JsonToExcelConverter } from "@/components/operations/JsonToExcelConverter";
 import StrategyManager from "@/components/operations/StrategyManager";
 import { OperationsFilters, type FilterValues } from "@/components/operations/OperationsFilters";
 import { ThemeToggle } from "@/components/ThemeToggle";
@@ -132,8 +131,6 @@ const Operations = () => {
                   </Card>
 
                   <OperationImport userId={user?.id} />
-                  
-                  <JsonToExcelConverter />
                 </div>
 
                 <div className="lg:col-span-2 space-y-4">

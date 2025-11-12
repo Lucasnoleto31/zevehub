@@ -10,8 +10,6 @@ import Dashboard from "./pages/Dashboard";
 import Admin from "./pages/Admin";
 import Operations from "./pages/Operations";
 import OperationDetail from "./pages/OperationDetail";
-import BotDetail from "./pages/BotDetail";
-import BotsComparison from "./pages/BotsComparison";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -30,8 +28,6 @@ const App = () => (
             <Route path="/admin" element={<Admin />} />
             <Route path="/operations" element={<Operations />} />
             <Route path="/operation/:id" element={<OperationDetail />} />
-            <Route path="/bot/:id" element={<BotDetail />} />
-            <Route path="/bots-comparison" element={<BotsComparison />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
