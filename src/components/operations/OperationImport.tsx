@@ -187,10 +187,12 @@ const OperationImport = ({ userId }: OperationImportProps) => {
       return timeStr;
     }
     
-    // Se é fração decimal do Excel (fração de 24h)
+    // Se é número do Excel (pode ser serial completo ou fração)
     if (typeof excelTime === 'number') {
-      const totalSeconds = Math.round(excelTime * 86400);
-      const hours = Math.floor(totalSeconds / 3600);
+      // Pegar apenas a parte decimal (fração do dia = horário)
+      const timeFraction = excelTime - Math.floor(excelTime);
+      const totalSeconds = Math.round(timeFraction * 86400);
+      const hours = Math.floor(totalSeconds / 3600) % 24;
       const minutes = Math.floor((totalSeconds % 3600) / 60);
       const seconds = totalSeconds % 60;
       return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
