@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
 import { Bot, TrendingUp, TrendingDown } from "lucide-react";
@@ -16,6 +17,7 @@ interface BotsListProps {
 }
 
 const BotsList = ({ userId }: BotsListProps) => {
+  const navigate = useNavigate();
   const [bots, setBots] = useState<Bot[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -61,7 +63,8 @@ const BotsList = ({ userId }: BotsListProps) => {
       {bots.map((bot) => (
         <div
           key={bot.id}
-          className="flex items-center justify-between p-4 border rounded-lg hover:bg-accent/5 transition-colors"
+          onClick={() => navigate(`/bot/${bot.id}`)}
+          className="flex items-center justify-between p-4 border rounded-lg hover:bg-accent/5 transition-colors cursor-pointer"
         >
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
