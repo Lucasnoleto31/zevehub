@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import { Loader2, Shield, TrendingUp } from "lucide-react";
 import { z } from "zod";
@@ -14,6 +15,8 @@ const signUpSchema = z.object({
   email: z.string().email({ message: "E-mail inválido" }),
   password: z.string().min(6, { message: "Senha deve ter no mínimo 6 caracteres" }),
   fullName: z.string().min(3, { message: "Nome deve ter no mínimo 3 caracteres" }),
+  phone: z.string().min(10, { message: "Telefone deve ter no mínimo 10 dígitos" }).regex(/^\d+$/, { message: "Telefone deve conter apenas números" }),
+  acceptTerms: z.boolean().refine((val) => val === true, { message: "Você deve aceitar os termos de uso" }),
 });
 
 const signInSchema = z.object({
@@ -21,11 +24,22 @@ const signInSchema = z.object({
   password: z.string().min(1, { message: "Senha obrigatória" }),
 });
 
+const resetPasswordSchema = z.object({
+  email: z.string().email({ message: "E-mail inválido" }),
+});
+
 const Auth = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
-  const [signUpData, setSignUpData] = useState({ email: "", password: "", fullName: "" });
+  const [signUpData, setSignUpData] = useState({ 
+    email: "", 
+    password: "", 
+    fullName: "", 
+    phone: "", 
+    acceptTerms: false 
+  });
   const [signInData, setSignInData] = useState({ email: "", password: "" });
+  const [resetEmail, setResetEmail] = useState("");
 
   useEffect(() => {
     const checkUser = async () => {
@@ -51,6 +65,7 @@ const Auth = () => {
           emailRedirectTo: `${window.location.origin}/dashboard`,
           data: {
             full_name: validatedData.fullName,
+            phone: validatedData.phone,
           },
         },
       });
@@ -66,6 +81,32 @@ const Auth = () => {
         toast.error(error.errors[0].message);
       } else {
         toast.error(error.message || "Erro ao criar conta");
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleResetPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+
+    try {
+      const validatedData = resetPasswordSchema.parse({ email: resetEmail });
+
+      const { error } = await supabase.auth.resetPasswordForEmail(validatedData.email, {
+        redirectTo: `${window.location.origin}/dashboard`,
+      });
+
+      if (error) throw error;
+
+      toast.success("E-mail de recuperação enviado! Verifique sua caixa de entrada.");
+      setResetEmail("");
+    } catch (error: any) {
+      if (error instanceof z.ZodError) {
+        toast.error(error.errors[0].message);
+      } else {
+        toast.error(error.message || "Erro ao enviar e-mail de recuperação");
       }
     } finally {
       setLoading(false);
@@ -131,9 +172,10 @@ const Auth = () => {
           </CardHeader>
           <CardContent>
             <Tabs defaultValue="signin" className="w-full">
-              <TabsList className="grid w-full grid-cols-2">
+              <TabsList className="grid w-full grid-cols-3">
                 <TabsTrigger value="signin">Entrar</TabsTrigger>
                 <TabsTrigger value="signup">Criar Conta</TabsTrigger>
+                <TabsTrigger value="reset">Recuperar</TabsTrigger>
               </TabsList>
 
               <TabsContent value="signin">
@@ -185,7 +227,7 @@ const Auth = () => {
                     <Input
                       id="signup-name"
                       type="text"
-                      placeholder="Seu nome"
+                      placeholder="Seu nome completo"
                       value={signUpData.fullName}
                       onChange={(e) => setSignUpData({ ...signUpData, fullName: e.target.value })}
                       disabled={loading}
@@ -216,6 +258,42 @@ const Auth = () => {
                       required
                     />
                   </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="signup-phone">Telefone WhatsApp</Label>
+                    <Input
+                      id="signup-phone"
+                      type="tel"
+                      placeholder="11999999999"
+                      value={signUpData.phone}
+                      onChange={(e) => setSignUpData({ ...signUpData, phone: e.target.value.replace(/\D/g, '') })}
+                      disabled={loading}
+                      required
+                    />
+                  </div>
+                  <div className="flex items-start space-x-2 pt-2">
+                    <Checkbox
+                      id="terms"
+                      checked={signUpData.acceptTerms}
+                      onCheckedChange={(checked) => 
+                        setSignUpData({ ...signUpData, acceptTerms: checked as boolean })
+                      }
+                      disabled={loading}
+                      required
+                    />
+                    <label
+                      htmlFor="terms"
+                      className="text-sm text-muted-foreground leading-normal cursor-pointer"
+                    >
+                      Eu aceito os{" "}
+                      <a href="#" className="text-primary hover:underline">
+                        termos de uso
+                      </a>{" "}
+                      e{" "}
+                      <a href="#" className="text-primary hover:underline">
+                        política de privacidade
+                      </a>
+                    </label>
+                  </div>
                   <Button type="submit" className="w-full" disabled={loading}>
                     {loading ? (
                       <>
@@ -224,6 +302,36 @@ const Auth = () => {
                       </>
                     ) : (
                       "Criar Conta"
+                    )}
+                  </Button>
+                </form>
+              </TabsContent>
+
+              <TabsContent value="reset">
+                <form onSubmit={handleResetPassword} className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="reset-email">E-mail</Label>
+                    <Input
+                      id="reset-email"
+                      type="email"
+                      placeholder="seu@email.com"
+                      value={resetEmail}
+                      onChange={(e) => setResetEmail(e.target.value)}
+                      disabled={loading}
+                      required
+                    />
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    Enviaremos um link de recuperação para o seu e-mail.
+                  </p>
+                  <Button type="submit" className="w-full" disabled={loading}>
+                    {loading ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Enviando...
+                      </>
+                    ) : (
+                      "Enviar Link de Recuperação"
                     )}
                   </Button>
                 </form>
