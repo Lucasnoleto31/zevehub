@@ -4,7 +4,6 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { ThemeProvider } from "next-themes";
-import * as Sentry from "@sentry/react";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import OfflineIndicator from "@/components/OfflineIndicator";
 import Index from "./pages/Index";
@@ -14,16 +13,10 @@ import Admin from "./pages/Admin";
 import Operations from "./pages/Operations";
 import OperationDetail from "./pages/OperationDetail";
 import NotFound from "./pages/NotFound";
-import { initSentry } from "@/lib/sentry";
 import { useEffect } from "react";
 import { registerServiceWorker } from "@/lib/register-sw";
 
-// Inicializa o Sentry
-initSentry();
-
 const queryClient = new QueryClient();
-
-const SentryRoutes = Sentry.withSentryReactRouterV6Routing(Routes);
 
 const App = () => {
   useEffect(() => {
@@ -40,7 +33,7 @@ const App = () => {
             <Sonner />
             <OfflineIndicator />
             <BrowserRouter>
-              <SentryRoutes>
+              <Routes>
                 <Route path="/" element={<Index />} />
                 <Route path="/auth" element={<Auth />} />
                 <Route path="/dashboard" element={<Dashboard />} />
@@ -49,7 +42,7 @@ const App = () => {
                 <Route path="/operation/:id" element={<OperationDetail />} />
                 {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                 <Route path="*" element={<NotFound />} />
-              </SentryRoutes>
+              </Routes>
             </BrowserRouter>
           </TooltipProvider>
         </ThemeProvider>
@@ -58,4 +51,4 @@ const App = () => {
   );
 };
 
-export default Sentry.withProfiler(App);
+export default App;
