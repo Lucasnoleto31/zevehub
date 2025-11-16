@@ -8,26 +8,26 @@ All colors MUST be HSL.
 
 @layer base {
   :root {
-    /* Zeve Platform Design System - Professional Trading Theme */
-    --background: 220 20% 97%;
-    --foreground: 220 40% 10%;
+    /* Zeve Platform Design System - Modern Light Blue Theme */
+    --background: 210 100% 97%;
+    --foreground: 215 25% 20%;
 
     --card: 0 0% 100%;
-    --card-foreground: 220 40% 10%;
+    --card-foreground: 215 25% 20%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 220 40% 10%;
+    --popover-foreground: 215 25% 20%;
 
-    /* Primary: Deep Blue - Professional & Trust */
-    --primary: 220 70% 25%;
+    /* Primary: Vibrant Light Blue */
+    --primary: 205 100% 50%;
     --primary-foreground: 0 0% 100%;
-    --primary-hover: 220 70% 20%;
+    --primary-hover: 205 100% 45%;
 
-    /* Secondary: Light Blue Accent */
-    --secondary: 220 15% 94%;
-    --secondary-foreground: 220 40% 10%;
+    /* Secondary: Soft Blue Accent */
+    --secondary: 210 40% 96%;
+    --secondary-foreground: 215 25% 20%;
 
-    /* Success: Trading Green */
+    /* Success: Fresh Green */
     --success: 142 76% 36%;
     --success-foreground: 0 0% 100%;
 
@@ -35,29 +35,33 @@ All colors MUST be HSL.
     --warning: 38 92% 50%;
     --warning-foreground: 0 0% 100%;
 
-    --muted: 220 15% 94%;
-    --muted-foreground: 220 15% 45%;
+    --muted: 210 40% 96%;
+    --muted-foreground: 215 16% 50%;
 
-    --accent: 220 70% 25%;
+    --accent: 200 100% 60%;
     --accent-foreground: 0 0% 100%;
 
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 220 20% 88%;
-    --input: 220 20% 88%;
-    --ring: 220 70% 25%;
+    --border: 210 30% 90%;
+    --input: 210 30% 90%;
+    --ring: 205 100% 50%;
 
-    --radius: 0.75rem;
+    --radius: 1rem;
 
-    /* Gradient Overlays */
-    --gradient-primary: linear-gradient(135deg, hsl(220 70% 25%), hsl(220 70% 35%));
+    /* Modern Gradient Overlays */
+    --gradient-primary: linear-gradient(135deg, hsl(205 100% 50%), hsl(200 100% 60%));
     --gradient-success: linear-gradient(135deg, hsl(142 76% 36%), hsl(142 76% 46%));
-    --gradient-card: linear-gradient(145deg, hsl(0 0% 100%), hsl(220 20% 98%));
+    --gradient-card: linear-gradient(145deg, hsl(0 0% 100%), hsl(210 40% 98%));
+    --gradient-hero: linear-gradient(135deg, hsl(210 100% 97%), hsl(200 100% 95%));
+    --gradient-mesh: radial-gradient(at 40% 20%, hsl(205 100% 85%) 0px, transparent 50%),
+                     radial-gradient(at 80% 0%, hsl(200 100% 88%) 0px, transparent 50%),
+                     radial-gradient(at 0% 50%, hsl(210 100% 90%) 0px, transparent 50%);
 
     /* Glass Effect */
-    --glass-bg: hsla(0, 0%, 100%, 0.7);
-    --glass-border: hsla(220, 20%, 88%, 0.3);
+    --glass-bg: hsla(0, 0%, 100%, 0.75);
+    --glass-border: hsla(205, 100%, 50%, 0.15);
 
     /* Shadows */
     --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
