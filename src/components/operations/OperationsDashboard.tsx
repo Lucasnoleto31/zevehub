@@ -1117,7 +1117,25 @@ const OperationsDashboard = ({ userId }: OperationsDashboardProps) => {
               
               <XAxis dataKey="date" tick={{ fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} />
               <YAxis tick={{ fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} />
-              <Tooltip formatter={(value: number) => value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })} />
+              <Tooltip 
+                formatter={(value, name, props) => {
+                  // Só exibe valores válidos (não nulos e não undefined)
+                  if (value === null || value === undefined) return null;
+
+                  // Formatação de moeda brasileira
+                  const formatted = (value as number).toLocaleString("pt-BR", {
+                    style: "currency",
+                    currency: "BRL",
+                  });
+
+                  return [formatted, " "];
+                }}
+                filterNull={true}
+                contentStyle={{
+                  borderRadius: "10px",
+                  padding: "10px",
+                }}
+              />
               
               {/* Linha de referência no zero */}
               <ReferenceLine 
