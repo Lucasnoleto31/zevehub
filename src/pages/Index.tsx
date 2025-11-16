@@ -9,6 +9,7 @@ import { TrendingUp, Rocket, Activity, BarChart3, Users, Clock, CheckCircle2, X,
 import { Navbar } from "@/components/Navbar";
 import { useScrollAnimation } from "@/hooks/useScrollAnimation";
 import { useParallax } from "@/hooks/useParallax";
+import { useCountUp } from "@/hooks/useCountUp";
 
 const Index = () => {
   const navigate = useNavigate();
@@ -33,6 +34,11 @@ const Index = () => {
       element.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
   };
+
+  // Counter animations for stats
+  const successRate = useCountUp({ end: 98, duration: 2500, suffix: '%' });
+  const activeUsers = useCountUp({ end: 5, duration: 2000, suffix: 'k+' });
+  const monitoring = useCountUp({ end: 24, duration: 1500, suffix: '/7' });
 
   useEffect(() => {
     // Check if user is already logged in
@@ -126,25 +132,44 @@ const Index = () => {
             ref={statsAnimation.ref}
             className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl mx-auto"
           >
-            {[
-              { icon: Activity, value: "98%", label: "Taxa de Sucesso", color: "text-primary" },
-              { icon: Users, value: "5k+", label: "Usuários Ativos", color: "text-primary" },
-              { icon: Clock, value: "24/7", label: "Monitoramento", color: "text-primary" }
-            ].map((stat, index) => (
-              <Card 
-                key={index} 
-                className={`border border-border hover:shadow-lg transition-all duration-300 rounded-xl bg-card p-8 scroll-scale ${statsAnimation.isVisible ? 'visible' : ''} delay-${(index + 1) * 100}`}
-              >
-                <div className="flex flex-col items-center">
-                  <div className={`text-6xl md:text-7xl font-bold ${stat.color} mb-3`}>
-                    {stat.value}
-                  </div>
-                  <div className="text-base text-muted-foreground font-medium">
-                    {stat.label}
-                  </div>
+            <Card 
+              className={`border border-border hover:shadow-lg transition-all duration-300 rounded-xl bg-card p-8 scroll-scale ${statsAnimation.isVisible ? 'visible' : ''} delay-100`}
+            >
+              <div className="flex flex-col items-center">
+                <div ref={successRate.ref} className="text-6xl md:text-7xl font-bold text-primary mb-3">
+                  {successRate.value}
                 </div>
-              </Card>
-            ))}
+                <div className="text-base text-muted-foreground font-medium">
+                  Taxa de Sucesso
+                </div>
+              </div>
+            </Card>
+
+            <Card 
+              className={`border border-border hover:shadow-lg transition-all duration-300 rounded-xl bg-card p-8 scroll-scale ${statsAnimation.isVisible ? 'visible' : ''} delay-200`}
+            >
+              <div className="flex flex-col items-center">
+                <div ref={activeUsers.ref} className="text-6xl md:text-7xl font-bold text-primary mb-3">
+                  {activeUsers.value}
+                </div>
+                <div className="text-base text-muted-foreground font-medium">
+                  Usuários Ativos
+                </div>
+              </div>
+            </Card>
+
+            <Card 
+              className={`border border-border hover:shadow-lg transition-all duration-300 rounded-xl bg-card p-8 scroll-scale ${statsAnimation.isVisible ? 'visible' : ''} delay-300`}
+            >
+              <div className="flex flex-col items-center">
+                <div ref={monitoring.ref} className="text-6xl md:text-7xl font-bold text-primary mb-3">
+                  {monitoring.value}
+                </div>
+                <div className="text-base text-muted-foreground font-medium">
+                  Monitoramento
+                </div>
+              </div>
+            </Card>
           </div>
         </div>
       </div>
