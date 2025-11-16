@@ -3,18 +3,24 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { TrendingUp, Rocket, Activity, BarChart3, Users, Clock, CheckCircle2, X } from "lucide-react";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { TrendingUp, Rocket, Activity, BarChart3, Users, Clock, CheckCircle2, X, Star, Quote } from "lucide-react";
 import { Navbar } from "@/components/Navbar";
 import { useScrollAnimation } from "@/hooks/useScrollAnimation";
+import { useParallax } from "@/hooks/useParallax";
 
 const Index = () => {
   const navigate = useNavigate();
   const [theme, setTheme] = useState<"light" | "dark">("light");
   
+  // Parallax effects
+  const parallaxOffset = useParallax(0.3);
+  
   // Scroll animation hooks for different sections
   const heroAnimation = useScrollAnimation({ threshold: 0.2 });
   const statsAnimation = useScrollAnimation({ threshold: 0.2 });
   const featuresAnimation = useScrollAnimation({ threshold: 0.1 });
+  const testimonialsAnimation = useScrollAnimation({ threshold: 0.1 });
   const pricingAnimation = useScrollAnimation({ threshold: 0.1 });
 
   useEffect(() => {
@@ -35,8 +41,33 @@ const Index = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background relative overflow-hidden">
       <Navbar theme={theme} onThemeToggle={toggleTheme} />
+      
+      {/* Parallax Background Elements */}
+      <div 
+        className="absolute top-40 right-20 w-80 h-80 opacity-[0.08] pointer-events-none"
+        style={{ transform: `translateY(${parallaxOffset}px)` }}
+      >
+        <svg viewBox="0 0 200 100" className="w-full h-full">
+          <polyline
+            fill="none"
+            stroke="hsl(217 91% 60%)"
+            strokeWidth="2"
+            points="0,80 40,60 80,40 120,50 160,20 200,30"
+          />
+        </svg>
+      </div>
+      
+      <div 
+        className="absolute top-[600px] left-20 w-64 h-64 opacity-[0.06] pointer-events-none"
+        style={{ transform: `translateY(${parallaxOffset * 1.5}px)` }}
+      >
+        <svg viewBox="0 0 200 200" className="w-full h-full">
+          <circle cx="100" cy="100" r="80" fill="none" stroke="hsl(217 91% 60%)" strokeWidth="2" strokeDasharray="10,5" />
+          <circle cx="100" cy="100" r="50" fill="none" stroke="hsl(217 91% 60%)" strokeWidth="1.5" />
+        </svg>
+      </div>
       
       {/* Hero Section */}
       <div 
@@ -146,7 +177,90 @@ const Index = () => {
         </div>
       </div>
 
-      {/* Pricing Section */}
+      {/* Testimonials Section */}
+      <div 
+        ref={testimonialsAnimation.ref}
+        className="container relative z-10 mx-auto px-6 py-24 bg-secondary/20"
+      >
+        <div className={`text-center mb-16 scroll-animate ${testimonialsAnimation.isVisible ? 'visible' : ''}`}>
+          <h2 className="text-4xl md:text-5xl font-bold text-foreground mb-4 tracking-tight">
+            O que nossos clientes dizem
+          </h2>
+          <p className="text-lg text-muted-foreground">
+            Resultados reais de quem já usa o Zeve Hub
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl mx-auto">
+          {[
+            {
+              name: "Carlos Silva",
+              role: "Trader Profissional",
+              avatar: "CS",
+              rating: 5,
+              text: "O Zeve Hub transformou completamente minha forma de operar. Consigo acompanhar todos os meus robôs em tempo real com uma interface limpa e intuitiva.",
+              result: "+127% em 6 meses"
+            },
+            {
+              name: "Marina Costa",
+              role: "Investidora",
+              avatar: "MC",
+              rating: 5,
+              text: "Finalmente encontrei uma plataforma que realmente entende as necessidades de quem opera com robôs. O suporte da assessoria é excepcional!",
+              result: "+89% em 4 meses"
+            },
+            {
+              name: "Ricardo Almeida",
+              role: "Day Trader",
+              avatar: "RA",
+              rating: 5,
+              text: "A análise avançada do Zeve Hub me deu insights que eu não conseguia ter antes. Minha performance melhorou significativamente.",
+              result: "+156% em 8 meses"
+            }
+          ].map((testimonial, index) => (
+            <Card 
+              key={index}
+              className={`border border-border hover:shadow-xl transition-all duration-300 rounded-xl bg-card relative scroll-animate ${testimonialsAnimation.isVisible ? 'visible' : ''} delay-${(index + 1) * 100}`}
+            >
+              <CardHeader className="pb-4">
+                <div className="flex items-start justify-between mb-4">
+                  <div className="flex items-center gap-3">
+                    <Avatar className="w-12 h-12">
+                      <AvatarFallback className="bg-primary/10 text-primary font-semibold">
+                        {testimonial.avatar}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div>
+                      <div className="font-semibold text-foreground">{testimonial.name}</div>
+                      <div className="text-sm text-muted-foreground">{testimonial.role}</div>
+                    </div>
+                  </div>
+                  <Quote className="w-8 h-8 text-primary/20" />
+                </div>
+                
+                <div className="flex gap-1 mb-3">
+                  {[...Array(testimonial.rating)].map((_, i) => (
+                    <Star key={i} className="w-4 h-4 fill-primary text-primary" />
+                  ))}
+                </div>
+              </CardHeader>
+              
+              <CardContent className="space-y-4">
+                <p className="text-sm text-muted-foreground leading-relaxed italic">
+                  "{testimonial.text}"
+                </p>
+                
+                <div className="pt-4 border-t border-border">
+                  <div className="text-xs text-muted-foreground mb-1">Resultado</div>
+                  <div className="text-2xl font-bold text-success">
+                    {testimonial.result}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </div>
       <div 
         ref={pricingAnimation.ref}
         className="container relative z-10 mx-auto px-6 py-20 bg-secondary/30"
