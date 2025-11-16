@@ -1104,14 +1104,14 @@ const OperationsDashboard = ({ userId }: OperationsDashboardProps) => {
 
                 {/* Gradiente verde */}
                 <linearGradient id="gradient-positive-ops" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#DFF3E2" stopOpacity={0.8} />
-                  <stop offset="100%" stopColor="#DFF3E2" stopOpacity={0.3} />
+                  <stop offset="0%" stopColor="#B8E6BF" stopOpacity={0.9} />
+                  <stop offset="100%" stopColor="#D4F1D7" stopOpacity={0.6} />
                 </linearGradient>
 
                 {/* Gradiente vermelho */}
                 <linearGradient id="gradient-negative-ops" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#F9D5D5" stopOpacity={0.3} />
-                  <stop offset="100%" stopColor="#F9D5D5" stopOpacity={0.8} />
+                  <stop offset="0%" stopColor="#F5B8B8" stopOpacity={0.6} />
+                  <stop offset="100%" stopColor="#F5B8B8" stopOpacity={0.9} />
                 </linearGradient>
               </defs>
               
