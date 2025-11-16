@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { User } from "@supabase/supabase-js";
 import { Button } from "@/components/ui/button";
@@ -102,6 +102,9 @@ const MenuCard = ({ item, index }: { item: MenuItem; index: number }) => {
           transition: transform ? 'none' : 'all 0.6s cubic-bezier(0.23, 1, 0.32, 1)',
         }}
       >
+        {item.path && (
+          <Link to={item.path} className="absolute inset-0 z-20" aria-label={`Ir para ${item.title}`} />
+        )}
         <div className="card-glow-effect" />
         <CardContent className="p-0 relative z-10">
           <div className="relative h-48 overflow-hidden">
