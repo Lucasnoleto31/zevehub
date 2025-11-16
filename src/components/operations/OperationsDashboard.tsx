@@ -1085,8 +1085,9 @@ const OperationsDashboard = ({ userId }: OperationsDashboardProps) => {
                   <stop offset="95%" stopColor="hsl(var(--destructive))" stopOpacity={0}/>
                 </linearGradient>
               </defs>
-              <Area type="monotone" dataKey="negative" stroke="hsl(var(--destructive))" strokeWidth={2.5} fillOpacity={1} fill="url(#colorNegative)" />
-              <Area type="monotone" dataKey="positive" stroke="hsl(var(--success))" strokeWidth={2.5} fillOpacity={1} fill="url(#colorPositive)" />
+              <Area type="monotone" dataKey="negative" stroke="transparent" strokeWidth={0} fillOpacity={1} fill="url(#colorNegative)" />
+              <Area type="monotone" dataKey="positive" stroke="transparent" strokeWidth={0} fillOpacity={1} fill="url(#colorPositive)" />
+              <Line type="monotone" dataKey="value" stroke="hsl(var(--foreground))" strokeWidth={2} dot={false} />
             </AreaChart>
           </ResponsiveContainer>
         </CardContent>
