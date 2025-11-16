@@ -414,7 +414,7 @@ const OperationsDashboard = ({ userId }: OperationsDashboardProps) => {
     }, {} as Record<string, number>);
 
     let accumulated = 0;
-    const curve = Object.entries(dailyResults)
+    const curvePoints = Object.entries(dailyResults)
       .sort(([dateA], [dateB]) => dateA.localeCompare(dateB))
       .map(([date, result]) => {
         accumulated += result;
@@ -422,11 +422,11 @@ const OperationsDashboard = ({ userId }: OperationsDashboardProps) => {
         return {
           date: (() => { const [yy, mm, dd] = date.split('-'); return `${dd}/${mm}`; })(),
           value,
-          positive: value >= 0 ? value : null,
-          negative: value < 0 ? value : null,
+          positive: value >= 0 ? value : 0,
+          negative: value < 0 ? value : 0,
         };
       });
-    setPerformanceCurve(curve);
+    setPerformanceCurve(curvePoints);
 
     // Melhores dias da semana (Segunda a Sexta apenas)
     const weekdays = ["Seg", "Ter", "Qua", "Qui", "Sex"];

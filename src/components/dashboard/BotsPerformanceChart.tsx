@@ -54,8 +54,8 @@ const chartData: PerformancePoint[] = Object.entries(dataByDate).map(([date, dat
     date,
     accumulated: value,
     operations: data.count,
-    positive: value >= 0 ? value : null,
-    negative: value < 0 ? value : null,
+    positive: value >= 0 ? value : 0,
+    negative: value < 0 ? value : 0,
   };
 });
 
