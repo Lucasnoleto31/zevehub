@@ -140,11 +140,13 @@ return (
           <defs>
             <linearGradient id="colorPositive" x1="0" y1="0" x2="0" y2="1">
               <stop offset="0%" stopColor="hsl(var(--success))" stopOpacity={0.95}/>
-              <stop offset="100%" stopColor="hsl(var(--success))" stopOpacity={0.6}/>
+              <stop offset="60%" stopColor="hsl(var(--success))" stopOpacity={0.25}/>
+              <stop offset="100%" stopColor="hsl(var(--success))" stopOpacity={0}/>
             </linearGradient>
             <linearGradient id="colorNegative" x1="0" y1="0" x2="0" y2="1">
               <stop offset="0%" stopColor="hsl(var(--destructive))" stopOpacity={0.95}/>
-              <stop offset="100%" stopColor="hsl(var(--destructive))" stopOpacity={0.6}/>
+              <stop offset="60%" stopColor="hsl(var(--destructive))" stopOpacity={0.25}/>
+              <stop offset="100%" stopColor="hsl(var(--destructive))" stopOpacity={0}/>
             </linearGradient>
           </defs>
           <XAxis 
@@ -169,7 +171,8 @@ return (
             <Area
               type="monotone"
               dataKey="negative"
-              stroke="none"
+              stroke="hsl(var(--destructive))"
+              strokeWidth={2}
               fill="url(#colorNegative)"
               name="Resultado Acumulado"
             />
@@ -177,7 +180,8 @@ return (
             <Area
               type="monotone"
               dataKey="positive"
-              stroke="none"
+              stroke="hsl(var(--success))"
+              strokeWidth={2}
               fill="url(#colorPositive)"
               name="Resultado Acumulado"
             />
