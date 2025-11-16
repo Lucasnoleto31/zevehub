@@ -410,6 +410,10 @@ All colors MUST be HSL.
     filter: blur(1px);
   }
 
+  .dark .particle {
+    background: radial-gradient(circle, hsl(218 21% 81% / 0.3) 0%, hsl(218 21% 81% / 0.1) 50%, transparent 100%);
+  }
+
   .particle-1 {
     width: 4px;
     height: 4px;
@@ -484,6 +488,10 @@ All colors MUST be HSL.
     pointer-events: none;
   }
 
+  .dark .glow-orb {
+    opacity: 0.08;
+  }
+
   .glow-orb-1 {
     width: 500px;
     height: 500px;
@@ -491,6 +499,10 @@ All colors MUST be HSL.
     right: -10%;
     background: radial-gradient(circle, hsl(217 91% 60%) 0%, transparent 70%);
     animation: pulse-glow 8s ease-in-out infinite;
+  }
+
+  .dark .glow-orb-1 {
+    background: radial-gradient(circle, hsl(218 21% 81%) 0%, transparent 70%);
   }
 
   .glow-orb-2 {
@@ -502,6 +514,10 @@ All colors MUST be HSL.
     animation: pulse-glow 10s ease-in-out infinite 2s;
   }
 
+  .dark .glow-orb-2 {
+    background: radial-gradient(circle, hsl(218 21% 75%) 0%, transparent 70%);
+  }
+
   .glow-orb-3 {
     width: 350px;
     height: 350px;
@@ -510,6 +526,10 @@ All colors MUST be HSL.
     transform: translate(-50%, -50%);
     background: radial-gradient(circle, hsl(217 91% 70%) 0%, transparent 70%);
     animation: pulse-glow 12s ease-in-out infinite 4s;
+  }
+
+  .dark .glow-orb-3 {
+    background: radial-gradient(circle, hsl(218 21% 70%) 0%, transparent 70%);
   }
 
   @keyframes pulse-glow {
