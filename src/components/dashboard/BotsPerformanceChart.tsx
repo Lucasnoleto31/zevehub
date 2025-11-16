@@ -139,12 +139,12 @@ return (
         <AreaChart data={performanceData} margin={{ top: 10, right: 10, left: 10, bottom: 60 }}>
           <defs>
             <linearGradient id="colorPositive" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="5%" stopColor="hsl(var(--success))" stopOpacity={0.4}/>
-              <stop offset="95%" stopColor="hsl(var(--success))" stopOpacity={0}/>
+              <stop offset="5%" stopColor="hsl(var(--success))" stopOpacity={0.8}/>
+              <stop offset="95%" stopColor="hsl(var(--success))" stopOpacity={0.2}/>
             </linearGradient>
             <linearGradient id="colorNegative" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="5%" stopColor="hsl(var(--destructive))" stopOpacity={0.4}/>
-              <stop offset="95%" stopColor="hsl(var(--destructive))" stopOpacity={0}/>
+              <stop offset="5%" stopColor="hsl(var(--destructive))" stopOpacity={0.8}/>
+              <stop offset="95%" stopColor="hsl(var(--destructive))" stopOpacity={0.2}/>
             </linearGradient>
           </defs>
           <XAxis 
