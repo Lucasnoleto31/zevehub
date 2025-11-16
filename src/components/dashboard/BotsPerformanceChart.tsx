@@ -169,21 +169,17 @@ return (
             <Area
               type="monotone"
               dataKey="negative"
-              stroke="hsl(var(--destructive))"
-              strokeWidth={2.5}
+              stroke="none"
               fill="url(#colorNegative)"
               name="Resultado Acumulado"
-              connectNulls={false}
             />
             {/* Área positiva - verde */}
             <Area
               type="monotone"
               dataKey="positive"
-              stroke="hsl(var(--success))"
-              strokeWidth={2.5}
+              stroke="none"
               fill="url(#colorPositive)"
               name="Resultado Acumulado"
-              connectNulls={false}
             />
           </AreaChart>
         </ResponsiveContainer>
