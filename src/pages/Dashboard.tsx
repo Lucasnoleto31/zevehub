@@ -66,13 +66,20 @@ const Dashboard = () => {
         setRoles(rolesData.map((r) => r.role));
       }
 
-      // Buscar estatísticas de operações
-      const { data: operations } = await supabase
+      // Buscar estatísticas de operações (todas, sem limite)
+      const { data: operations, error: opsError } = await supabase
         .from("trading_operations")
         .select("*")
-        .order("operation_date", { ascending: false });
+        .order("operation_date", { ascending: false })
+        .order("operation_time", { ascending: false });
+
+      if (opsError) {
+        console.error("Erro ao carregar operações:", opsError);
+        toast.error("Erro ao carregar operações");
+      }
 
       if (operations) {
+        console.log("Total de operações carregadas:", operations.length);
         const totalOps = operations.length;
         const totalProfit = operations.reduce((sum, op) => sum + Number(op.result), 0);
         const winningOps = operations.filter(op => Number(op.result) > 0).length;
