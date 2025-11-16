@@ -117,17 +117,6 @@ const BotsPerformanceChart = () => {
     return null;
   };
 
-  // Separar dados em positivos e negativos para colorir diferentemente
-  const positiveData = performanceData.map(point => ({
-    ...point,
-    accumulated: point.accumulated >= 0 ? point.accumulated : null
-  }));
-
-  const negativeData = performanceData.map(point => ({
-    ...point,
-    accumulated: point.accumulated < 0 ? point.accumulated : null
-  }));
-
   return (
     <Card>
       <CardHeader>
@@ -170,25 +159,31 @@ const BotsPerformanceChart = () => {
               width={80}
             />
             <Tooltip content={<CustomTooltip />} />
+            {/* Área negativa - vermelho */}
             <Area
               type="monotone"
               dataKey="accumulated"
-              data={positiveData}
-              stroke="hsl(var(--success))"
-              strokeWidth={2.5}
-              fill="url(#colorPositive)"
-              name="Resultado Acumulado"
-              connectNulls
-            />
-            <Area
-              type="monotone"
-              dataKey="accumulated"
-              data={negativeData}
               stroke="hsl(var(--destructive))"
               strokeWidth={2.5}
               fill="url(#colorNegative)"
               name="Resultado Acumulado"
-              connectNulls
+              data={performanceData.map(point => ({
+                ...point,
+                accumulated: point.accumulated < 0 ? point.accumulated : 0
+              }))}
+            />
+            {/* Área positiva - verde */}
+            <Area
+              type="monotone"
+              dataKey="accumulated"
+              stroke="hsl(var(--success))"
+              strokeWidth={2.5}
+              fill="url(#colorPositive)"
+              name="Resultado Acumulado"
+              data={performanceData.map(point => ({
+                ...point,
+                accumulated: point.accumulated >= 0 ? point.accumulated : 0
+              }))}
             />
           </AreaChart>
         </ResponsiveContainer>
