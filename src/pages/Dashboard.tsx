@@ -100,7 +100,20 @@ const Dashboard = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-accent/20 to-background">
+    <div className="min-h-screen bg-gradient-to-br from-background via-accent/20 to-background relative overflow-hidden">
+      {/* Animated Background Effects */}
+      <div className="fixed inset-0 pointer-events-none overflow-hidden">
+        <div className="particle particle-1" />
+        <div className="particle particle-2" />
+        <div className="particle particle-3" />
+        <div className="particle particle-4" />
+        <div className="particle particle-5" />
+        <div className="particle particle-6" />
+        <div className="glow-orb glow-orb-1" />
+        <div className="glow-orb glow-orb-2" />
+        <div className="glow-orb glow-orb-3" />
+      </div>
+
       {/* Header */}
       <header className="border-b bg-card/50 backdrop-blur-md sticky top-0 z-50">
         <div className="container mx-auto px-4 py-4">
