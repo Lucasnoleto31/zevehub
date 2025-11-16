@@ -54,8 +54,8 @@ const chartData: PerformancePoint[] = Object.entries(dataByDate).map(([date, dat
     date,
     accumulated: value,
     operations: data.count,
-    positive: value >= 0 ? value : 0,
-    negative: value < 0 ? value : 0,
+    positive: value >= 0 ? value : null,
+    negative: value < 0 ? value : null,
   };
 });
 
@@ -169,8 +169,8 @@ return (
             <Area
               type="monotone"
               dataKey="negative"
-              stroke="transparent"
-              strokeWidth={0}
+              stroke="hsl(var(--destructive))"
+              strokeWidth={2.5}
               fill="url(#colorNegative)"
               name="Resultado Acumulado"
               connectNulls={false}
@@ -179,20 +179,11 @@ return (
             <Area
               type="monotone"
               dataKey="positive"
-              stroke="transparent"
-              strokeWidth={0}
+              stroke="hsl(var(--success))"
+              strokeWidth={2.5}
               fill="url(#colorPositive)"
               name="Resultado Acumulado"
               connectNulls={false}
-            />
-            {/* Linha contínua que conecta todos os pontos */}
-            <Line
-              type="monotone"
-              dataKey="accumulated"
-              stroke="hsl(var(--foreground))"
-              strokeWidth={2}
-              dot={false}
-              name="Resultado Acumulado"
             />
           </AreaChart>
         </ResponsiveContainer>

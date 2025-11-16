@@ -414,7 +414,7 @@ const OperationsDashboard = ({ userId }: OperationsDashboardProps) => {
     }, {} as Record<string, number>);
 
     let accumulated = 0;
-    const curvePoints = Object.entries(dailyResults)
+    const curve = Object.entries(dailyResults)
       .sort(([dateA], [dateB]) => dateA.localeCompare(dateB))
       .map(([date, result]) => {
         accumulated += result;
@@ -422,11 +422,11 @@ const OperationsDashboard = ({ userId }: OperationsDashboardProps) => {
         return {
           date: (() => { const [yy, mm, dd] = date.split('-'); return `${dd}/${mm}`; })(),
           value,
-          positive: value >= 0 ? value : 0,
-          negative: value < 0 ? value : 0,
+          positive: value >= 0 ? value : null,
+          negative: value < 0 ? value : null,
         };
       });
-    setPerformanceCurve(curvePoints);
+    setPerformanceCurve(curve);
 
     // Melhores dias da semana (Segunda a Sexta apenas)
     const weekdays = ["Seg", "Ter", "Qua", "Qui", "Sex"];
@@ -1085,9 +1085,8 @@ const OperationsDashboard = ({ userId }: OperationsDashboardProps) => {
                   <stop offset="95%" stopColor="hsl(var(--destructive))" stopOpacity={0}/>
                 </linearGradient>
               </defs>
-              <Area type="monotone" dataKey="negative" stroke="transparent" strokeWidth={0} fillOpacity={1} fill="url(#colorNegative)" />
-              <Area type="monotone" dataKey="positive" stroke="transparent" strokeWidth={0} fillOpacity={1} fill="url(#colorPositive)" />
-              <Line type="monotone" dataKey="value" stroke="hsl(var(--foreground))" strokeWidth={2} dot={false} />
+              <Area type="monotone" dataKey="negative" stroke="hsl(var(--destructive))" strokeWidth={2.5} fillOpacity={1} fill="url(#colorNegative)" />
+              <Area type="monotone" dataKey="positive" stroke="hsl(var(--success))" strokeWidth={2.5} fillOpacity={1} fill="url(#colorPositive)" />
             </AreaChart>
           </ResponsiveContainer>
         </CardContent>
