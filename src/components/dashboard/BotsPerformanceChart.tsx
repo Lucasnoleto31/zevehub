@@ -117,7 +117,16 @@ const BotsPerformanceChart = () => {
     return null;
   };
 
-  const isPositive = performanceData.length > 0 && performanceData[performanceData.length - 1].accumulated >= 0;
+  // Separar dados em positivos e negativos para colorir diferentemente
+  const positiveData = performanceData.map(point => ({
+    ...point,
+    accumulated: point.accumulated >= 0 ? point.accumulated : null
+  }));
+
+  const negativeData = performanceData.map(point => ({
+    ...point,
+    accumulated: point.accumulated < 0 ? point.accumulated : null
+  }));
 
   return (
     <Card>
@@ -164,10 +173,22 @@ const BotsPerformanceChart = () => {
             <Area
               type="monotone"
               dataKey="accumulated"
-              stroke={isPositive ? "hsl(var(--success))" : "hsl(var(--destructive))"}
+              data={positiveData}
+              stroke="hsl(var(--success))"
               strokeWidth={2.5}
-              fill={isPositive ? "url(#colorPositive)" : "url(#colorNegative)"}
+              fill="url(#colorPositive)"
               name="Resultado Acumulado"
+              connectNulls
+            />
+            <Area
+              type="monotone"
+              dataKey="accumulated"
+              data={negativeData}
+              stroke="hsl(var(--destructive))"
+              strokeWidth={2.5}
+              fill="url(#colorNegative)"
+              name="Resultado Acumulado"
+              connectNulls
             />
           </AreaChart>
         </ResponsiveContainer>
