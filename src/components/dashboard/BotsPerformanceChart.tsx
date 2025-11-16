@@ -8,6 +8,8 @@ interface PerformancePoint {
   date: string;
   accumulated: number;
   operations: number;
+  positiveValue: number;
+  negativeValue: number;
 }
 
 const BotsPerformanceChart = () => {
@@ -52,6 +54,8 @@ const chartData: PerformancePoint[] = Object.entries(dataByDate).map(([date, dat
     date,
     accumulated: value,
     operations: data.count,
+    positiveValue: value >= 0 ? value : 0,
+    negativeValue: value < 0 ? value : 0,
   };
 });
 
@@ -119,12 +123,6 @@ const CustomTooltip = ({ active, payload }: any) => {
   return null;
 };
 
-  // Calcular gradiente dinâmico baseado nos valores
-  const minValue = Math.min(...performanceData.map(d => d.accumulated));
-  const maxValue = Math.max(...performanceData.map(d => d.accumulated));
-  const range = maxValue - minValue;
-  const zeroPosition = range !== 0 ? ((0 - minValue) / range) * 100 : 50;
-
   return (
     <Card>
       <CardHeader>
@@ -140,11 +138,13 @@ const CustomTooltip = ({ active, payload }: any) => {
         <ResponsiveContainer width="100%" height={300}>
           <AreaChart data={performanceData} margin={{ top: 10, right: 10, left: 10, bottom: 60 }}>
             <defs>
-              <linearGradient id="splitColor" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="hsl(var(--success))" stopOpacity={0.4}/>
-                <stop offset={`${zeroPosition}%`} stopColor="hsl(var(--success))" stopOpacity={0.1}/>
-                <stop offset={`${zeroPosition}%`} stopColor="hsl(var(--destructive))" stopOpacity={0.1}/>
-                <stop offset="100%" stopColor="hsl(var(--destructive))" stopOpacity={0.4}/>
+              <linearGradient id="positiveGradient" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="#DFF3E2" stopOpacity={1}/>
+                <stop offset="100%" stopColor="#DFF3E2" stopOpacity={0.3}/>
+              </linearGradient>
+              <linearGradient id="negativeGradient" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="#F9D5D5" stopOpacity={0.3}/>
+                <stop offset="100%" stopColor="#F9D5D5" stopOpacity={1}/>
               </linearGradient>
             </defs>
             <XAxis 
@@ -165,13 +165,25 @@ const CustomTooltip = ({ active, payload }: any) => {
               width={80}
             />
             <Tooltip content={<CustomTooltip />} />
+            {/* Área negativa - do valor até zero */}
             <Area
               type="monotone"
-              dataKey="accumulated"
-              stroke={performanceData[performanceData.length - 1]?.accumulated >= 0 ? "hsl(var(--success))" : "hsl(var(--destructive))"}
+              dataKey="negativeValue"
+              stroke="hsl(var(--destructive))"
               strokeWidth={2.5}
-              fill="url(#splitColor)"
-              name="Resultado Acumulado"
+              fill="url(#negativeGradient)"
+              fillOpacity={1}
+              isAnimationActive={false}
+            />
+            {/* Área positiva - de zero até o valor */}
+            <Area
+              type="monotone"
+              dataKey="positiveValue"
+              stroke="hsl(var(--success))"
+              strokeWidth={2.5}
+              fill="url(#positiveGradient)"
+              fillOpacity={1}
+              isAnimationActive={false}
             />
           </AreaChart>
         </ResponsiveContainer>

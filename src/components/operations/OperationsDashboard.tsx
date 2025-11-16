@@ -421,6 +421,8 @@ const OperationsDashboard = ({ userId }: OperationsDashboardProps) => {
         return {
           date: (() => { const [yy, mm, dd] = date.split('-'); return `${dd}/${mm}`; })(),
           value: accumulated,
+          positiveValue: accumulated >= 0 ? accumulated : 0,
+          negativeValue: accumulated < 0 ? accumulated : 0,
         };
       });
     setPerformanceCurve(curve);
@@ -1073,33 +1075,34 @@ const OperationsDashboard = ({ userId }: OperationsDashboardProps) => {
               <YAxis tick={{ fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} />
               <Tooltip formatter={(value: number) => value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })} />
               <defs>
-                <linearGradient id="splitColorOps" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="hsl(var(--success))" stopOpacity={0.4}/>
-                  <stop offset={`${(() => {
-                    if (performanceCurve.length === 0) return 50;
-                    const values = performanceCurve.map(d => d.value);
-                    const min = Math.min(...values);
-                    const max = Math.max(...values);
-                    const range = max - min;
-                    return range !== 0 ? ((0 - min) / range) * 100 : 50;
-                  })()}%`} stopColor="hsl(var(--success))" stopOpacity={0.1}/>
-                  <stop offset={`${(() => {
-                    if (performanceCurve.length === 0) return 50;
-                    const values = performanceCurve.map(d => d.value);
-                    const min = Math.min(...values);
-                    const max = Math.max(...values);
-                    const range = max - min;
-                    return range !== 0 ? ((0 - min) / range) * 100 : 50;
-                  })()}%`} stopColor="hsl(var(--destructive))" stopOpacity={0.1}/>
-                  <stop offset="100%" stopColor="hsl(var(--destructive))" stopOpacity={0.4}/>
+                <linearGradient id="positiveGradientOps" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#DFF3E2" stopOpacity={1}/>
+                  <stop offset="100%" stopColor="#DFF3E2" stopOpacity={0.3}/>
+                </linearGradient>
+                <linearGradient id="negativeGradientOps" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#F9D5D5" stopOpacity={0.3}/>
+                  <stop offset="100%" stopColor="#F9D5D5" stopOpacity={1}/>
                 </linearGradient>
               </defs>
+              {/* Área negativa - do valor até zero */}
               <Area 
                 type="monotone" 
-                dataKey="value" 
-                stroke={performanceCurve[performanceCurve.length - 1]?.value >= 0 ? "hsl(var(--success))" : "hsl(var(--destructive))"}
+                dataKey="negativeValue" 
+                stroke="hsl(var(--destructive))"
                 strokeWidth={2.5} 
-                fill="url(#splitColorOps)" 
+                fill="url(#negativeGradientOps)" 
+                fillOpacity={1}
+                isAnimationActive={false}
+              />
+              {/* Área positiva - de zero até o valor */}
+              <Area 
+                type="monotone" 
+                dataKey="positiveValue" 
+                stroke="hsl(var(--success))"
+                strokeWidth={2.5} 
+                fill="url(#positiveGradientOps)" 
+                fillOpacity={1}
+                isAnimationActive={false}
               />
             </AreaChart>
           </ResponsiveContainer>
