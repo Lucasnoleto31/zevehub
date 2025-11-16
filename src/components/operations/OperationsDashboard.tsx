@@ -418,12 +418,9 @@ const OperationsDashboard = ({ userId }: OperationsDashboardProps) => {
       .sort(([dateA], [dateB]) => dateA.localeCompare(dateB))
       .map(([date, result]) => {
         accumulated += result;
-        const value = accumulated;
         return {
           date: (() => { const [yy, mm, dd] = date.split('-'); return `${dd}/${mm}`; })(),
-          value,
-          positive: value >= 0 ? value : null,
-          negative: value < 0 ? value : null,
+          value: accumulated,
         };
       });
     setPerformanceCurve(curve);
@@ -1076,17 +1073,34 @@ const OperationsDashboard = ({ userId }: OperationsDashboardProps) => {
               <YAxis tick={{ fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} />
               <Tooltip formatter={(value: number) => value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })} />
               <defs>
-                <linearGradient id="colorPositive" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="hsl(var(--success))" stopOpacity={0.4}/>
-                  <stop offset="95%" stopColor="hsl(var(--success))" stopOpacity={0}/>
-                </linearGradient>
-                <linearGradient id="colorNegative" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="hsl(var(--destructive))" stopOpacity={0.4}/>
-                  <stop offset="95%" stopColor="hsl(var(--destructive))" stopOpacity={0}/>
+                <linearGradient id="splitColorOps" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="hsl(var(--success))" stopOpacity={0.4}/>
+                  <stop offset={`${(() => {
+                    if (performanceCurve.length === 0) return 50;
+                    const values = performanceCurve.map(d => d.value);
+                    const min = Math.min(...values);
+                    const max = Math.max(...values);
+                    const range = max - min;
+                    return range !== 0 ? ((0 - min) / range) * 100 : 50;
+                  })()}%`} stopColor="hsl(var(--success))" stopOpacity={0.1}/>
+                  <stop offset={`${(() => {
+                    if (performanceCurve.length === 0) return 50;
+                    const values = performanceCurve.map(d => d.value);
+                    const min = Math.min(...values);
+                    const max = Math.max(...values);
+                    const range = max - min;
+                    return range !== 0 ? ((0 - min) / range) * 100 : 50;
+                  })()}%`} stopColor="hsl(var(--destructive))" stopOpacity={0.1}/>
+                  <stop offset="100%" stopColor="hsl(var(--destructive))" stopOpacity={0.4}/>
                 </linearGradient>
               </defs>
-              <Area type="monotone" dataKey="negative" stroke="hsl(var(--destructive))" strokeWidth={2.5} fillOpacity={1} fill="url(#colorNegative)" />
-              <Area type="monotone" dataKey="positive" stroke="hsl(var(--success))" strokeWidth={2.5} fillOpacity={1} fill="url(#colorPositive)" />
+              <Area 
+                type="monotone" 
+                dataKey="value" 
+                stroke={performanceCurve[performanceCurve.length - 1]?.value >= 0 ? "hsl(var(--success))" : "hsl(var(--destructive))"}
+                strokeWidth={2.5} 
+                fill="url(#splitColorOps)" 
+              />
             </AreaChart>
           </ResponsiveContainer>
         </CardContent>
