@@ -111,7 +111,7 @@ const CustomTooltip = ({ active, payload }: any) => {
           Operações: <span className="font-medium text-foreground">{point.operations}</span>
         </p>
         <p className={`text-sm font-bold ${value >= 0 ? 'text-success' : 'text-destructive'}`}>
-          Resultado: R$ {value >= 0 ? '+' : ''}{value.toFixed(2)}
+          Resultado: {value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
         </p>
       </div>
     );
@@ -180,7 +180,14 @@ const CustomTooltip = ({ active, payload }: any) => {
               tickLine={false}
               width={80}
             />
-            <Tooltip content={<CustomTooltip />} />
+            <Tooltip 
+              content={<CustomTooltip />}
+              filterNull={true}
+              contentStyle={{
+                borderRadius: "10px",
+                padding: "10px",
+              }}
+            />
             
             {/* Linha de referência no zero */}
             <ReferenceLine 
