@@ -8,28 +8,28 @@ All colors MUST be HSL.
 
 @layer base {
   :root {
-    /* Zeve Design System v1.0 - Light Mode */
-    --background: 0 0% 100%;
-    --foreground: 210 75% 11%;
+    /* Zeve Hub Design System - Light Mode (Vibrant Blue) */
+    --background: 218 26% 97%;
+    --foreground: 222 47% 11%;
 
-    --card: 40 17% 96%;
-    --card-foreground: 210 75% 11%;
+    --card: 0 0% 100%;
+    --card-foreground: 222 47% 11%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 210 75% 11%;
+    --popover-foreground: 222 47% 11%;
 
-    /* Primary: Zeve Blue Light */
-    --primary: 210 56% 25%;
+    /* Primary: Vibrant Blue (like in image) */
+    --primary: 217 91% 60%;
     --primary-foreground: 0 0% 100%;
-    --primary-hover: 210 56% 20%;
+    --primary-hover: 217 91% 55%;
 
-    /* Secondary: Champagne */
-    --secondary: 40 17% 96%;
-    --secondary-foreground: 210 75% 11%;
+    /* Secondary: Light Blue/Gray */
+    --secondary: 218 26% 97%;
+    --secondary-foreground: 222 47% 11%;
 
-    /* Accent: Neutral Blue */
-    --accent: 218 21% 81%;
-    --accent-foreground: 210 75% 11%;
+    /* Accent: Soft Blue */
+    --accent: 217 91% 95%;
+    --accent-foreground: 217 91% 60%;
 
     /* Success */
     --success: 145 63% 49%;
@@ -37,33 +37,32 @@ All colors MUST be HSL.
 
     /* Warning */
     --warning: 45 100% 70%;
-    --warning-foreground: 210 75% 11%;
+    --warning-foreground: 222 47% 11%;
 
     /* Error */
     --error: 0 100% 69%;
     --error-foreground: 0 0% 100%;
 
-    --muted: 0 0% 91%;
-    --muted-foreground: 210 56% 25%;
+    --muted: 220 14% 71%;
+    --muted-foreground: 220 9% 46%;
 
     --destructive: 0 100% 69%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 210 75% 11% / 0.08;
-    --input: 210 75% 11% / 0.15;
-    --ring: 210 56% 25%;
+    --border: 220 13% 91%;
+    --input: 220 13% 91%;
+    --ring: 217 91% 60%;
 
     --radius: 0.75rem;
 
-    /* Zeve Institutional Gradient */
-    --gradient-primary: linear-gradient(135deg, hsl(210 56% 25%) 0%, hsl(210 75% 11%) 100%);
-    --gradient-card: linear-gradient(145deg, hsl(0 0% 100%), hsl(40 17% 96%));
-    --gradient-subtle: linear-gradient(180deg, hsl(0 0% 100%), hsl(218 21% 95%));
+    /* Gradients */
+    --gradient-primary: linear-gradient(135deg, hsl(217 91% 60%) 0%, hsl(217 91% 50%) 100%);
+    --gradient-card: linear-gradient(145deg, hsl(0 0% 100%), hsl(218 26% 98%));
 
-    /* Subtle Shadows (Apple-style) */
+    /* Shadows */
     --shadow-soft: 0px 4px 14px rgba(0, 0, 0, 0.06);
     --glass-bg: hsla(0, 0%, 100%, 0.75);
-    --glass-border: hsla(210, 56%, 25%, 0.08);
+    --glass-border: hsla(217, 91%, 60%, 0.12);
 
     /* Shadows */
     --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
