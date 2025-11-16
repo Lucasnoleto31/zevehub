@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend, AreaChart, Area, PieChart, Pie, Cell, ReferenceLine } from "recharts";
 import { TrendingUp, TrendingDown, Target, Award, Calendar, Clock, Filter, Bot, Info, Trophy } from "lucide-react";
-import { Tooltip as TooltipComponent, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Tooltip as TooltipComponent, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
@@ -1651,89 +1651,83 @@ const OperationsDashboard = ({ userId }: OperationsDashboardProps) => {
                       </div>
                     </div>
                     
-                    <TooltipProvider>
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                        <div>
-                          <p className="text-sm text-muted-foreground">Operações</p>
-                          <p className="text-lg font-semibold">{stat.totalOps}</p>
-                        </div>
-                        
-                        <div>
-                          <div className="flex items-center gap-1 mb-1">
-                            <p className="text-sm text-muted-foreground">Win Rate</p>
-                            <TooltipComponent>
-                              <TooltipTrigger asChild>
-                                <Info className="w-3 h-3 text-muted-foreground cursor-help" />
-                              </TooltipTrigger>
-                              <TooltipContent className="max-w-xs">
-                                <p className="font-semibold mb-1">Win Rate (Taxa de Acerto)</p>
-                                <p className="text-xs">
-                                  Percentual de operações positivas (ganhos) em relação ao total. 
-                                  Um Win Rate de 60% significa que 6 em cada 10 operações foram lucrativas. 
-                                  Valores acima de 50% indicam mais acertos que erros.
-                                </p>
-                              </TooltipContent>
-                            </TooltipComponent>
-                          </div>
-                          <p className="text-lg font-semibold text-primary">{stat.winRate.toFixed(1)}%</p>
-                          <p className="text-xs text-muted-foreground">
-                            {stat.positive}W / {stat.negative}L
-                          </p>
-                        </div>
-                        
-                        <div>
-                          <div className="flex items-center gap-1 mb-1">
-                            <p className="text-sm text-muted-foreground">Payoff</p>
-                            <TooltipComponent>
-                              <TooltipTrigger asChild>
-                                <Info className="w-3 h-3 text-muted-foreground cursor-help" />
-                              </TooltipTrigger>
-                              <TooltipContent className="max-w-xs">
-                                <p className="font-semibold mb-1">Payoff (Razão Risco/Retorno)</p>
-                                <p className="text-xs">
-                                  Relação entre o ganho médio e a perda média. Um Payoff de 2.0 significa que 
-                                  quando você ganha, ganha o dobro do que perde em média. Valores acima de 1.0 
-                                  são positivos - você ganha mais do que perde. Estratégias com Payoff alto 
-                                  podem ser lucrativas mesmo com Win Rate abaixo de 50%.
-                                </p>
-                              </TooltipContent>
-                            </TooltipComponent>
-                          </div>
-                          <p className={`text-lg font-semibold ${stat.payoff >= 1 ? 'text-success' : 'text-destructive'}`}>
-                            {stat.payoff.toFixed(2)}
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            Ganho/Perda médio
-                          </p>
-                        </div>
-                        
-                        <div>
-                          <div className="flex items-center gap-1 mb-1">
-                            <p className="text-sm text-muted-foreground">Max Drawdown</p>
-                            <TooltipComponent>
-                              <TooltipTrigger asChild>
-                                <Info className="w-3 h-3 text-muted-foreground cursor-help" />
-                              </TooltipTrigger>
-                              <TooltipContent className="max-w-xs">
-                                <p className="font-semibold mb-1">Max Drawdown (Maior Queda)</p>
-                                <p className="text-xs">
-                                  Maior perda acumulada do pico até o vale. Representa o pior cenário que 
-                                  você enfrentou - quanto você perdeu do ponto mais alto até o mais baixo. 
-                                  Valores menores indicam menor risco. Por exemplo: se seu capital chegou a 
-                                  R$ 10.000 e caiu para R$ 8.000, o drawdown foi de R$ 2.000 (20%).
-                                </p>
-                              </TooltipContent>
-                            </TooltipComponent>
-                          </div>
-                          <p className="text-lg font-semibold text-destructive">
-                            {stat.maxDrawdown.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            Maior queda
-                          </p>
-                        </div>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                      <div>
+                        <p className="text-sm text-muted-foreground">Operações</p>
+                        <p className="text-lg font-semibold">{stat.totalOps}</p>
                       </div>
-                    </TooltipProvider>
+                      
+                      <div>
+                        <div className="flex items-center gap-1 mb-1">
+                          <p className="text-sm text-muted-foreground">Win Rate</p>
+                          <TooltipComponent>
+                            <TooltipTrigger asChild>
+                              <Info className="w-3 h-3 text-muted-foreground cursor-help" />
+                            </TooltipTrigger>
+                            <TooltipContent className="max-w-xs">
+                              <p className="font-semibold mb-1">Win Rate (Taxa de Acerto)</p>
+                              <p className="text-xs">
+                                Percentual de operações positivas (ganhos) em relação ao total. 
+                                Um Win Rate de 60% significa que 6 em cada 10 operações foram lucrativas. 
+                                Valores acima de 50% indicam mais acertos que erros.
+                              </p>
+                            </TooltipContent>
+                          </TooltipComponent>
+                        </div>
+                        <p className="text-lg font-semibold text-primary">{stat.winRate.toFixed(1)}%</p>
+                        <p className="text-xs text-muted-foreground">
+                          {stat.positive}W / {stat.negative}L
+                        </p>
+                      </div>
+                      
+                      <div>
+                        <div className="flex items-center gap-1 mb-1">
+                          <p className="text-sm text-muted-foreground">Payoff</p>
+                          <TooltipComponent>
+                            <TooltipTrigger asChild>
+                              <Info className="w-3 h-3 text-muted-foreground cursor-help" />
+                            </TooltipTrigger>
+                            <TooltipContent className="max-w-xs">
+                              <p className="font-semibold mb-1">Payoff (Razão Risco/Retorno)</p>
+                              <p className="text-xs">
+                                Relação entre o ganho médio e a perda média. Um Payoff de 2.0 significa que 
+                                quando você ganha, ganha o dobro do que perde em média. Valores acima de 1.0 
+                                são positivos - você ganha mais do que perde. Estratégias com Payoff alto 
+                                podem ser lucrativas mesmo com Win Rate abaixo de 50%.
+                              </p>
+                            </TooltipContent>
+                          </TooltipComponent>
+                        </div>
+                        <p className={`text-lg font-semibold ${stat.payoff >= 1 ? 'text-success' : 'text-destructive'}`}>
+                          {stat.payoff.toFixed(2)}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          Ganho/Perda médio
+                        </p>
+                      </div>
+                      
+                      <div>
+                        <div className="flex items-center gap-1 mb-1">
+                          <p className="text-sm text-muted-foreground">Max Drawdown</p>
+                          <TooltipComponent>
+                            <TooltipTrigger asChild>
+                              <Info className="w-3 h-3 text-muted-foreground cursor-help" />
+                            </TooltipTrigger>
+                            <TooltipContent className="max-w-xs">
+                              <p className="font-semibold mb-1">Max Drawdown (Máxima Perda)</p>
+                              <p className="text-xs">
+                                Maior sequência de perda acumulada. Mostra o pior momento que sua conta passou. 
+                                Se você tinha R$ 10.000 e caiu para R$ 8.000, seu Drawdown foi de R$ 2.000 (20%). 
+                                Quanto menor o Drawdown, mais estável é sua estratégia.
+                              </p>
+                            </TooltipContent>
+                          </TooltipComponent>
+                        </div>
+                        <p className="text-lg font-semibold text-destructive">
+                          {stat.maxDrawdown.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
+                        </p>
+                      </div>
+                    </div>
                     
                     <div className="grid grid-cols-2 gap-4 mt-3 pt-3 border-t">
                       <div>
