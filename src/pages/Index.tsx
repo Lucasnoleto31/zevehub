@@ -4,7 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { TrendingUp, Rocket, Activity, BarChart3, Users, Clock, CheckCircle2, X, Star, Quote } from "lucide-react";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { TrendingUp, Rocket, Activity, BarChart3, Users, Clock, CheckCircle2, X, Star, Quote, ChevronDown } from "lucide-react";
 import { Navbar } from "@/components/Navbar";
 import { useScrollAnimation } from "@/hooks/useScrollAnimation";
 import { useParallax } from "@/hooks/useParallax";
@@ -21,7 +22,17 @@ const Index = () => {
   const statsAnimation = useScrollAnimation({ threshold: 0.2 });
   const featuresAnimation = useScrollAnimation({ threshold: 0.1 });
   const testimonialsAnimation = useScrollAnimation({ threshold: 0.1 });
+  const partnersAnimation = useScrollAnimation({ threshold: 0.1 });
+  const faqAnimation = useScrollAnimation({ threshold: 0.1 });
   const pricingAnimation = useScrollAnimation({ threshold: 0.1 });
+
+  // Smooth scroll function
+  const scrollToSection = (sectionId: string) => {
+    const element = document.getElementById(sectionId);
+    if (element) {
+      element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  };
 
   useEffect(() => {
     // Check if user is already logged in
@@ -71,6 +82,7 @@ const Index = () => {
       
       {/* Hero Section */}
       <div 
+        id="inicio"
         ref={heroAnimation.ref}
         className={`container relative z-10 mx-auto px-6 pt-32 pb-20 scroll-animate ${heroAnimation.isVisible ? 'visible' : ''}`}
       >
@@ -93,7 +105,7 @@ const Index = () => {
           <div className="flex flex-col sm:flex-row gap-5 justify-center mb-24">
             <Button 
               size="lg" 
-              onClick={() => navigate("/auth")} 
+              onClick={() => scrollToSection("pricing")} 
               className="gap-3 text-base px-10 py-7 rounded-xl font-semibold text-lg shadow-lg hover:opacity-90 transition-all"
             >
               Começar Agora
@@ -174,6 +186,40 @@ const Index = () => {
               </Card>
             ))}
           </div>
+        </div>
+      </div>
+
+      {/* Partners Section */}
+      <div 
+        ref={partnersAnimation.ref}
+        className="container relative z-10 mx-auto px-6 py-16"
+      >
+        <div className={`text-center mb-12 scroll-animate ${partnersAnimation.isVisible ? 'visible' : ''}`}>
+          <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-3 tracking-tight">
+            Parceiros de confiança
+          </h2>
+          <p className="text-base text-muted-foreground">
+            Trabalhamos com as melhores plataformas do mercado
+          </p>
+        </div>
+
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-8 max-w-4xl mx-auto items-center">
+          {[
+            { name: "B3", description: "Bolsa Oficial" },
+            { name: "MetaTrader", description: "Plataforma de Trading" },
+            { name: "TradingView", description: "Análise Técnica" },
+            { name: "Clear", description: "Corretora Parceira" }
+          ].map((partner, index) => (
+            <div
+              key={index}
+              className={`flex items-center justify-center p-6 bg-card rounded-xl border border-border hover:shadow-lg transition-all duration-300 scroll-animate ${partnersAnimation.isVisible ? 'visible' : ''} delay-${(index + 1) * 100}`}
+            >
+              <div className="text-center">
+                <div className="text-2xl font-bold text-foreground mb-1">{partner.name}</div>
+                <div className="text-xs text-muted-foreground">{partner.description}</div>
+              </div>
+            </div>
+          ))}
         </div>
       </div>
 
@@ -261,7 +307,74 @@ const Index = () => {
           ))}
         </div>
       </div>
+
+      {/* FAQ Section */}
       <div 
+        ref={faqAnimation.ref}
+        className="container relative z-10 mx-auto px-6 py-20"
+      >
+        <div className={`text-center mb-16 scroll-animate ${faqAnimation.isVisible ? 'visible' : ''}`}>
+          <h2 className="text-4xl md:text-5xl font-bold text-foreground mb-4 tracking-tight">
+            Perguntas Frequentes
+          </h2>
+          <p className="text-lg text-muted-foreground">
+            Tire suas dúvidas sobre a plataforma
+          </p>
+        </div>
+
+        <div className={`max-w-3xl mx-auto scroll-animate ${faqAnimation.isVisible ? 'visible' : ''}`}>
+          <Accordion type="single" collapsible className="space-y-4">
+            <AccordionItem value="item-1" className="border border-border rounded-xl px-6 bg-card">
+              <AccordionTrigger className="text-left hover:no-underline py-6">
+                <span className="font-semibold text-lg">O que é o Zeve Hub?</span>
+              </AccordionTrigger>
+              <AccordionContent className="text-muted-foreground pb-6">
+                O Zeve Hub é a plataforma central da Zeve Investimentos, onde você pode monitorar todos os seus robôs de trading em tempo real, acessar análises avançadas de performance e contar com suporte especializado da nossa assessoria.
+              </AccordionContent>
+            </AccordionItem>
+
+            <AccordionItem value="item-2" className="border border-border rounded-xl px-6 bg-card">
+              <AccordionTrigger className="text-left hover:no-underline py-6">
+                <span className="font-semibold text-lg">Qual a diferença entre os planos?</span>
+              </AccordionTrigger>
+              <AccordionContent className="text-muted-foreground pb-6">
+                O plano "Com Assessoria" é totalmente gratuito e inclui suporte prioritário da equipe Zeve. O plano "Independente" custa R$ 199,90/mês e oferece todas as funcionalidades de monitoramento, mas sem o suporte direto da assessoria.
+              </AccordionContent>
+            </AccordionItem>
+
+            <AccordionItem value="item-3" className="border border-border rounded-xl px-6 bg-card">
+              <AccordionTrigger className="text-left hover:no-underline py-6">
+                <span className="font-semibold text-lg">Como funciona o monitoramento em tempo real?</span>
+              </AccordionTrigger>
+              <AccordionContent className="text-muted-foreground pb-6">
+                Nossa plataforma se conecta diretamente aos seus robôs e atualiza as informações instantaneamente. Você recebe alertas sobre operações, pode visualizar gráficos de performance e acompanhar todos os resultados em um dashboard intuitivo.
+              </AccordionContent>
+            </AccordionItem>
+
+            <AccordionItem value="item-4" className="border border-border rounded-xl px-6 bg-card">
+              <AccordionTrigger className="text-left hover:no-underline py-6">
+                <span className="font-semibold text-lg">Preciso ter conhecimento técnico para usar?</span>
+              </AccordionTrigger>
+              <AccordionContent className="text-muted-foreground pb-6">
+                Não! O Zeve Hub foi desenvolvido para ser simples e intuitivo. Mesmo usuários iniciantes conseguem navegar facilmente pela plataforma. E se precisar de ajuda, nossa assessoria está sempre disponível para orientá-lo.
+              </AccordionContent>
+            </AccordionItem>
+
+            <AccordionItem value="item-5" className="border border-border rounded-xl px-6 bg-card">
+              <AccordionTrigger className="text-left hover:no-underline py-6">
+                <span className="font-semibold text-lg">Como faço para começar?</span>
+              </AccordionTrigger>
+              <AccordionContent className="text-muted-foreground pb-6">
+                É muito simples! Clique em "Começar Agora", crie sua conta gratuita e você terá acesso imediato à plataforma. Nossa equipe pode ajudá-lo na configuração inicial dos seus robôs.
+              </AccordionContent>
+            </AccordionItem>
+          </Accordion>
+        </div>
+      </div>
+
+      {/* Pricing Section */}
+      <div 
+        id="pricing"
         ref={pricingAnimation.ref}
         className="container relative z-10 mx-auto px-6 py-20 bg-secondary/30"
       >
