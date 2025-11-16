@@ -25,6 +25,8 @@ const Index = () => {
   const testimonialsAnimation = useScrollAnimation({ threshold: 0.1 });
   const partnersAnimation = useScrollAnimation({ threshold: 0.1 });
   const faqAnimation = useScrollAnimation({ threshold: 0.1 });
+  const ctaAnimation = useScrollAnimation({ threshold: 0.1 });
+  const cta2Animation = useScrollAnimation({ threshold: 0.1 });
   const pricingAnimation = useScrollAnimation({ threshold: 0.1 });
 
   // Smooth scroll function
@@ -214,6 +216,42 @@ const Index = () => {
         </div>
       </div>
 
+      {/* CTA Section 1 */}
+      <div 
+        ref={ctaAnimation.ref}
+        className="container relative z-10 mx-auto px-6 py-20"
+      >
+        <Card className={`max-w-4xl mx-auto bg-gradient-to-br from-primary/10 via-primary/5 to-background border-2 border-primary/20 overflow-hidden scroll-animate ${ctaAnimation.isVisible ? 'visible' : ''}`}>
+          <CardContent className="p-12 md:p-16 text-center relative">
+            <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2"></div>
+            <div className="absolute bottom-0 left-0 w-64 h-64 bg-primary/5 rounded-full blur-3xl translate-y-1/2 -translate-x-1/2"></div>
+            
+            <div className="relative z-10">
+              <Badge className="mb-6 px-6 py-2 text-sm bg-primary/20 text-primary border-primary/30 rounded-full">
+                Comece Hoje Mesmo
+              </Badge>
+              
+              <h2 className="text-3xl md:text-5xl font-bold text-foreground mb-6 leading-tight">
+                Pronto para elevar seus resultados?
+              </h2>
+              
+              <p className="text-lg md:text-xl text-muted-foreground mb-10 max-w-2xl mx-auto leading-relaxed">
+                Junte-se a milhares de traders que já transformaram sua performance com o Zeve Hub
+              </p>
+              
+              <Button 
+                size="lg" 
+                onClick={() => navigate("/auth")} 
+                className="gap-3 text-base px-12 py-7 rounded-xl font-bold text-lg shadow-xl hover:shadow-2xl hover:scale-105 transition-all"
+              >
+                Criar Conta Gratuita
+                <Rocket className="w-5 h-5" />
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
       {/* Partners Section */}
       <div 
         ref={partnersAnimation.ref}
@@ -394,6 +432,67 @@ const Index = () => {
               </AccordionContent>
             </AccordionItem>
           </Accordion>
+        </div>
+      </div>
+
+      {/* CTA Section 2 */}
+      <div 
+        ref={cta2Animation.ref}
+        className="container relative z-10 mx-auto px-6 py-20 bg-gradient-to-b from-background to-secondary/20"
+      >
+        <div className={`max-w-5xl mx-auto text-center scroll-animate ${cta2Animation.isVisible ? 'visible' : ''}`}>
+          <div className="grid md:grid-cols-3 gap-8 mb-12">
+            <div className="flex flex-col items-center">
+              <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mb-4">
+                <CheckCircle2 className="w-8 h-8 text-primary" />
+              </div>
+              <h3 className="font-bold text-lg mb-2">Setup em 5 minutos</h3>
+              <p className="text-sm text-muted-foreground">Configure sua conta e comece a operar rapidamente</p>
+            </div>
+            
+            <div className="flex flex-col items-center">
+              <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mb-4">
+                <Users className="w-8 h-8 text-primary" />
+              </div>
+              <h3 className="font-bold text-lg mb-2">Suporte dedicado</h3>
+              <p className="text-sm text-muted-foreground">Assessoria Zeve disponível para ajudar você</p>
+            </div>
+            
+            <div className="flex flex-col items-center">
+              <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mb-4">
+                <TrendingUp className="w-8 h-8 text-primary" />
+              </div>
+              <h3 className="font-bold text-lg mb-2">Resultados comprovados</h3>
+              <p className="text-sm text-muted-foreground">98% de taxa de sucesso dos nossos usuários</p>
+            </div>
+          </div>
+
+          <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-6">
+            Não perca mais tempo. Comece agora!
+          </h2>
+          
+          <p className="text-lg text-muted-foreground mb-8 max-w-2xl mx-auto">
+            Acesso gratuito e ilimitado ao melhor sistema de monitoramento de robôs do mercado
+          </p>
+          
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <Button 
+              size="lg" 
+              onClick={() => navigate("/auth")} 
+              className="gap-3 text-base px-10 py-7 rounded-xl font-bold text-lg shadow-lg hover:opacity-90 transition-all"
+            >
+              Começar Gratuitamente
+              <TrendingUp className="w-5 h-5" />
+            </Button>
+            <Button 
+              size="lg" 
+              variant="outline" 
+              onClick={() => scrollToSection("pricing")} 
+              className="text-base px-10 py-7 rounded-xl border-2 hover:bg-accent/30 transition-all font-bold text-lg"
+            >
+              Ver Planos
+            </Button>
+          </div>
         </div>
       </div>
 
