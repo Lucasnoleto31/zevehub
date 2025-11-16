@@ -10,131 +10,11 @@ import { toast } from "sonner";
 import {
   LogOut,
   TrendingUp,
-  Bot,
-  Trophy,
-  History,
-  Wrench,
-  User as UserIcon,
-  Shield,
   Settings,
-  ArrowRight,
-  LucideIcon,
+  Shield,
+  User as UserIcon,
 } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
-import menuRobos from "@/assets/menu-robos.jpg";
-import menuRanking from "@/assets/menu-ranking.jpg";
-import menuHistorico from "@/assets/menu-historico.jpg";
-import menuFerramentas from "@/assets/menu-ferramentas.jpg";
-import menuPerfil from "@/assets/menu-perfil.jpg";
-import menuConfiguracoes from "@/assets/menu-configuracoes.jpg";
-
-interface MenuItem {
-  title: string;
-  icon: LucideIcon;
-  description: string;
-  image: string;
-  path?: string;
-}
-
-const menuItems: MenuItem[] = [
-  { title: "Robôs", icon: Bot, description: "Gerencie seus robôs de trading", image: menuRobos, path: "/operations" },
-  { title: "Ranking", icon: Trophy, description: "Veja o ranking de performance", image: menuRanking },
-  { title: "Histórico", icon: History, description: "Acesse seu histórico de operações", image: menuHistorico },
-  { title: "Ferramentas", icon: Wrench, description: "Ferramentas e utilidades", image: menuFerramentas },
-  { title: "Perfil", icon: UserIcon, description: "Seu perfil e informações", image: menuPerfil },
-  { title: "Configurações", icon: Settings, description: "Ajustes e preferências", image: menuConfiguracoes },
-];
-
-const MenuCard = ({ item, index }: { item: MenuItem; index: number }) => {
-  const navigate = useNavigate();
-  const [cardRef, setCardRef] = useState<HTMLDivElement | null>(null);
-  const [transform, setTransform] = useState("");
-
-  useEffect(() => {
-    if (!cardRef) return;
-
-    const handleMouseMove = (e: MouseEvent) => {
-      const rect = cardRef.getBoundingClientRect();
-      const centerX = rect.left + rect.width / 2;
-      const centerY = rect.top + rect.height / 2;
-      
-      const mouseX = e.clientX - centerX;
-      const mouseY = e.clientY - centerY;
-      
-      const rotateY = (mouseX / rect.width) * 15;
-      const rotateX = -(mouseY / rect.height) * 15;
-      
-      setTransform(`perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) translateY(-12px) scale(1.02)`);
-    };
-
-    const handleMouseLeave = () => {
-      setTransform("");
-    };
-
-    cardRef.addEventListener('mousemove', handleMouseMove);
-    cardRef.addEventListener('mouseleave', handleMouseLeave);
-
-    return () => {
-      cardRef.removeEventListener('mousemove', handleMouseMove);
-      cardRef.removeEventListener('mouseleave', handleMouseLeave);
-    };
-  }, [cardRef]);
-
-  const handleClick = () => {
-    if (item.path) {
-      navigate(item.path);
-    }
-  };
-
-  return (
-    <div
-      className="card-3d-wrapper"
-      style={{ 
-        animationDelay: `${index * 0.1}s`,
-      }}
-      ref={setCardRef}
-      onClick={handleClick}
-    >
-      <Card 
-        className="card-3d group overflow-hidden border-0 shadow-lg cursor-pointer bg-card relative"
-        style={{
-          transform: transform,
-          transition: transform ? 'none' : 'all 0.6s cubic-bezier(0.23, 1, 0.32, 1)',
-        }}
-      >
-        {item.path && (
-          <Link to={item.path} className="absolute inset-0 z-20" aria-label={`Ir para ${item.title}`} />
-        )}
-        <div className="card-glow-effect" />
-        <CardContent className="p-0 relative z-10">
-          <div className="relative h-48 overflow-hidden">
-            <img 
-              src={item.image} 
-              alt={item.title}
-              className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
-            />
-            <div className="absolute inset-0 bg-gradient-to-t from-card via-card/60 to-transparent" />
-            <div className="absolute top-4 right-4 w-12 h-12 rounded-full bg-primary/20 backdrop-blur-md flex items-center justify-center border border-primary/30 group-hover:bg-primary group-hover:shadow-glow transition-all duration-500">
-              <item.icon className="w-6 h-6 text-primary group-hover:text-primary-foreground transition-colors duration-500 group-hover:scale-110" />
-            </div>
-          </div>
-          
-          <div className="p-6 space-y-3">
-            <div className="flex items-center justify-between">
-              <h3 className="text-xl font-bold text-foreground group-hover:text-primary transition-colors duration-300">
-                {item.title}
-              </h3>
-              <ArrowRight className="w-5 h-5 text-muted-foreground group-hover:text-primary group-hover:translate-x-2 transition-all duration-300" />
-            </div>
-            <p className="text-sm text-muted-foreground leading-relaxed">
-              {item.description}
-            </p>
-          </div>
-        </CardContent>
-      </Card>
-    </div>
-  );
-};
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -198,15 +78,6 @@ const Dashboard = () => {
       </div>
     );
   }
-
-  const menuItems = [
-    { title: "Robôs", icon: Bot, description: "Gerencie seus robôs de trading", image: menuRobos },
-    { title: "Ranking", icon: Trophy, description: "Veja o ranking de performance", image: menuRanking },
-    { title: "Histórico", icon: History, description: "Acesse seu histórico de operações", image: menuHistorico },
-    { title: "Ferramentas", icon: Wrench, description: "Ferramentas e utilidades", image: menuFerramentas },
-    { title: "Perfil", icon: UserIcon, description: "Seu perfil e informações", image: menuPerfil },
-    { title: "Configurações", icon: Settings, description: "Ajustes e preferências", image: menuConfiguracoes },
-  ];
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-accent/20 to-background relative overflow-hidden">
@@ -306,13 +177,6 @@ const Dashboard = () => {
               </div>
             </CardContent>
           </Card>
-        </div>
-
-        {/* Menu Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-slide-up">
-          {menuItems.map((item, index) => (
-            <MenuCard key={item.title} item={item} index={index} />
-          ))}
         </div>
       </main>
     </div>
