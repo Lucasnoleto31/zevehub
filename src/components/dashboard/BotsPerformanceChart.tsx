@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, Area, AreaChart, ReferenceLine } from "recharts";
+import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, Area, AreaChart } from "recharts";
 import { TrendingUp } from "lucide-react";
 
 interface PerformancePoint {
@@ -54,8 +54,8 @@ const chartData: PerformancePoint[] = Object.entries(dataByDate).map(([date, dat
     date,
     accumulated: value,
     operations: data.count,
-    positive: value > 0 ? value : 0,
-    negative: value < 0 ? value : 0,
+    positive: value >= 0 ? value : null,
+    negative: value < 0 ? value : null,
   };
 });
 
@@ -139,14 +139,12 @@ return (
         <AreaChart data={performanceData} margin={{ top: 10, right: 10, left: 10, bottom: 60 }}>
           <defs>
             <linearGradient id="colorPositive" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="hsl(var(--success))" stopOpacity={0.95}/>
-              <stop offset="60%" stopColor="hsl(var(--success))" stopOpacity={0.25}/>
-              <stop offset="100%" stopColor="hsl(var(--success))" stopOpacity={0}/>
+              <stop offset="5%" stopColor="hsl(var(--success))" stopOpacity={0.4}/>
+              <stop offset="95%" stopColor="hsl(var(--success))" stopOpacity={0}/>
             </linearGradient>
             <linearGradient id="colorNegative" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="hsl(var(--destructive))" stopOpacity={0.95}/>
-              <stop offset="60%" stopColor="hsl(var(--destructive))" stopOpacity={0.25}/>
-              <stop offset="100%" stopColor="hsl(var(--destructive))" stopOpacity={0}/>
+              <stop offset="5%" stopColor="hsl(var(--destructive))" stopOpacity={0.4}/>
+              <stop offset="95%" stopColor="hsl(var(--destructive))" stopOpacity={0}/>
             </linearGradient>
           </defs>
           <XAxis 
@@ -167,36 +165,25 @@ return (
             width={80}
           />
             <Tooltip content={<CustomTooltip />} />
-            <ReferenceLine 
-              y={0} 
-              stroke="hsl(var(--muted-foreground))" 
-              strokeDasharray="3 3"
-              strokeWidth={1.5}
-              label={{ 
-                value: "R$ 0", 
-                position: "right",
-                fill: "hsl(var(--muted-foreground))",
-                fontSize: 11,
-                fontWeight: 500
-              }}
-            />
             {/* Área negativa - vermelho */}
             <Area
               type="monotone"
               dataKey="negative"
               stroke="hsl(var(--destructive))"
-              strokeWidth={2}
+              strokeWidth={2.5}
               fill="url(#colorNegative)"
               name="Resultado Acumulado"
+              connectNulls={false}
             />
             {/* Área positiva - verde */}
             <Area
               type="monotone"
               dataKey="positive"
               stroke="hsl(var(--success))"
-              strokeWidth={2}
+              strokeWidth={2.5}
               fill="url(#colorPositive)"
               name="Resultado Acumulado"
+              connectNulls={false}
             />
           </AreaChart>
         </ResponsiveContainer>

@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { LineChart, Line, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend, AreaChart, Area, PieChart, Pie, Cell, ReferenceLine } from "recharts";
+import { LineChart, Line, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend, AreaChart, Area, PieChart, Pie, Cell } from "recharts";
 import { TrendingUp, TrendingDown, Target, Award, Calendar, Clock, Filter, Bot, Info, Trophy } from "lucide-react";
 import { Tooltip as TooltipComponent, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Button } from "@/components/ui/button";
@@ -422,8 +422,8 @@ const OperationsDashboard = ({ userId }: OperationsDashboardProps) => {
         return {
           date: (() => { const [yy, mm, dd] = date.split('-'); return `${dd}/${mm}`; })(),
           value,
-          positive: value > 0 ? value : 0,
-          negative: value < 0 ? value : 0,
+          positive: value >= 0 ? value : null,
+          negative: value < 0 ? value : null,
         };
       });
     setPerformanceCurve(curve);
@@ -1075,33 +1075,18 @@ const OperationsDashboard = ({ userId }: OperationsDashboardProps) => {
               <XAxis dataKey="date" tick={{ fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} />
               <YAxis tick={{ fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} />
               <Tooltip formatter={(value: number) => value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })} />
-              <ReferenceLine 
-                y={0} 
-                stroke="hsl(var(--muted-foreground))" 
-                strokeDasharray="3 3"
-                strokeWidth={1.5}
-                label={{ 
-                  value: "R$ 0", 
-                  position: "right",
-                  fill: "hsl(var(--muted-foreground))",
-                  fontSize: 11,
-                  fontWeight: 500
-                }}
-              />
               <defs>
                 <linearGradient id="colorPositive" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="hsl(var(--success))" stopOpacity={0.95}/>
-                  <stop offset="60%" stopColor="hsl(var(--success))" stopOpacity={0.25}/>
-                  <stop offset="100%" stopColor="hsl(var(--success))" stopOpacity={0}/>
+                  <stop offset="5%" stopColor="hsl(var(--success))" stopOpacity={0.4}/>
+                  <stop offset="95%" stopColor="hsl(var(--success))" stopOpacity={0}/>
                 </linearGradient>
                 <linearGradient id="colorNegative" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="hsl(var(--destructive))" stopOpacity={0.95}/>
-                  <stop offset="60%" stopColor="hsl(var(--destructive))" stopOpacity={0.25}/>
-                  <stop offset="100%" stopColor="hsl(var(--destructive))" stopOpacity={0}/>
+                  <stop offset="5%" stopColor="hsl(var(--destructive))" stopOpacity={0.4}/>
+                  <stop offset="95%" stopColor="hsl(var(--destructive))" stopOpacity={0}/>
                 </linearGradient>
               </defs>
-              <Area type="monotone" dataKey="negative" stroke="hsl(var(--destructive))" strokeWidth={2} fillOpacity={1} fill="url(#colorNegative)" />
-              <Area type="monotone" dataKey="positive" stroke="hsl(var(--success))" strokeWidth={2} fillOpacity={1} fill="url(#colorPositive)" />
+              <Area type="monotone" dataKey="negative" stroke="hsl(var(--destructive))" strokeWidth={2.5} fillOpacity={1} fill="url(#colorNegative)" />
+              <Area type="monotone" dataKey="positive" stroke="hsl(var(--success))" strokeWidth={2.5} fillOpacity={1} fill="url(#colorPositive)" />
             </AreaChart>
           </ResponsiveContainer>
         </CardContent>
