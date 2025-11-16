@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, Area, AreaChart } from "recharts";
+import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, Area, AreaChart, ReferenceLine } from "recharts";
 import { TrendingUp } from "lucide-react";
 
 interface PerformancePoint {
@@ -181,6 +181,15 @@ const CustomTooltip = ({ active, payload }: any) => {
               width={80}
             />
             <Tooltip content={<CustomTooltip />} />
+            
+            {/* Linha de referência no zero */}
+            <ReferenceLine 
+              y={0} 
+              stroke="hsl(var(--border))" 
+              strokeWidth={1.5}
+              strokeDasharray="3 3"
+              label={{ value: 'R$ 0', position: 'insideTopLeft', fill: 'hsl(var(--muted-foreground))', fontSize: 11 }}
+            />
             
             {/* Área positiva */}
             <Area
