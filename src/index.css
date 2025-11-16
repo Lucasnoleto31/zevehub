@@ -217,4 +217,120 @@ All colors MUST be HSL.
       transform: translateY(0);
     }
   }
+
+  /* Scroll Animation Keyframes */
+  @keyframes fade-in {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+
+  @keyframes slide-up {
+    from {
+      opacity: 0;
+      transform: translateY(30px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes slide-in-left {
+    from {
+      opacity: 0;
+      transform: translateX(-30px);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+
+  @keyframes slide-in-right {
+    from {
+      opacity: 0;
+      transform: translateX(30px);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+
+  @keyframes scale-in {
+    from {
+      opacity: 0;
+      transform: scale(0.9);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+
+  /* Scroll Animation Classes */
+  .scroll-animate {
+    opacity: 0;
+  }
+
+  .scroll-animate.visible {
+    animation: slide-up 0.6s ease-out forwards;
+  }
+
+  .scroll-fade-in {
+    opacity: 0;
+  }
+
+  .scroll-fade-in.visible {
+    animation: fade-in 0.6s ease-out forwards;
+  }
+
+  .scroll-slide-left {
+    opacity: 0;
+  }
+
+  .scroll-slide-left.visible {
+    animation: slide-in-left 0.6s ease-out forwards;
+  }
+
+  .scroll-slide-right {
+    opacity: 0;
+  }
+
+  .scroll-slide-right.visible {
+    animation: slide-in-right 0.6s ease-out forwards;
+  }
+
+  .scroll-scale {
+    opacity: 0;
+  }
+
+  .scroll-scale.visible {
+    animation: scale-in 0.5s ease-out forwards;
+  }
+
+  /* Stagger delays for sequential animations */
+  .delay-100 {
+    animation-delay: 0.1s;
+  }
+
+  .delay-200 {
+    animation-delay: 0.2s;
+  }
+
+  .delay-300 {
+    animation-delay: 0.3s;
+  }
+
+  .delay-400 {
+    animation-delay: 0.4s;
+  }
+
+  .delay-500 {
+    animation-delay: 0.5s;
+  }
 }

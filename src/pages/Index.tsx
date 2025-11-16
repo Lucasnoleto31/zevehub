@@ -5,10 +5,17 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { TrendingUp, Rocket, Activity, BarChart3, Users, Clock, CheckCircle2, X } from "lucide-react";
 import { Navbar } from "@/components/Navbar";
+import { useScrollAnimation } from "@/hooks/useScrollAnimation";
 
 const Index = () => {
   const navigate = useNavigate();
   const [theme, setTheme] = useState<"light" | "dark">("light");
+  
+  // Scroll animation hooks for different sections
+  const heroAnimation = useScrollAnimation({ threshold: 0.2 });
+  const statsAnimation = useScrollAnimation({ threshold: 0.2 });
+  const featuresAnimation = useScrollAnimation({ threshold: 0.1 });
+  const pricingAnimation = useScrollAnimation({ threshold: 0.1 });
 
   useEffect(() => {
     // Check if user is already logged in
@@ -32,7 +39,10 @@ const Index = () => {
       <Navbar theme={theme} onThemeToggle={toggleTheme} />
       
       {/* Hero Section */}
-      <div className="container relative z-10 mx-auto px-6 pt-32 pb-20">
+      <div 
+        ref={heroAnimation.ref}
+        className={`container relative z-10 mx-auto px-6 pt-32 pb-20 scroll-animate ${heroAnimation.isVisible ? 'visible' : ''}`}
+      >
         <div className="text-center max-w-6xl mx-auto">
           <Badge className="mb-10 px-6 py-3 text-base bg-accent/80 text-accent-foreground border-accent/30 hover:bg-accent transition-all rounded-full" variant="outline">
             <Rocket className="w-4 h-4 mr-2" />
@@ -69,13 +79,19 @@ const Index = () => {
           </div>
 
           {/* Stats Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl mx-auto">
+          <div 
+            ref={statsAnimation.ref}
+            className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl mx-auto"
+          >
             {[
               { icon: Activity, value: "98%", label: "Taxa de Sucesso", color: "text-primary" },
               { icon: Users, value: "5k+", label: "Usuários Ativos", color: "text-primary" },
               { icon: Clock, value: "24/7", label: "Monitoramento", color: "text-primary" }
             ].map((stat, index) => (
-              <Card key={index} className="border border-border hover:shadow-lg transition-all duration-300 rounded-xl bg-card p-8">
+              <Card 
+                key={index} 
+                className={`border border-border hover:shadow-lg transition-all duration-300 rounded-xl bg-card p-8 scroll-scale ${statsAnimation.isVisible ? 'visible' : ''} delay-${(index + 1) * 100}`}
+              >
                 <div className="flex flex-col items-center">
                   <div className={`text-6xl md:text-7xl font-bold ${stat.color} mb-3`}>
                     {stat.value}
@@ -91,9 +107,12 @@ const Index = () => {
       </div>
 
       {/* Features Section */}
-      <div className="container relative z-10 mx-auto px-6 py-20">
+      <div 
+        ref={featuresAnimation.ref}
+        className="container relative z-10 mx-auto px-6 py-20"
+      >
         <div className="max-w-5xl mx-auto">
-          <div className="text-center mb-16">
+          <div className={`text-center mb-16 scroll-animate ${featuresAnimation.isVisible ? 'visible' : ''}`}>
             <h2 className="text-4xl md:text-5xl font-bold text-foreground mb-4 tracking-tight">
               Tudo que você precisa
             </h2>
@@ -103,48 +122,36 @@ const Index = () => {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <Card className="border border-border hover:shadow-lg transition-all duration-300 rounded-xl bg-card">
-              <CardHeader className="pb-6 pt-8">
-                <div className="w-14 h-14 rounded-xl bg-primary/10 flex items-center justify-center mx-auto mb-6">
-                  <Activity className="w-7 h-7 text-primary" />
-                </div>
-                <CardTitle className="text-xl font-semibold mb-3 text-center">Monitoramento em Tempo Real</CardTitle>
-                <CardDescription className="text-sm leading-relaxed text-muted-foreground text-center">
-                  Acompanhe todas as operações dos seus robôs instantaneamente
-                </CardDescription>
-              </CardHeader>
-            </Card>
-
-            <Card className="border border-border hover:shadow-lg transition-all duration-300 rounded-xl bg-card">
-              <CardHeader className="pb-6 pt-8">
-                <div className="w-14 h-14 rounded-xl bg-primary/10 flex items-center justify-center mx-auto mb-6">
-                  <BarChart3 className="w-7 h-7 text-primary" />
-                </div>
-                <CardTitle className="text-xl font-semibold mb-3 text-center">Análise Avançada</CardTitle>
-                <CardDescription className="text-sm leading-relaxed text-muted-foreground text-center">
-                  Gráficos detalhados e insights estratégicos para melhor performance
-                </CardDescription>
-              </CardHeader>
-            </Card>
-
-            <Card className="border border-border hover:shadow-lg transition-all duration-300 rounded-xl bg-card">
-              <CardHeader className="pb-6 pt-8">
-                <div className="w-14 h-14 rounded-xl bg-primary/10 flex items-center justify-center mx-auto mb-6">
-                  <Users className="w-7 h-7 text-primary" />
-                </div>
-                <CardTitle className="text-xl font-semibold mb-3 text-center">Suporte Especializado</CardTitle>
-                <CardDescription className="text-sm leading-relaxed text-muted-foreground text-center">
-                  Acesso direto à assessoria Zeve para orientações personalizadas
-                </CardDescription>
-              </CardHeader>
-            </Card>
+            {[
+              { icon: Activity, title: "Monitoramento em Tempo Real", desc: "Acompanhe todas as operações dos seus robôs instantaneamente" },
+              { icon: BarChart3, title: "Análise Avançada", desc: "Gráficos detalhados e insights estratégicos para melhor performance" },
+              { icon: Users, title: "Suporte Especializado", desc: "Acesso direto à assessoria Zeve para orientações personalizadas" }
+            ].map((feature, index) => (
+              <Card 
+                key={index}
+                className={`border border-border hover:shadow-lg transition-all duration-300 rounded-xl bg-card scroll-animate ${featuresAnimation.isVisible ? 'visible' : ''} delay-${(index + 1) * 100}`}
+              >
+                <CardHeader className="pb-6 pt-8">
+                  <div className="w-14 h-14 rounded-xl bg-primary/10 flex items-center justify-center mx-auto mb-6">
+                    <feature.icon className="w-7 h-7 text-primary" />
+                  </div>
+                  <CardTitle className="text-xl font-semibold mb-3 text-center">{feature.title}</CardTitle>
+                  <CardDescription className="text-sm leading-relaxed text-muted-foreground text-center">
+                    {feature.desc}
+                  </CardDescription>
+                </CardHeader>
+              </Card>
+            ))}
           </div>
         </div>
       </div>
 
       {/* Pricing Section */}
-      <div className="container relative z-10 mx-auto px-6 py-20 bg-secondary/30">
-        <div className="text-center mb-16">
+      <div 
+        ref={pricingAnimation.ref}
+        className="container relative z-10 mx-auto px-6 py-20 bg-secondary/30"
+      >
+        <div className={`text-center mb-16 scroll-animate ${pricingAnimation.isVisible ? 'visible' : ''}`}>
           <h2 className="text-4xl md:text-5xl font-bold text-foreground mb-5 tracking-tight">
             Escolha seu plano
           </h2>
@@ -155,7 +162,7 @@ const Index = () => {
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
           {/* Plano Gratuito com Assessoria */}
-          <Card className="border-2 border-primary/40 hover:shadow-xl transition-all duration-300 relative overflow-hidden rounded-xl bg-card">
+          <Card className={`border-2 border-primary/40 hover:shadow-xl transition-all duration-300 relative overflow-hidden rounded-xl bg-card scroll-slide-left ${pricingAnimation.isVisible ? 'visible' : ''}`}>
             <div className="absolute top-0 right-0 bg-success text-success-foreground px-5 py-2 text-sm font-semibold rounded-bl-xl">
               Recomendado
             </div>
@@ -189,7 +196,7 @@ const Index = () => {
           </Card>
 
           {/* Plano Independente */}
-          <Card className="border border-border hover:shadow-xl transition-all duration-300 rounded-xl bg-card">
+          <Card className={`border border-border hover:shadow-xl transition-all duration-300 rounded-xl bg-card scroll-slide-right ${pricingAnimation.isVisible ? 'visible' : ''} delay-200`}>
             <CardHeader className="text-center pb-8 pt-12">
               <CardTitle className="text-3xl font-bold mb-5">Independente</CardTitle>
               <div className="flex items-baseline justify-center gap-2 mb-5">
