@@ -421,8 +421,6 @@ const OperationsDashboard = ({ userId }: OperationsDashboardProps) => {
         return {
           date: (() => { const [yy, mm, dd] = date.split('-'); return `${dd}/${mm}`; })(),
           value: accumulated,
-          positiveValue: accumulated >= 0 ? accumulated : 0,
-          negativeValue: accumulated < 0 ? accumulated : 0,
         };
       });
     setPerformanceCurve(curve);
@@ -1071,37 +1069,75 @@ const OperationsDashboard = ({ userId }: OperationsDashboardProps) => {
         <CardContent>
           <ResponsiveContainer width="100%" height={300}>
             <AreaChart data={performanceCurve}>
+              <defs>
+                {/* Máscara da área positiva */}
+                <clipPath id="clip-positive-ops">
+                  <rect x="0" y="0" width="100%" height={`${(() => {
+                    if (performanceCurve.length === 0) return 50;
+                    const values = performanceCurve.map(d => d.value);
+                    const min = Math.min(...values, 0);
+                    const max = Math.max(...values, 0);
+                    const range = max - min;
+                    return range !== 0 ? ((max) / range) * 100 : 50;
+                  })()}%`} />
+                </clipPath>
+
+                {/* Máscara da área negativa */}
+                <clipPath id="clip-negative-ops">
+                  <rect x="0" y={`${(() => {
+                    if (performanceCurve.length === 0) return 50;
+                    const values = performanceCurve.map(d => d.value);
+                    const min = Math.min(...values, 0);
+                    const max = Math.max(...values, 0);
+                    const range = max - min;
+                    return range !== 0 ? ((max) / range) * 100 : 50;
+                  })()}%`} width="100%" height={`${(() => {
+                    if (performanceCurve.length === 0) return 50;
+                    const values = performanceCurve.map(d => d.value);
+                    const min = Math.min(...values, 0);
+                    const max = Math.max(...values, 0);
+                    const range = max - min;
+                    const zeroPos = range !== 0 ? ((max) / range) * 100 : 50;
+                    return 100 - zeroPos;
+                  })()}%`} />
+                </clipPath>
+
+                {/* Gradiente verde */}
+                <linearGradient id="gradient-positive-ops" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#DFF3E2" stopOpacity={0.8} />
+                  <stop offset="100%" stopColor="#DFF3E2" stopOpacity={0.3} />
+                </linearGradient>
+
+                {/* Gradiente vermelho */}
+                <linearGradient id="gradient-negative-ops" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#F9D5D5" stopOpacity={0.3} />
+                  <stop offset="100%" stopColor="#F9D5D5" stopOpacity={0.8} />
+                </linearGradient>
+              </defs>
+              
               <XAxis dataKey="date" tick={{ fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} />
               <YAxis tick={{ fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} />
               <Tooltip formatter={(value: number) => value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })} />
-              <defs>
-                <linearGradient id="positiveGradientOps" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#DFF3E2" stopOpacity={1}/>
-                  <stop offset="100%" stopColor="#DFF3E2" stopOpacity={0.3}/>
-                </linearGradient>
-                <linearGradient id="negativeGradientOps" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#F9D5D5" stopOpacity={0.3}/>
-                  <stop offset="100%" stopColor="#F9D5D5" stopOpacity={1}/>
-                </linearGradient>
-              </defs>
-              {/* Área negativa - do valor até zero */}
+              
+              {/* Área positiva */}
               <Area 
                 type="monotone" 
-                dataKey="negativeValue" 
-                stroke="hsl(var(--destructive))"
+                dataKey="value" 
+                stroke="#3BA55D"
                 strokeWidth={2.5} 
-                fill="url(#negativeGradientOps)" 
-                fillOpacity={1}
+                fill="url(#gradient-positive-ops)" 
+                clipPath="url(#clip-positive-ops)"
                 isAnimationActive={false}
               />
-              {/* Área positiva - de zero até o valor */}
+
+              {/* Área negativa */}
               <Area 
                 type="monotone" 
-                dataKey="positiveValue" 
-                stroke="hsl(var(--success))"
+                dataKey="value" 
+                stroke="#E63946"
                 strokeWidth={2.5} 
-                fill="url(#positiveGradientOps)" 
-                fillOpacity={1}
+                fill="url(#gradient-negative-ops)" 
+                clipPath="url(#clip-negative-ops)"
                 isAnimationActive={false}
               />
             </AreaChart>
