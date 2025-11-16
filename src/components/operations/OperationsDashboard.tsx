@@ -422,8 +422,8 @@ const OperationsDashboard = ({ userId }: OperationsDashboardProps) => {
         return {
           date: (() => { const [yy, mm, dd] = date.split('-'); return `${dd}/${mm}`; })(),
           value,
-          positive: value >= 0 ? value : null,
-          negative: value < 0 ? value : null,
+          positive: value >= 0 ? value : 0,
+          negative: value < 0 ? value : 0,
         };
       });
     setPerformanceCurve(curve);
