@@ -45,7 +45,8 @@ const menuItems: MenuItem[] = [
   { title: "Configurações", icon: Settings, description: "Ajustes e preferências", image: menuConfiguracoes },
 ];
 
-const MenuCard = ({ item, index, onNavigate }: { item: MenuItem; index: number; onNavigate: (path?: string) => void }) => {
+const MenuCard = ({ item, index }: { item: MenuItem; index: number }) => {
+  const navigate = useNavigate();
   const [cardRef, setCardRef] = useState<HTMLDivElement | null>(null);
   const [transform, setTransform] = useState("");
 
@@ -79,6 +80,12 @@ const MenuCard = ({ item, index, onNavigate }: { item: MenuItem; index: number; 
     };
   }, [cardRef]);
 
+  const handleClick = () => {
+    if (item.path) {
+      navigate(item.path);
+    }
+  };
+
   return (
     <div
       className="card-3d-wrapper"
@@ -93,7 +100,7 @@ const MenuCard = ({ item, index, onNavigate }: { item: MenuItem; index: number; 
           transform: transform,
           transition: transform ? 'none' : 'all 0.6s cubic-bezier(0.23, 1, 0.32, 1)',
         }}
-        onClick={() => onNavigate(item.path)}
+        onClick={handleClick}
       >
         <div className="card-glow-effect" />
         <CardContent className="p-0 relative z-10">
@@ -290,12 +297,7 @@ const Dashboard = () => {
         {/* Menu Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-slide-up">
           {menuItems.map((item, index) => (
-            <MenuCard 
-              key={item.title} 
-              item={item} 
-              index={index}
-              onNavigate={(path) => path && navigate(path)}
-            />
+            <MenuCard key={item.title} item={item} index={index} />
           ))}
         </div>
       </main>
