@@ -92,15 +92,15 @@ const MenuCard = ({ item, index }: { item: MenuItem; index: number }) => {
       style={{ 
         animationDelay: `${index * 0.1}s`,
       }}
+      ref={setCardRef}
+      onClick={handleClick}
     >
       <Card 
-        ref={setCardRef}
         className="card-3d group overflow-hidden border-0 shadow-lg cursor-pointer bg-card relative"
         style={{
           transform: transform,
           transition: transform ? 'none' : 'all 0.6s cubic-bezier(0.23, 1, 0.32, 1)',
         }}
-        onClick={handleClick}
       >
         <div className="card-glow-effect" />
         <CardContent className="p-0 relative z-10">
