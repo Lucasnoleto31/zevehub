@@ -8,8 +8,6 @@ interface PerformancePoint {
   date: string;
   accumulated: number;
   operations: number;
-  positiveValue: number;
-  negativeValue: number;
 }
 
 const BotsPerformanceChart = () => {
@@ -54,8 +52,6 @@ const chartData: PerformancePoint[] = Object.entries(dataByDate).map(([date, dat
     date,
     accumulated: value,
     operations: data.count,
-    positiveValue: value >= 0 ? value : 0,
-    negativeValue: value < 0 ? value : 0,
   };
 });
 
@@ -123,6 +119,12 @@ const CustomTooltip = ({ active, payload }: any) => {
   return null;
 };
 
+  // Calcular a posição do zero no gráfico
+  const minValue = Math.min(...performanceData.map(d => d.accumulated), 0);
+  const maxValue = Math.max(...performanceData.map(d => d.accumulated), 0);
+  const range = maxValue - minValue;
+  const zeroPosition = range !== 0 ? ((maxValue) / range) * 100 : 50;
+
   return (
     <Card>
       <CardHeader>
@@ -138,15 +140,29 @@ const CustomTooltip = ({ active, payload }: any) => {
         <ResponsiveContainer width="100%" height={300}>
           <AreaChart data={performanceData} margin={{ top: 10, right: 10, left: 10, bottom: 60 }}>
             <defs>
-              <linearGradient id="positiveGradient" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="#DFF3E2" stopOpacity={1}/>
-                <stop offset="100%" stopColor="#DFF3E2" stopOpacity={0.3}/>
+              {/* Máscara da área positiva */}
+              <clipPath id="clip-positive">
+                <rect x="0" y="0" width="100%" height={`${zeroPosition}%`} />
+              </clipPath>
+
+              {/* Máscara da área negativa */}
+              <clipPath id="clip-negative">
+                <rect x="0" y={`${zeroPosition}%`} width="100%" height={`${100 - zeroPosition}%`} />
+              </clipPath>
+
+              {/* Gradiente verde */}
+              <linearGradient id="gradient-positive" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="#DFF3E2" stopOpacity={0.8} />
+                <stop offset="100%" stopColor="#DFF3E2" stopOpacity={0.3} />
               </linearGradient>
-              <linearGradient id="negativeGradient" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="#F9D5D5" stopOpacity={0.3}/>
-                <stop offset="100%" stopColor="#F9D5D5" stopOpacity={1}/>
+
+              {/* Gradiente vermelho */}
+              <linearGradient id="gradient-negative" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="#F9D5D5" stopOpacity={0.3} />
+                <stop offset="100%" stopColor="#F9D5D5" stopOpacity={0.8} />
               </linearGradient>
             </defs>
+            
             <XAxis 
               dataKey="date" 
               className="text-xs"
@@ -165,24 +181,26 @@ const CustomTooltip = ({ active, payload }: any) => {
               width={80}
             />
             <Tooltip content={<CustomTooltip />} />
-            {/* Área negativa - do valor até zero */}
+            
+            {/* Área positiva */}
             <Area
               type="monotone"
-              dataKey="negativeValue"
-              stroke="hsl(var(--destructive))"
+              dataKey="accumulated"
+              stroke="#3BA55D"
               strokeWidth={2.5}
-              fill="url(#negativeGradient)"
-              fillOpacity={1}
+              fill="url(#gradient-positive)"
+              clipPath="url(#clip-positive)"
               isAnimationActive={false}
             />
-            {/* Área positiva - de zero até o valor */}
+
+            {/* Área negativa */}
             <Area
               type="monotone"
-              dataKey="positiveValue"
-              stroke="hsl(var(--success))"
+              dataKey="accumulated"
+              stroke="#E63946"
               strokeWidth={2.5}
-              fill="url(#positiveGradient)"
-              fillOpacity={1}
+              fill="url(#gradient-negative)"
+              clipPath="url(#clip-negative)"
               isAnimationActive={false}
             />
           </AreaChart>
