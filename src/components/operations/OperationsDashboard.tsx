@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { LineChart, Line, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend, AreaChart, Area, PieChart, Pie, Cell } from "recharts";
+import { LineChart, Line, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend, AreaChart, Area, PieChart, Pie, Cell, ReferenceLine } from "recharts";
 import { TrendingUp, TrendingDown, Target, Award, Calendar, Clock, Filter, Bot, Info, Trophy } from "lucide-react";
 import { Tooltip as TooltipComponent, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Button } from "@/components/ui/button";
@@ -1118,6 +1118,15 @@ const OperationsDashboard = ({ userId }: OperationsDashboardProps) => {
               <XAxis dataKey="date" tick={{ fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} />
               <YAxis tick={{ fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} />
               <Tooltip formatter={(value: number) => value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })} />
+              
+              {/* Linha de referência no zero */}
+              <ReferenceLine 
+                y={0} 
+                stroke="hsl(var(--border))" 
+                strokeWidth={1.5}
+                strokeDasharray="3 3"
+                label={{ value: 'R$ 0', position: 'insideTopLeft', fill: 'hsl(var(--muted-foreground))', fontSize: 11 }}
+              />
               
               {/* Área positiva */}
               <Area 
