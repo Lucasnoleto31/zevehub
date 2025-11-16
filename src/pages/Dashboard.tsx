@@ -15,6 +15,8 @@ import {
   User as UserIcon,
 } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { DashboardStats } from "@/components/dashboard/DashboardStats";
+import { RecentOperationsTable } from "@/components/dashboard/RecentOperationsTable";
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -22,6 +24,13 @@ const Dashboard = () => {
   const [profile, setProfile] = useState<any>(null);
   const [roles, setRoles] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
+  const [stats, setStats] = useState({
+    totalOperations: 0,
+    totalProfit: 0,
+    winRate: 0,
+    averageResult: 0,
+  });
+  const [recentOperations, setRecentOperations] = useState<any[]>([]);
 
   useEffect(() => {
     checkUser();
@@ -55,6 +64,30 @@ const Dashboard = () => {
 
       if (rolesData) {
         setRoles(rolesData.map((r) => r.role));
+      }
+
+      // Buscar estatísticas de operações
+      const { data: operations } = await supabase
+        .from("trading_operations")
+        .select("*")
+        .order("operation_date", { ascending: false });
+
+      if (operations) {
+        const totalOps = operations.length;
+        const totalProfit = operations.reduce((sum, op) => sum + Number(op.result), 0);
+        const winningOps = operations.filter(op => Number(op.result) > 0).length;
+        const winRate = totalOps > 0 ? (winningOps / totalOps) * 100 : 0;
+        const avgResult = totalOps > 0 ? totalProfit / totalOps : 0;
+
+        setStats({
+          totalOperations: totalOps,
+          totalProfit,
+          winRate,
+          averageResult: avgResult,
+        });
+
+        // Pegar as 5 operações mais recentes
+        setRecentOperations(operations.slice(0, 5));
       }
     } catch (error) {
       console.error("Erro ao carregar dados:", error);
@@ -177,6 +210,16 @@ const Dashboard = () => {
               </div>
             </CardContent>
           </Card>
+        </div>
+
+        {/* Estatísticas */}
+        <div className="mb-8">
+          <DashboardStats stats={stats} loading={loading} />
+        </div>
+
+        {/* Operações Recentes */}
+        <div>
+          <RecentOperationsTable operations={recentOperations} loading={loading} />
         </div>
       </main>
     </div>
