@@ -178,39 +178,44 @@ const Dashboard = () => {
         {/* Menu Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-slide-up">
           {menuItems.map((item, index) => (
-            <Card 
+            <div
               key={item.title}
-              className="group overflow-hidden border-0 shadow-lg hover:shadow-xl transition-all duration-500 cursor-pointer bg-card"
+              className="card-3d-wrapper"
               style={{ 
                 animationDelay: `${index * 0.1}s`,
               }}
             >
-              <CardContent className="p-0">
-                <div className="relative h-48 overflow-hidden">
-                  <img 
-                    src={item.image} 
-                    alt={item.title}
-                    className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-card via-card/60 to-transparent" />
-                  <div className="absolute top-4 right-4 w-12 h-12 rounded-full bg-primary/20 backdrop-blur-md flex items-center justify-center border border-primary/30 group-hover:bg-primary transition-colors">
-                    <item.icon className="w-6 h-6 text-primary group-hover:text-primary-foreground transition-colors" />
+              <Card 
+                className="card-3d group overflow-hidden border-0 shadow-lg cursor-pointer bg-card relative"
+              >
+                <div className="card-glow-effect" />
+                <CardContent className="p-0 relative z-10">
+                  <div className="relative h-48 overflow-hidden">
+                    <img 
+                      src={item.image} 
+                      alt={item.title}
+                      className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-card via-card/60 to-transparent" />
+                    <div className="absolute top-4 right-4 w-12 h-12 rounded-full bg-primary/20 backdrop-blur-md flex items-center justify-center border border-primary/30 group-hover:bg-primary group-hover:shadow-glow transition-all duration-500">
+                      <item.icon className="w-6 h-6 text-primary group-hover:text-primary-foreground transition-colors duration-500 group-hover:scale-110" />
+                    </div>
                   </div>
-                </div>
-                
-                <div className="p-6 space-y-3">
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-xl font-bold text-foreground group-hover:text-primary transition-colors">
-                      {item.title}
-                    </h3>
-                    <ArrowRight className="w-5 h-5 text-muted-foreground group-hover:text-primary group-hover:translate-x-1 transition-all" />
+                  
+                  <div className="p-6 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-xl font-bold text-foreground group-hover:text-primary transition-colors duration-300">
+                        {item.title}
+                      </h3>
+                      <ArrowRight className="w-5 h-5 text-muted-foreground group-hover:text-primary group-hover:translate-x-2 transition-all duration-300" />
+                    </div>
+                    <p className="text-sm text-muted-foreground leading-relaxed">
+                      {item.description}
+                    </p>
                   </div>
-                  <p className="text-sm text-muted-foreground leading-relaxed">
-                    {item.description}
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+            </div>
           ))}
         </div>
       </main>
