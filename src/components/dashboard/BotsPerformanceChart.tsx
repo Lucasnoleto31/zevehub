@@ -169,8 +169,8 @@ return (
             <Area
               type="monotone"
               dataKey="negative"
-              stroke="hsl(var(--destructive))"
-              strokeWidth={2.5}
+              stroke="transparent"
+              strokeWidth={0}
               fill="url(#colorNegative)"
               name="Resultado Acumulado"
               connectNulls={false}
@@ -179,11 +179,20 @@ return (
             <Area
               type="monotone"
               dataKey="positive"
-              stroke="hsl(var(--success))"
-              strokeWidth={2.5}
+              stroke="transparent"
+              strokeWidth={0}
               fill="url(#colorPositive)"
               name="Resultado Acumulado"
               connectNulls={false}
+            />
+            {/* Linha contínua que conecta todos os pontos */}
+            <Line
+              type="monotone"
+              dataKey="accumulated"
+              stroke="hsl(var(--foreground))"
+              strokeWidth={2}
+              dot={false}
+              name="Resultado Acumulado"
             />
           </AreaChart>
         </ResponsiveContainer>
