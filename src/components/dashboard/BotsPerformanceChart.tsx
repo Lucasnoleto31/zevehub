@@ -8,6 +8,8 @@ interface PerformancePoint {
   date: string;
   accumulated: number;
   operations: number;
+  positive?: number | null;
+  negative?: number | null;
 }
 
 const BotsPerformanceChart = () => {
@@ -44,16 +46,18 @@ const BotsPerformanceChart = () => {
           dataByDate[date].count += 1;
         });
 
-        // Criar array com valores acumulados
-        let accumulated = 0;
-        const chartData: PerformancePoint[] = Object.entries(dataByDate).map(([date, data]) => {
-          accumulated += data.result;
-          return {
-            date,
-            accumulated: Number(accumulated.toFixed(2)),
-            operations: data.count,
-          };
-        });
+let accumulated = 0;
+const chartData: PerformancePoint[] = Object.entries(dataByDate).map(([date, data]) => {
+  accumulated += data.result;
+  const value = Number(accumulated.toFixed(2));
+  return {
+    date,
+    accumulated: value,
+    operations: data.count,
+    positive: value >= 0 ? value : null,
+    negative: value < 0 ? value : null,
+  };
+});
 
         setPerformanceData(chartData);
       }
@@ -100,90 +104,86 @@ const BotsPerformanceChart = () => {
     );
   }
 
-  const CustomTooltip = ({ active, payload }: any) => {
-    if (active && payload && payload.length) {
-      return (
-        <div className="bg-card border border-border rounded-lg p-3 shadow-lg">
-          <p className="text-sm font-semibold text-foreground mb-1">{payload[0].payload.date}</p>
-          <p className="text-sm text-muted-foreground">
-            Operações: <span className="font-medium text-foreground">{payload[0].payload.operations}</span>
-          </p>
-          <p className={`text-sm font-bold ${payload[0].value >= 0 ? 'text-success' : 'text-destructive'}`}>
-            Resultado: R$ {payload[0].value >= 0 ? '+' : ''}{payload[0].value.toFixed(2)}
-          </p>
-        </div>
-      );
-    }
-    return null;
-  };
+const CustomTooltip = ({ active, payload }: any) => {
+  if (active && payload && payload.length) {
+    const point = payload[0].payload;
+    const value = point.accumulated as number;
+    return (
+      <div className="bg-card border border-border rounded-lg p-3 shadow-lg">
+        <p className="text-sm font-semibold text-foreground mb-1">{point.date}</p>
+        <p className="text-sm text-muted-foreground">
+          Operações: <span className="font-medium text-foreground">{point.operations}</span>
+        </p>
+        <p className={`text-sm font-bold ${value >= 0 ? 'text-success' : 'text-destructive'}`}>
+          Resultado: R$ {value >= 0 ? '+' : ''}{value.toFixed(2)}
+        </p>
+      </div>
+    );
+  }
+  return null;
+};
 
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <TrendingUp className="w-5 h-5" />
-          Evolução de Performance
-        </CardTitle>
-        <CardDescription>
-          Resultado acumulado de todas as operações ao longo do tempo
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <ResponsiveContainer width="100%" height={300}>
-          <AreaChart data={performanceData} margin={{ top: 10, right: 10, left: 10, bottom: 60 }}>
-            <defs>
-              <linearGradient id="colorPositive" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="hsl(var(--success))" stopOpacity={0.4}/>
-                <stop offset="95%" stopColor="hsl(var(--success))" stopOpacity={0}/>
-              </linearGradient>
-              <linearGradient id="colorNegative" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="hsl(var(--destructive))" stopOpacity={0.4}/>
-                <stop offset="95%" stopColor="hsl(var(--destructive))" stopOpacity={0}/>
-              </linearGradient>
-            </defs>
-            <XAxis 
-              dataKey="date" 
-              className="text-xs"
-              tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }}
-              angle={-45}
-              textAnchor="end"
-              height={80}
-              axisLine={false}
-              tickLine={false}
-            />
-            <YAxis 
-              className="text-xs"
-              tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }}
-              axisLine={false}
-              tickLine={false}
-              width={80}
-            />
+return (
+  <Card>
+    <CardHeader>
+      <CardTitle className="flex items-center gap-2">
+        <TrendingUp className="w-5 h-5" />
+        Evolução de Performance
+      </CardTitle>
+      <CardDescription>
+        Resultado acumulado de todas as operações ao longo do tempo
+      </CardDescription>
+    </CardHeader>
+    <CardContent>
+      <ResponsiveContainer width="100%" height={300}>
+        <AreaChart data={performanceData} margin={{ top: 10, right: 10, left: 10, bottom: 60 }}>
+          <defs>
+            <linearGradient id="colorPositive" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="5%" stopColor="hsl(var(--success))" stopOpacity={0.4}/>
+              <stop offset="95%" stopColor="hsl(var(--success))" stopOpacity={0}/>
+            </linearGradient>
+            <linearGradient id="colorNegative" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="5%" stopColor="hsl(var(--destructive))" stopOpacity={0.4}/>
+              <stop offset="95%" stopColor="hsl(var(--destructive))" stopOpacity={0}/>
+            </linearGradient>
+          </defs>
+          <XAxis 
+            dataKey="date" 
+            className="text-xs"
+            tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }}
+            angle={-45}
+            textAnchor="end"
+            height={80}
+            axisLine={false}
+            tickLine={false}
+          />
+          <YAxis 
+            className="text-xs"
+            tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }}
+            axisLine={false}
+            tickLine={false}
+            width={80}
+          />
             <Tooltip content={<CustomTooltip />} />
             {/* Área negativa - vermelho */}
             <Area
               type="monotone"
-              dataKey="accumulated"
+              dataKey="negative"
               stroke="hsl(var(--destructive))"
               strokeWidth={2.5}
               fill="url(#colorNegative)"
               name="Resultado Acumulado"
-              data={performanceData.map(point => ({
-                ...point,
-                accumulated: point.accumulated < 0 ? point.accumulated : 0
-              }))}
+              connectNulls={false}
             />
             {/* Área positiva - verde */}
             <Area
               type="monotone"
-              dataKey="accumulated"
+              dataKey="positive"
               stroke="hsl(var(--success))"
               strokeWidth={2.5}
               fill="url(#colorPositive)"
               name="Resultado Acumulado"
-              data={performanceData.map(point => ({
-                ...point,
-                accumulated: point.accumulated >= 0 ? point.accumulated : 0
-              }))}
+              connectNulls={false}
             />
           </AreaChart>
         </ResponsiveContainer>
