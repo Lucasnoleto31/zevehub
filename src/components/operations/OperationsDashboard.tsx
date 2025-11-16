@@ -418,9 +418,12 @@ const OperationsDashboard = ({ userId }: OperationsDashboardProps) => {
       .sort(([dateA], [dateB]) => dateA.localeCompare(dateB))
       .map(([date, result]) => {
         accumulated += result;
+        const value = accumulated;
         return {
           date: (() => { const [yy, mm, dd] = date.split('-'); return `${dd}/${mm}`; })(),
-          value: accumulated,
+          value,
+          positive: value >= 0 ? value : null,
+          negative: value < 0 ? value : null,
         };
       });
     setPerformanceCurve(curve);
@@ -1073,12 +1076,17 @@ const OperationsDashboard = ({ userId }: OperationsDashboardProps) => {
               <YAxis tick={{ fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} />
               <Tooltip formatter={(value: number) => value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })} />
               <defs>
-                <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
+                <linearGradient id="colorPositive" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="5%" stopColor="hsl(var(--success))" stopOpacity={0.4}/>
                   <stop offset="95%" stopColor="hsl(var(--success))" stopOpacity={0}/>
                 </linearGradient>
+                <linearGradient id="colorNegative" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="hsl(var(--destructive))" stopOpacity={0.4}/>
+                  <stop offset="95%" stopColor="hsl(var(--destructive))" stopOpacity={0}/>
+                </linearGradient>
               </defs>
-              <Area type="monotone" dataKey="value" stroke="hsl(var(--success))" strokeWidth={2.5} fillOpacity={1} fill="url(#colorValue)" />
+              <Area type="monotone" dataKey="negative" stroke="hsl(var(--destructive))" strokeWidth={2.5} fillOpacity={1} fill="url(#colorNegative)" />
+              <Area type="monotone" dataKey="positive" stroke="hsl(var(--success))" strokeWidth={2.5} fillOpacity={1} fill="url(#colorPositive)" />
             </AreaChart>
           </ResponsiveContainer>
         </CardContent>
