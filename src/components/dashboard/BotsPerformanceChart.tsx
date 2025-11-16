@@ -8,8 +8,6 @@ interface PerformancePoint {
   date: string;
   accumulated: number;
   operations: number;
-  positive?: number | null;
-  negative?: number | null;
 }
 
 const BotsPerformanceChart = () => {
@@ -54,8 +52,6 @@ const chartData: PerformancePoint[] = Object.entries(dataByDate).map(([date, dat
     date,
     accumulated: value,
     operations: data.count,
-    positive: value >= 0 ? value : null,
-    negative: value < 0 ? value : null,
   };
 });
 
@@ -123,67 +119,59 @@ const CustomTooltip = ({ active, payload }: any) => {
   return null;
 };
 
-return (
-  <Card>
-    <CardHeader>
-      <CardTitle className="flex items-center gap-2">
-        <TrendingUp className="w-5 h-5" />
-        Evolução de Performance
-      </CardTitle>
-      <CardDescription>
-        Resultado acumulado de todas as operações ao longo do tempo
-      </CardDescription>
-    </CardHeader>
-    <CardContent>
-      <ResponsiveContainer width="100%" height={300}>
-        <AreaChart data={performanceData} margin={{ top: 10, right: 10, left: 10, bottom: 60 }}>
-          <defs>
-            <linearGradient id="colorPositive" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="5%" stopColor="hsl(var(--success))" stopOpacity={0.4}/>
-              <stop offset="95%" stopColor="hsl(var(--success))" stopOpacity={0}/>
-            </linearGradient>
-            <linearGradient id="colorNegative" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="5%" stopColor="hsl(var(--destructive))" stopOpacity={0.4}/>
-              <stop offset="95%" stopColor="hsl(var(--destructive))" stopOpacity={0}/>
-            </linearGradient>
-          </defs>
-          <XAxis 
-            dataKey="date" 
-            className="text-xs"
-            tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }}
-            angle={-45}
-            textAnchor="end"
-            height={80}
-            axisLine={false}
-            tickLine={false}
-          />
-          <YAxis 
-            className="text-xs"
-            tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }}
-            axisLine={false}
-            tickLine={false}
-            width={80}
-          />
-            <Tooltip content={<CustomTooltip />} />
-            {/* Área negativa - vermelho */}
-            <Area
-              type="monotone"
-              dataKey="negative"
-              stroke="hsl(var(--destructive))"
-              strokeWidth={2.5}
-              fill="url(#colorNegative)"
-              name="Resultado Acumulado"
-              connectNulls={false}
+  // Calcular gradiente dinâmico baseado nos valores
+  const minValue = Math.min(...performanceData.map(d => d.accumulated));
+  const maxValue = Math.max(...performanceData.map(d => d.accumulated));
+  const range = maxValue - minValue;
+  const zeroPosition = range !== 0 ? ((0 - minValue) / range) * 100 : 50;
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <TrendingUp className="w-5 h-5" />
+          Evolução de Performance
+        </CardTitle>
+        <CardDescription>
+          Resultado acumulado de todas as operações ao longo do tempo
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <ResponsiveContainer width="100%" height={300}>
+          <AreaChart data={performanceData} margin={{ top: 10, right: 10, left: 10, bottom: 60 }}>
+            <defs>
+              <linearGradient id="splitColor" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="hsl(var(--success))" stopOpacity={0.4}/>
+                <stop offset={`${zeroPosition}%`} stopColor="hsl(var(--success))" stopOpacity={0.1}/>
+                <stop offset={`${zeroPosition}%`} stopColor="hsl(var(--destructive))" stopOpacity={0.1}/>
+                <stop offset="100%" stopColor="hsl(var(--destructive))" stopOpacity={0.4}/>
+              </linearGradient>
+            </defs>
+            <XAxis 
+              dataKey="date" 
+              className="text-xs"
+              tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }}
+              angle={-45}
+              textAnchor="end"
+              height={80}
+              axisLine={false}
+              tickLine={false}
             />
-            {/* Área positiva - verde */}
+            <YAxis 
+              className="text-xs"
+              tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }}
+              axisLine={false}
+              tickLine={false}
+              width={80}
+            />
+            <Tooltip content={<CustomTooltip />} />
             <Area
               type="monotone"
-              dataKey="positive"
-              stroke="hsl(var(--success))"
+              dataKey="accumulated"
+              stroke={performanceData[performanceData.length - 1]?.accumulated >= 0 ? "hsl(var(--success))" : "hsl(var(--destructive))"}
               strokeWidth={2.5}
-              fill="url(#colorPositive)"
+              fill="url(#splitColor)"
               name="Resultado Acumulado"
-              connectNulls={false}
             />
           </AreaChart>
         </ResponsiveContainer>
