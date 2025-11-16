@@ -17,8 +17,15 @@ import {
   User as UserIcon,
   Shield,
   Settings,
+  ArrowRight,
 } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import menuRobos from "@/assets/menu-robos.jpg";
+import menuRanking from "@/assets/menu-ranking.jpg";
+import menuHistorico from "@/assets/menu-historico.jpg";
+import menuFerramentas from "@/assets/menu-ferramentas.jpg";
+import menuPerfil from "@/assets/menu-perfil.jpg";
+import menuConfiguracoes from "@/assets/menu-configuracoes.jpg";
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -84,16 +91,16 @@ const Dashboard = () => {
   }
 
   const menuItems = [
-    { title: "Robôs", icon: Bot, description: "Gerencie seus robôs de trading" },
-    { title: "Ranking", icon: Trophy, description: "Veja o ranking de performance" },
-    { title: "Histórico", icon: History, description: "Acesse seu histórico de operações" },
-    { title: "Ferramentas", icon: Wrench, description: "Ferramentas e utilidades" },
-    { title: "Perfil", icon: UserIcon, description: "Seu perfil e informações" },
-    { title: "Configurações", icon: Settings, description: "Ajustes e preferências" },
+    { title: "Robôs", icon: Bot, description: "Gerencie seus robôs de trading", image: menuRobos },
+    { title: "Ranking", icon: Trophy, description: "Veja o ranking de performance", image: menuRanking },
+    { title: "Histórico", icon: History, description: "Acesse seu histórico de operações", image: menuHistorico },
+    { title: "Ferramentas", icon: Wrench, description: "Ferramentas e utilidades", image: menuFerramentas },
+    { title: "Perfil", icon: UserIcon, description: "Seu perfil e informações", image: menuPerfil },
+    { title: "Configurações", icon: Settings, description: "Ajustes e preferências", image: menuConfiguracoes },
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-primary/5 to-background">
+    <div className="min-h-screen bg-gradient-to-br from-background via-accent/20 to-background">
       {/* Header */}
       <header className="border-b bg-card/50 backdrop-blur-md sticky top-0 z-50">
         <div className="container mx-auto px-4 py-4">
@@ -173,18 +180,34 @@ const Dashboard = () => {
           {menuItems.map((item, index) => (
             <Card 
               key={item.title}
-              className="hover:shadow-lg transition-all duration-300 cursor-pointer hover:scale-105 group"
-              style={{ animationDelay: `${index * 0.1}s` }}
+              className="group overflow-hidden border-0 shadow-lg hover:shadow-xl transition-all duration-500 cursor-pointer bg-card"
+              style={{ 
+                animationDelay: `${index * 0.1}s`,
+              }}
             >
-              <CardContent className="pt-6">
-                <div className="flex flex-col items-center text-center gap-4">
-                  <div className="w-16 h-16 rounded-full bg-gradient-primary flex items-center justify-center group-hover:scale-110 transition-transform">
-                    <item.icon className="w-8 h-8 text-primary-foreground" />
+              <CardContent className="p-0">
+                <div className="relative h-48 overflow-hidden">
+                  <img 
+                    src={item.image} 
+                    alt={item.title}
+                    className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-card via-card/60 to-transparent" />
+                  <div className="absolute top-4 right-4 w-12 h-12 rounded-full bg-primary/20 backdrop-blur-md flex items-center justify-center border border-primary/30 group-hover:bg-primary transition-colors">
+                    <item.icon className="w-6 h-6 text-primary group-hover:text-primary-foreground transition-colors" />
                   </div>
-                  <div>
-                    <h3 className="text-xl font-bold text-foreground mb-2">{item.title}</h3>
-                    <p className="text-sm text-muted-foreground">{item.description}</p>
+                </div>
+                
+                <div className="p-6 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-xl font-bold text-foreground group-hover:text-primary transition-colors">
+                      {item.title}
+                    </h3>
+                    <ArrowRight className="w-5 h-5 text-muted-foreground group-hover:text-primary group-hover:translate-x-1 transition-all" />
                   </div>
+                  <p className="text-sm text-muted-foreground leading-relaxed">
+                    {item.description}
+                  </p>
                 </div>
               </CardContent>
             </Card>
