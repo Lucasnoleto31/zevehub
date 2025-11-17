@@ -140,6 +140,39 @@ export type Database = {
         }
         Relationships: []
       }
+      finance_categories: {
+        Row: {
+          color: string | null
+          created_at: string | null
+          icon: string | null
+          id: string
+          name: string
+          type: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          color?: string | null
+          created_at?: string | null
+          icon?: string | null
+          id?: string
+          name: string
+          type: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          color?: string | null
+          created_at?: string | null
+          icon?: string | null
+          id?: string
+          name?: string
+          type?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       messages: {
         Row: {
           content: string
@@ -220,6 +253,7 @@ export type Database = {
       personal_finances: {
         Row: {
           amount: number
+          attachment_url: string | null
           category: string
           created_at: string
           description: string | null
@@ -232,6 +266,7 @@ export type Database = {
         }
         Insert: {
           amount: number
+          attachment_url?: string | null
           category: string
           created_at?: string
           description?: string | null
@@ -244,6 +279,7 @@ export type Database = {
         }
         Update: {
           amount?: number
+          attachment_url?: string | null
           category?: string
           created_at?: string
           description?: string | null

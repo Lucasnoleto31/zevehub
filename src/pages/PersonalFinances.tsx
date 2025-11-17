@@ -4,13 +4,16 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, Download, Target } from "lucide-react";
+import { Plus, Download, Target, Settings } from "lucide-react";
 import { TransactionDialog } from "@/components/finances/TransactionDialog";
 import { TransactionsTable } from "@/components/finances/TransactionsTable";
 import { FinancialSummary } from "@/components/finances/FinancialSummary";
 import { FinancialCharts } from "@/components/finances/FinancialCharts";
 import { FinancialGoals } from "@/components/finances/FinancialGoals";
 import { PeriodFilter } from "@/components/finances/PeriodFilter";
+import { CategoryManager } from "@/components/finances/CategoryManager";
+import { AdvancedMetrics } from "@/components/finances/AdvancedMetrics";
+import { useGoalNotifications } from "@/hooks/useGoalNotifications";
 import { toast } from "sonner";
 import * as XLSX from 'xlsx';
 
@@ -35,6 +38,9 @@ const PersonalFinances = () => {
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
   const [loading, setLoading] = useState(true);
   const [periodFilter, setPeriodFilter] = useState<'month' | 'quarter' | 'year' | 'all'>('month');
+  
+  // Hook para notificações de metas
+  useGoalNotifications();
 
   useEffect(() => {
     checkUser();
@@ -211,14 +217,20 @@ const PersonalFinances = () => {
         />
 
         <Tabs defaultValue="overview" className="space-y-4">
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="overview">Visão Geral</TabsTrigger>
+            <TabsTrigger value="analytics">Análise</TabsTrigger>
             <TabsTrigger value="transactions">Transações</TabsTrigger>
             <TabsTrigger value="goals">Metas</TabsTrigger>
+            <TabsTrigger value="categories">Categorias</TabsTrigger>
           </TabsList>
 
           <TabsContent value="overview" className="space-y-4">
             <FinancialCharts transactions={filteredTransactions} />
+          </TabsContent>
+
+          <TabsContent value="analytics" className="space-y-4">
+            <AdvancedMetrics transactions={filteredTransactions} />
           </TabsContent>
 
           <TabsContent value="transactions">
@@ -239,6 +251,17 @@ const PersonalFinances = () => {
 
           <TabsContent value="goals">
             <FinancialGoals />
+          </TabsContent>
+
+          <TabsContent value="categories">
+            <Card>
+              <CardHeader>
+                <CardTitle>Gerenciar Categorias</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <CategoryManager />
+              </CardContent>
+            </Card>
           </TabsContent>
         </Tabs>
 

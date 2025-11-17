@@ -1,13 +1,13 @@
 import { NavLink } from "@/components/NavLink";
 import { useLocation } from "react-router-dom";
 import {
-  LayoutDashboard,
+  Home,
   LineChart,
   User,
-  Wallet,
-  Settings,
   Shield,
+  Wallet,
 } from "lucide-react";
+
 import {
   Sidebar,
   SidebarContent,
@@ -17,7 +17,6 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-  SidebarTrigger,
   useSidebar,
 } from "@/components/ui/sidebar";
 
@@ -26,10 +25,26 @@ interface AppSidebarProps {
 }
 
 const menuItems = [
-  { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
-  { title: "Operações", url: "/operations", icon: LineChart },
-  { title: "Finanças Pessoais", url: "/financas", icon: Wallet },
-  { title: "Perfil", url: "/profile", icon: User },
+  {
+    title: "Dashboard",
+    url: "/dashboard",
+    icon: Home,
+  },
+  {
+    title: "Operações",
+    url: "/operacoes",
+    icon: LineChart,
+  },
+  {
+    title: "Finanças Pessoais",
+    url: "/financas",
+    icon: Wallet,
+  },
+  {
+    title: "Perfil",
+    url: "/perfil",
+    icon: User,
+  },
 ];
 
 export function AppSidebar({ isAdmin }: AppSidebarProps) {
