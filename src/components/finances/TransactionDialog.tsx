@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Transaction } from "@/pages/PersonalFinances";
+import { Transaction } from "@/types/finances";
 import { Upload, X, Paperclip } from "lucide-react";
 import {
   Dialog,
