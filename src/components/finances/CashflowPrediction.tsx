@@ -12,11 +12,65 @@ export const CashflowPrediction = () => {
   const [loading, setLoading] = useState(false);
   const [historical, setHistorical] = useState<any[]>([]);
   const [insufficientData, setInsufficientData] = useState(false);
+  const [demoMode, setDemoMode] = useState(false);
+
+  const loadDemoData = () => {
+    setDemoMode(true);
+    setInsufficientData(false);
+    
+    // Dados históricos fake dos últimos 6 meses
+    const demoHistorical = [
+      { month: "2025-06", income: 4500.00, expense: 3200.00, balance: 1300.00 },
+      { month: "2025-07", income: 4800.00, expense: 3500.00, balance: 1300.00 },
+      { month: "2025-08", income: 4500.00, expense: 2900.00, balance: 1600.00 },
+      { month: "2025-09", income: 5000.00, expense: 3400.00, balance: 1600.00 },
+      { month: "2025-10", income: 4700.00, expense: 3100.00, balance: 1600.00 },
+      { month: "2025-11", income: 4900.00, expense: 3300.00, balance: 1600.00 },
+    ];
+    
+    const demoPrediction = `📊 **PREVISÃO DE FLUXO DE CAIXA - PRÓXIMOS 3 MESES** (Dados de Demonstração)
+
+**DEZEMBRO 2025:**
+• Receita Prevista: R$ 4.850,00
+• Despesa Prevista: R$ 3.250,00
+• Saldo Projetado: R$ 1.600,00
+
+**JANEIRO 2026:**
+• Receita Prevista: R$ 4.750,00
+• Despesa Prevista: R$ 3.400,00
+• Saldo Projetado: R$ 1.350,00
+
+**FEVEREIRO 2026:**
+• Receita Prevista: R$ 4.900,00
+• Despesa Prevista: R$ 3.300,00
+• Saldo Projetado: R$ 1.600,00
+
+📈 **TENDÊNCIAS IDENTIFICADAS:**
+1. Receitas estáveis com média mensal de R$ 4.800,00
+2. Despesas controladas, variando entre R$ 2.900,00 e R$ 3.500,00
+3. Saldo positivo consistente de aproximadamente R$ 1.500,00/mês
+
+💡 **RECOMENDAÇÕES:**
+1. **Reserva de Emergência**: Com saldo mensal de ~R$ 1.500, considere guardar 30% (R$ 450) para fundo de emergência
+2. **Otimização de Gastos**: Suas despesas estão controladas. Identifique os 20% de gastos que podem ser reduzidos
+3. **Investimentos**: Com fluxo positivo constante, considere investir R$ 500-700/mês em aplicações de médio prazo
+
+⚠️ **ALERTAS:**
+• Janeiro pode ter saldo menor devido ao aumento típico de despesas pós-festas
+• Mantenha reserva de pelo menos R$ 3.000 para cobrir 2 meses de despesas essenciais
+
+*Esta é uma demonstração. Adicione suas transações reais para obter previsões personalizadas!*`;
+    
+    setPrediction(demoPrediction);
+    setHistorical(demoHistorical);
+    toast.success("Demonstração carregada! Adicione suas transações para previsões reais.");
+  };
 
   const generatePrediction = async () => {
     setLoading(true);
     setPrediction(null);
     setInsufficientData(false);
+    setDemoMode(false);
 
     try {
       const { data, error } = await supabase.functions.invoke("predict-cashflow", {
@@ -104,10 +158,21 @@ export const CashflowPrediction = () => {
           {insufficientData && (
             <Alert variant="destructive">
               <AlertCircle className="h-4 w-4" />
-              <AlertDescription>
-                <strong>Dados insuficientes:</strong> Você precisa ter pelo menos 5 transações registradas 
-                nos últimos 12 meses para gerar previsões. Continue registrando suas transações 
-                na aba "Transações" para habilitar esta funcionalidade.
+              <AlertDescription className="space-y-2">
+                <div>
+                  <strong>Dados insuficientes:</strong> Você precisa ter pelo menos 5 transações registradas 
+                  nos últimos 12 meses para gerar previsões. Continue registrando suas transações 
+                  na aba "Transações" para habilitar esta funcionalidade.
+                </div>
+                <Button 
+                  onClick={loadDemoData} 
+                  variant="outline" 
+                  size="sm"
+                  className="mt-2"
+                >
+                  <Sparkles className="h-4 w-4 mr-2" />
+                  Ver Demonstração com Dados de Exemplo
+                </Button>
               </AlertDescription>
             </Alert>
           )}
@@ -122,6 +187,15 @@ export const CashflowPrediction = () => {
 
           {prediction && (
             <div className="space-y-4">
+              {demoMode && (
+                <Alert>
+                  <Sparkles className="h-4 w-4" />
+                  <AlertDescription>
+                    Você está visualizando uma demonstração com dados de exemplo. 
+                    Adicione suas transações reais para obter previsões personalizadas!
+                  </AlertDescription>
+                </Alert>
+              )}
               <div className="prose prose-sm dark:prose-invert max-w-none">
                 <div className="whitespace-pre-wrap bg-muted/50 p-4 rounded-lg border">
                   {prediction}
