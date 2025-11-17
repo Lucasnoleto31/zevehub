@@ -9,8 +9,19 @@ import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
-import { ArrowLeft, Camera, Save, Mail, Phone, User as UserIcon } from "lucide-react";
+import { ArrowLeft, Camera, Save, Mail, Phone, User as UserIcon, Lock, Shield, Trash2 } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 const Profile = () => {
   const navigate = useNavigate();
@@ -30,6 +41,14 @@ const Profile = () => {
     email_notifications: true,
     push_notifications: true,
   });
+
+  const [passwordData, setPasswordData] = useState({
+    current_password: "",
+    new_password: "",
+    confirm_password: "",
+  });
+
+  const [deleteConfirmation, setDeleteConfirmation] = useState("");
 
   useEffect(() => {
     checkUser();
@@ -118,6 +137,78 @@ const Profile = () => {
       toast.error("Erro ao salvar perfil");
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleChangePassword = async () => {
+    if (!passwordData.new_password || !passwordData.confirm_password) {
+      toast.error("Preencha todos os campos de senha");
+      return;
+    }
+
+    if (passwordData.new_password !== passwordData.confirm_password) {
+      toast.error("As senhas não coincidem");
+      return;
+    }
+
+    if (passwordData.new_password.length < 6) {
+      toast.error("A senha deve ter no mínimo 6 caracteres");
+      return;
+    }
+
+    try {
+      const { error } = await supabase.auth.updateUser({
+        password: passwordData.new_password
+      });
+
+      if (error) throw error;
+
+      setPasswordData({
+        current_password: "",
+        new_password: "",
+        confirm_password: "",
+      });
+
+      toast.success("Senha alterada com sucesso!");
+    } catch (error: any) {
+      console.error("Erro ao alterar senha:", error);
+      toast.error(error.message || "Erro ao alterar senha");
+    }
+  };
+
+  const handleDeleteAccount = async () => {
+    if (!user) return;
+
+    if (deleteConfirmation !== "DELETAR") {
+      toast.error("Digite DELETAR para confirmar");
+      return;
+    }
+
+    try {
+      // Primeiro, deletar dados do usuário
+      const { error: profileError } = await supabase
+        .from("profiles")
+        .delete()
+        .eq("id", user.id);
+
+      if (profileError) throw profileError;
+
+      // Depois, deletar a conta de autenticação
+      const { error: authError } = await supabase.auth.admin.deleteUser(user.id);
+      
+      if (authError) {
+        // Se não tiver permissão admin, apenas fazer logout
+        await supabase.auth.signOut();
+        toast.success("Conta removida. Você foi desconectado.");
+        navigate("/auth");
+        return;
+      }
+
+      toast.success("Conta deletada com sucesso");
+      navigate("/auth");
+    } catch (error: any) {
+      console.error("Erro ao deletar conta:", error);
+      toast.error("Erro ao deletar conta. Entre em contato com o suporte.");
     }
   };
 
@@ -276,6 +367,116 @@ const Profile = () => {
                   }
                 />
               </div>
+            </CardContent>
+          </Card>
+
+          {/* Security Section */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Shield className="w-5 h-5" />
+                Segurança
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="new_password">Nova Senha</Label>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    id="new_password"
+                    type="password"
+                    value={passwordData.new_password}
+                    onChange={(e) => setPasswordData(prev => ({ ...prev, new_password: e.target.value }))}
+                    className="pl-10"
+                    placeholder="Digite sua nova senha"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="confirm_password">Confirmar Nova Senha</Label>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    id="confirm_password"
+                    type="password"
+                    value={passwordData.confirm_password}
+                    onChange={(e) => setPasswordData(prev => ({ ...prev, confirm_password: e.target.value }))}
+                    className="pl-10"
+                    placeholder="Confirme sua nova senha"
+                  />
+                </div>
+              </div>
+
+              <Button
+                onClick={handleChangePassword}
+                variant="outline"
+                className="w-full"
+              >
+                Alterar Senha
+              </Button>
+            </CardContent>
+          </Card>
+
+          {/* Danger Zone */}
+          <Card className="border-error/50">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-error">
+                <Trash2 className="w-5 h-5" />
+                Zona Perigosa
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label>Deletar Conta Permanentemente</Label>
+                <p className="text-sm text-muted-foreground">
+                  Esta ação não pode ser desfeita. Todos os seus dados serão permanentemente removidos.
+                </p>
+              </div>
+
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button variant="destructive" className="w-full">
+                    Deletar Minha Conta
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Tem certeza absoluta?</AlertDialogTitle>
+                    <AlertDialogDescription className="space-y-4">
+                      <p>
+                        Esta ação não pode ser desfeita. Isso irá permanentemente deletar sua conta
+                        e remover todos os seus dados de nossos servidores.
+                      </p>
+                      <div className="space-y-2">
+                        <Label htmlFor="delete-confirm">
+                          Digite <span className="font-bold text-foreground">DELETAR</span> para confirmar:
+                        </Label>
+                        <Input
+                          id="delete-confirm"
+                          value={deleteConfirmation}
+                          onChange={(e) => setDeleteConfirmation(e.target.value)}
+                          placeholder="DELETAR"
+                          className="font-mono"
+                        />
+                      </div>
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel onClick={() => setDeleteConfirmation("")}>
+                      Cancelar
+                    </AlertDialogCancel>
+                    <AlertDialogAction
+                      onClick={handleDeleteAccount}
+                      className="bg-error hover:bg-error/90"
+                      disabled={deleteConfirmation !== "DELETAR"}
+                    >
+                      Deletar Conta
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
             </CardContent>
           </Card>
 
