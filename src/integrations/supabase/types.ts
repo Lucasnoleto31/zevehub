@@ -44,6 +44,36 @@ export type Database = {
         }
         Relationships: []
       }
+      activity_logs: {
+        Row: {
+          activity_type: string
+          created_at: string | null
+          description: string
+          id: string
+          ip_address: string | null
+          user_agent: string | null
+          user_id: string
+        }
+        Insert: {
+          activity_type: string
+          created_at?: string | null
+          description: string
+          id?: string
+          ip_address?: string | null
+          user_agent?: string | null
+          user_id: string
+        }
+        Update: {
+          activity_type?: string
+          created_at?: string | null
+          description?: string
+          id?: string
+          ip_address?: string | null
+          user_agent?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       bankroll_management: {
         Row: {
           created_at: string
@@ -200,6 +230,9 @@ export type Database = {
           last_login: string | null
           phone: string | null
           status: string | null
+          totp_enabled: boolean | null
+          totp_secret: string | null
+          totp_verified_at: string | null
           updated_at: string
         }
         Insert: {
@@ -214,6 +247,9 @@ export type Database = {
           last_login?: string | null
           phone?: string | null
           status?: string | null
+          totp_enabled?: boolean | null
+          totp_secret?: string | null
+          totp_verified_at?: string | null
           updated_at?: string
         }
         Update: {
@@ -228,6 +264,9 @@ export type Database = {
           last_login?: string | null
           phone?: string | null
           status?: string | null
+          totp_enabled?: boolean | null
+          totp_secret?: string | null
+          totp_verified_at?: string | null
           updated_at?: string
         }
         Relationships: []

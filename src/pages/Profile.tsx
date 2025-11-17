@@ -11,6 +11,9 @@ import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import { ArrowLeft, Camera, Save, Mail, Phone, User as UserIcon, Lock, Shield, Trash2 } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { TwoFactorAuth } from "@/components/profile/TwoFactorAuth";
+import { ActivityLog } from "@/components/profile/ActivityLog";
+import { ActiveSessions } from "@/components/profile/ActiveSessions";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -35,6 +38,7 @@ const Profile = () => {
     email: "",
     phone: "",
     avatar_url: "",
+    totp_enabled: false,
   });
 
   const [notifications, setNotifications] = useState({
@@ -77,6 +81,7 @@ const Profile = () => {
           email: profileData.email || "",
           phone: profileData.phone || "",
           avatar_url: profileData.avatar_url || "",
+          totp_enabled: profileData.totp_enabled || false,
         });
       }
     } catch (error) {
@@ -369,6 +374,22 @@ const Profile = () => {
               </div>
             </CardContent>
           </Card>
+
+          {/* Two-Factor Authentication */}
+          {user && (
+            <TwoFactorAuth
+              userId={user.id}
+              email={formData.email}
+              totpEnabled={formData.totp_enabled}
+              onUpdate={checkUser}
+            />
+          )}
+
+          {/* Activity Log */}
+          {user && <ActivityLog userId={user.id} />}
+
+          {/* Active Sessions */}
+          {user && <ActiveSessions userId={user.id} />}
 
           {/* Security Section */}
           <Card>
