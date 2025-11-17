@@ -51,10 +51,11 @@ serve(async (req) => {
     if (!transactions || transactions.length < 5) {
       return new Response(
         JSON.stringify({ 
-          error: "Histórico insuficiente. Necessário pelo menos 5 transações dos últimos 12 meses." 
+          error: "Histórico insuficiente. Necessário pelo menos 5 transações dos últimos 12 meses.",
+          code: "INSUFFICIENT_DATA"
         }),
         { 
-          status: 400, 
+          status: 200,
           headers: { ...corsHeaders, "Content-Type": "application/json" } 
         }
       );
