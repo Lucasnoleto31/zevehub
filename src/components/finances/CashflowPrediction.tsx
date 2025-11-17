@@ -25,13 +25,31 @@ export const CashflowPrediction = () => {
 
       if (error) {
         console.error("Error from function:", error);
-        if (error.message.includes("429")) {
-          toast.error("Limite de requisições excedido. Tente novamente em alguns minutos.");
-        } else if (error.message.includes("402")) {
-          toast.error("Créditos insuficientes. Adicione créditos em Settings → Workspace → Usage.");
-        } else {
-          throw error;
+        const rawBody = (error as any)?.context?.body;
+        let combinedMsg = error.message || "";
+        if (rawBody) {
+          try {
+            const parsed = JSON.parse(rawBody);
+            if (parsed?.error) combinedMsg = `${combinedMsg} ${parsed.error}`.trim();
+          } catch {}
         }
+
+        if (combinedMsg.includes("Histórico insuficiente")) {
+          setInsufficientData(true);
+          toast.info("Adicione mais transações para gerar previsões precisas");
+          return;
+        }
+        
+        if (combinedMsg.includes("429")) {
+          toast.error("Limite de requisições excedido. Tente novamente em alguns minutos.");
+          return;
+        }
+        if (combinedMsg.includes("402")) {
+          toast.error("Créditos insuficientes. Adicione créditos em Settings → Workspace → Usage.");
+          return;
+        }
+
+        toast.error(combinedMsg || "Erro ao chamar a previsão");
         return;
       }
 
