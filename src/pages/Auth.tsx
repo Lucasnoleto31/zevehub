@@ -168,12 +168,24 @@ const Auth = () => {
 
       if (data.session) {
         // Log de acesso
-        await supabase.from("access_logs").insert({
+        const accessLogData = {
           user_id: data.user.id,
           ip_address: "client-side",
           user_agent: navigator.userAgent,
           device_info: navigator.platform,
-        });
+        };
+        
+        await supabase.from("access_logs").insert(accessLogData);
+
+        // Verificar se é um novo dispositivo e enviar notificação
+        try {
+          await supabase.functions.invoke("check-new-device", {
+            body: accessLogData,
+          });
+        } catch (error) {
+          console.error("Error checking new device:", error);
+          // Não bloqueia o login se houver erro na verificação
+        }
 
         toast.success("Login realizado com sucesso!");
         navigate("/dashboard");
