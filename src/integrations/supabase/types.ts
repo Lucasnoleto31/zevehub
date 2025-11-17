@@ -107,6 +107,39 @@ export type Database = {
         }
         Relationships: []
       }
+      category_budgets: {
+        Row: {
+          alert_threshold: number | null
+          budget_amount: number
+          category: string
+          created_at: string | null
+          id: string
+          month: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          alert_threshold?: number | null
+          budget_amount: number
+          category: string
+          created_at?: string | null
+          id?: string
+          month: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          alert_threshold?: number | null
+          budget_amount?: number
+          category?: string
+          created_at?: string | null
+          id?: string
+          month?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       client_bots: {
         Row: {
           bot_name: string
@@ -258,6 +291,7 @@ export type Database = {
           created_at: string
           description: string | null
           id: string
+          tags: string[] | null
           title: string
           transaction_date: string
           type: string
@@ -271,6 +305,7 @@ export type Database = {
           created_at?: string
           description?: string | null
           id?: string
+          tags?: string[] | null
           title: string
           transaction_date: string
           type: string
@@ -284,6 +319,7 @@ export type Database = {
           created_at?: string
           description?: string | null
           id?: string
+          tags?: string[] | null
           title?: string
           transaction_date?: string
           type?: string
@@ -519,6 +555,16 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      check_budget_status: {
+        Args: { p_category: string; p_month: string; p_user_id: string }
+        Returns: {
+          alert_threshold: number
+          budget_amount: number
+          percentage: number
+          should_alert: boolean
+          spent_amount: number
+        }[]
+      }
       distinct_strategies: {
         Args: never
         Returns: {
