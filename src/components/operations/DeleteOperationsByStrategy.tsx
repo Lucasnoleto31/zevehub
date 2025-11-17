@@ -25,12 +25,13 @@ const DeleteOperationsByStrategy = ({ userId }: DeleteOperationsByStrategyProps)
 
   const loadStrategies = async () => {
     try {
-      // Buscar todas as estratégias únicas diretamente
+      // Buscar todas as estratégias únicas sem limite de paginação
       const { data, error } = await supabase
         .from("trading_operations")
         .select("strategy")
         .not("strategy", "is", null)
-        .order("strategy");
+        .order("strategy")
+        .limit(10000); // Aumentar limite para pegar todas as operações
 
       if (error) throw error;
 
