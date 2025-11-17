@@ -149,14 +149,14 @@ export const AdvancedFilters = ({ transactions, onFilterChange, categories }: Ad
           <div className="space-y-2">
             <Label>Categoria</Label>
             <Select
-              value={filters.category}
-              onValueChange={(value) => handleFilterChange("category", value)}
+              value={filters.category || "all"}
+              onValueChange={(value) => handleFilterChange("category", value === "all" ? "" : value)}
             >
               <SelectTrigger>
                 <SelectValue placeholder="Todas" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Todas</SelectItem>
+                <SelectItem value="all">Todas</SelectItem>
                 {categories.map((cat) => (
                   <SelectItem key={cat} value={cat}>
                     {cat}
@@ -169,14 +169,14 @@ export const AdvancedFilters = ({ transactions, onFilterChange, categories }: Ad
           <div className="space-y-2">
             <Label>Tipo</Label>
             <Select
-              value={filters.type}
-              onValueChange={(value) => handleFilterChange("type", value)}
+              value={filters.type || "all"}
+              onValueChange={(value) => handleFilterChange("type", value === "all" ? "" : value)}
             >
               <SelectTrigger>
                 <SelectValue placeholder="Todos" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Todos</SelectItem>
+                <SelectItem value="all">Todos</SelectItem>
                 <SelectItem value="income">Receita</SelectItem>
                 <SelectItem value="expense">Despesa</SelectItem>
               </SelectContent>
