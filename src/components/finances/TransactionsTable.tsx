@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import {
@@ -10,7 +11,8 @@ import {
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Pencil, Trash2, TrendingUp, TrendingDown } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Pencil, Trash2, TrendingUp, TrendingDown, ArrowUpDown, Search } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -23,6 +25,9 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import type { Transaction } from "@/types/finances";
+
+type SortField = "date" | "amount" | "category" | null;
+type SortOrder = "asc" | "desc";
 
 interface TransactionsTableProps {
   transactions: Transaction[];
@@ -37,6 +42,77 @@ export const TransactionsTable = ({
   onEdit,
   onDelete,
 }: TransactionsTableProps) => {
+  const [sortField, setSortField] = useState<SortField>(null);
+  const [sortOrder, setSortOrder] = useState<SortOrder>("desc");
+  const [searchTerm, setSearchTerm] = useState("");
+  const [minValue, setMinValue] = useState("");
+  const [maxValue, setMaxValue] = useState("");
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
+
+  const handleSort = (field: SortField) => {
+    if (sortField === field) {
+      setSortOrder(sortOrder === "asc" ? "desc" : "asc");
+    } else {
+      setSortField(field);
+      setSortOrder("desc");
+    }
+  };
+
+  let filteredTransactions = [...transactions];
+
+  // Filtro de busca por título
+  if (searchTerm) {
+    filteredTransactions = filteredTransactions.filter((t) =>
+      t.title.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+  }
+
+  // Filtro de valor
+  if (minValue) {
+    filteredTransactions = filteredTransactions.filter(
+      (t) => Number(t.amount) >= Number(minValue)
+    );
+  }
+  if (maxValue) {
+    filteredTransactions = filteredTransactions.filter(
+      (t) => Number(t.amount) <= Number(maxValue)
+    );
+  }
+
+  // Filtro de data
+  if (startDate) {
+    filteredTransactions = filteredTransactions.filter(
+      (t) => t.transaction_date >= startDate
+    );
+  }
+  if (endDate) {
+    filteredTransactions = filteredTransactions.filter(
+      (t) => t.transaction_date <= endDate
+    );
+  }
+
+  // Ordenação
+  if (sortField) {
+    filteredTransactions.sort((a, b) => {
+      let comparison = 0;
+      
+      switch (sortField) {
+        case "date":
+          comparison = new Date(a.transaction_date).getTime() - new Date(b.transaction_date).getTime();
+          break;
+        case "amount":
+          comparison = Number(a.amount) - Number(b.amount);
+          break;
+        case "category":
+          comparison = a.category.localeCompare(b.category);
+          break;
+      }
+      
+      return sortOrder === "asc" ? comparison : -comparison;
+    });
+  }
+
   if (loading) {
     return <div className="text-center py-8">Carregando transações...</div>;
   }
@@ -50,19 +126,86 @@ export const TransactionsTable = ({
   }
 
   return (
-    <Table>
+    <div className="space-y-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+        <div className="relative">
+          <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Buscar por título..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-8"
+          />
+        </div>
+        <Input
+          type="number"
+          placeholder="Valor mínimo"
+          value={minValue}
+          onChange={(e) => setMinValue(e.target.value)}
+        />
+        <Input
+          type="number"
+          placeholder="Valor máximo"
+          value={maxValue}
+          onChange={(e) => setMaxValue(e.target.value)}
+        />
+        <Input
+          type="date"
+          placeholder="Data inicial"
+          value={startDate}
+          onChange={(e) => setStartDate(e.target.value)}
+        />
+        <Input
+          type="date"
+          placeholder="Data final"
+          value={endDate}
+          onChange={(e) => setEndDate(e.target.value)}
+        />
+      </div>
+
+      <Table>
       <TableHeader>
         <TableRow>
-          <TableHead>Data</TableHead>
+          <TableHead>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => handleSort("date")}
+              className="flex items-center gap-1 hover:bg-transparent"
+            >
+              Data
+              <ArrowUpDown className="h-3 w-3" />
+            </Button>
+          </TableHead>
           <TableHead>Título</TableHead>
-          <TableHead>Categoria</TableHead>
+          <TableHead>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => handleSort("category")}
+              className="flex items-center gap-1 hover:bg-transparent"
+            >
+              Categoria
+              <ArrowUpDown className="h-3 w-3" />
+            </Button>
+          </TableHead>
           <TableHead>Tipo</TableHead>
-          <TableHead className="text-right">Valor</TableHead>
+          <TableHead className="text-right">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => handleSort("amount")}
+              className="flex items-center gap-1 hover:bg-transparent"
+            >
+              Valor
+              <ArrowUpDown className="h-3 w-3" />
+            </Button>
+          </TableHead>
           <TableHead className="text-right">Ações</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
-        {transactions.map((transaction) => (
+        {filteredTransactions.map((transaction) => (
           <TableRow key={transaction.id}>
             <TableCell className="font-medium">
               {format(new Date(transaction.transaction_date), "dd/MM/yyyy", {
@@ -145,5 +288,6 @@ export const TransactionsTable = ({
         ))}
       </TableBody>
     </Table>
+    </div>
   );
 };

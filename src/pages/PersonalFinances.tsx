@@ -7,6 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Plus, Download } from "lucide-react";
 import { TransactionDialog } from "@/components/finances/TransactionDialog";
 import { TransactionsTable } from "@/components/finances/TransactionsTable";
+import { TransactionCards } from "@/components/finances/TransactionCards";
 import { FinancialSummary } from "@/components/finances/FinancialSummary";
 import { FinancialCharts } from "@/components/finances/FinancialCharts";
 import { FinancialGoals } from "@/components/finances/FinancialGoals";
@@ -301,7 +302,9 @@ const PersonalFinances = () => {
               />
               <ImportTransactions onImportComplete={loadTransactions} />
             </Suspense>
-            <Card>
+            
+            {/* Desktop: Table */}
+            <Card className="hidden md:block">
               <CardHeader>
                 <CardTitle>Todas as Transações</CardTitle>
               </CardHeader>
@@ -314,6 +317,17 @@ const PersonalFinances = () => {
                 />
               </CardContent>
             </Card>
+
+            {/* Mobile: Cards */}
+            <div className="md:hidden">
+              <h3 className="text-lg font-semibold mb-4">Todas as Transações</h3>
+              <TransactionCards
+                transactions={displayTransactions}
+                loading={loading}
+                onEdit={handleEdit}
+                onDelete={handleDelete}
+              />
+            </div>
           </TabsContent>
 
           <TabsContent value="accounts">
