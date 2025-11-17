@@ -11,10 +11,12 @@ export const CashflowPrediction = () => {
   const [prediction, setPrediction] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [historical, setHistorical] = useState<any[]>([]);
+  const [insufficientData, setInsufficientData] = useState(false);
 
   const generatePrediction = async () => {
     setLoading(true);
     setPrediction(null);
+    setInsufficientData(false);
 
     try {
       const { data, error } = await supabase.functions.invoke("predict-cashflow", {
@@ -22,6 +24,7 @@ export const CashflowPrediction = () => {
       });
 
       if (error) {
+        console.error("Error from function:", error);
         if (error.message.includes("429")) {
           toast.error("Limite de requisições excedido. Tente novamente em alguns minutos.");
         } else if (error.message.includes("402")) {
@@ -32,8 +35,14 @@ export const CashflowPrediction = () => {
         return;
       }
 
-      if (data.error) {
-        toast.error(data.error);
+      if (data?.error) {
+        // Verificar se é o erro de dados insuficientes
+        if (data.error.includes("Histórico insuficiente")) {
+          setInsufficientData(true);
+          toast.info("Adicione mais transações para gerar previsões precisas");
+        } else {
+          toast.error(data.error);
+        }
         return;
       }
 
@@ -70,9 +79,20 @@ export const CashflowPrediction = () => {
             <AlertCircle className="h-4 w-4" />
             <AlertDescription>
               A IA analisa seu histórico financeiro dos últimos 12 meses para gerar previsões
-              inteligentes e recomendações personalizadas.
+              inteligentes e recomendações personalizadas. Necessário pelo menos 5 transações.
             </AlertDescription>
           </Alert>
+
+          {insufficientData && (
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>
+                <strong>Dados insuficientes:</strong> Você precisa ter pelo menos 5 transações registradas 
+                nos últimos 12 meses para gerar previsões. Continue registrando suas transações 
+                na aba "Transações" para habilitar esta funcionalidade.
+              </AlertDescription>
+            </Alert>
+          )}
 
           {loading && (
             <div className="space-y-3">
@@ -119,7 +139,7 @@ export const CashflowPrediction = () => {
             </div>
           )}
 
-          {!prediction && !loading && (
+          {!prediction && !loading && !insufficientData && (
             <div className="text-center py-12">
               <TrendingUp className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
               <p className="text-muted-foreground">
