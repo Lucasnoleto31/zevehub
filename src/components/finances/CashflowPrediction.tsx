@@ -53,12 +53,12 @@ export const CashflowPrediction = () => {
         return;
       }
 
-      if (data?.error) {
+      if (data?.error || data?.code === "INSUFFICIENT_DATA") {
         // Verificar se é o erro de dados insuficientes
-        if (data.error.includes("Histórico insuficiente")) {
+        if (data?.error?.includes("Histórico insuficiente") || data?.code === "INSUFFICIENT_DATA") {
           setInsufficientData(true);
           toast.info("Adicione mais transações para gerar previsões precisas");
-        } else {
+        } else if (data?.error) {
           toast.error(data.error);
         }
         return;
