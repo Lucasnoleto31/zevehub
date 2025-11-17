@@ -13,6 +13,10 @@ import { FinancialGoals } from "@/components/finances/FinancialGoals";
 import { PeriodFilter } from "@/components/finances/PeriodFilter";
 import { CategoryManager } from "@/components/finances/CategoryManager";
 import { AdvancedMetrics } from "@/components/finances/AdvancedMetrics";
+import { AdvancedFilters } from "@/components/finances/AdvancedFilters";
+import { ImportTransactions } from "@/components/finances/ImportTransactions";
+import { BudgetManager } from "@/components/finances/BudgetManager";
+import { CategoryDrilldown } from "@/components/finances/CategoryDrilldown";
 import { useGoalNotifications } from "@/hooks/useGoalNotifications";
 import { toast } from "sonner";
 import * as XLSX from 'xlsx';
@@ -34,16 +38,19 @@ const PersonalFinances = () => {
   const navigate = useNavigate();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [filteredTransactions, setFilteredTransactions] = useState<Transaction[]>([]);
+  const [displayTransactions, setDisplayTransactions] = useState<Transaction[]>([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
   const [loading, setLoading] = useState(true);
   const [periodFilter, setPeriodFilter] = useState<'month' | 'quarter' | 'year' | 'all'>('month');
+  const [categories, setCategories] = useState<string[]>([]);
   
   // Hook para notificações de metas
   useGoalNotifications();
 
   useEffect(() => {
     checkUser();
+    loadCategories();
   }, []);
 
   const checkUser = async () => {
@@ -76,6 +83,25 @@ const PersonalFinances = () => {
   useEffect(() => {
     filterTransactionsByPeriod();
   }, [periodFilter, transactions]);
+
+  useEffect(() => {
+    setDisplayTransactions(filteredTransactions);
+  }, [filteredTransactions]);
+
+  const loadCategories = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("finance_categories")
+        .select("name")
+        .eq("type", "expense")
+        .order("name");
+
+      if (error) throw error;
+      setCategories(data?.map(c => c.name) || []);
+    } catch (error) {
+      console.error("Erro ao carregar categorias:", error);
+    }
+  };
 
   const filterTransactionsByPeriod = () => {
     const now = new Date();
@@ -217,11 +243,13 @@ const PersonalFinances = () => {
         />
 
         <Tabs defaultValue="overview" className="space-y-4">
-          <TabsList className="grid w-full grid-cols-5">
+          <TabsList className="grid w-full grid-cols-7">
             <TabsTrigger value="overview">Visão Geral</TabsTrigger>
             <TabsTrigger value="analytics">Análise</TabsTrigger>
+            <TabsTrigger value="drilldown">Drill-down</TabsTrigger>
             <TabsTrigger value="transactions">Transações</TabsTrigger>
             <TabsTrigger value="goals">Metas</TabsTrigger>
+            <TabsTrigger value="budgets">Orçamentos</TabsTrigger>
             <TabsTrigger value="categories">Categorias</TabsTrigger>
           </TabsList>
 
@@ -233,14 +261,24 @@ const PersonalFinances = () => {
             <AdvancedMetrics transactions={filteredTransactions} />
           </TabsContent>
 
-          <TabsContent value="transactions">
+          <TabsContent value="drilldown" className="space-y-4">
+            <CategoryDrilldown transactions={filteredTransactions} />
+          </TabsContent>
+
+          <TabsContent value="transactions" className="space-y-4">
+            <AdvancedFilters
+              transactions={filteredTransactions}
+              onFilterChange={setDisplayTransactions}
+              categories={categories}
+            />
+            <ImportTransactions onImportComplete={loadTransactions} />
             <Card>
               <CardHeader>
                 <CardTitle>Todas as Transações</CardTitle>
               </CardHeader>
               <CardContent>
                 <TransactionsTable
-                  transactions={filteredTransactions}
+                  transactions={displayTransactions}
                   loading={loading}
                   onEdit={handleEdit}
                   onDelete={handleDelete}
@@ -251,6 +289,10 @@ const PersonalFinances = () => {
 
           <TabsContent value="goals">
             <FinancialGoals />
+          </TabsContent>
+
+          <TabsContent value="budgets">
+            <BudgetManager categories={categories} />
           </TabsContent>
 
           <TabsContent value="categories">

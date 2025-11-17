@@ -43,6 +43,7 @@ export const TransactionDialog = ({ open, onOpenChange, transaction, onSave }: T
       category: "",
       description: "",
       transaction_date: new Date().toISOString().split('T')[0],
+      tags: "",
     },
   });
 
@@ -60,6 +61,8 @@ export const TransactionDialog = ({ open, onOpenChange, transaction, onSave }: T
       setValue("category", transaction.category);
       setValue("description", transaction.description || "");
       setValue("transaction_date", transaction.transaction_date);
+      const transactionTags = (transaction as any).tags || [];
+      setValue("tags", transactionTags.join(", "));
       setExistingAttachment((transaction as any).attachment_url || null);
     } else {
       reset();
@@ -133,11 +136,21 @@ export const TransactionDialog = ({ open, onOpenChange, transaction, onSave }: T
         attachmentUrl = await uploadFile(user.id);
       }
 
+      // Processar tags
+      let tags = null;
+      if (data.tags && typeof data.tags === 'string') {
+        tags = data.tags
+          .split(',')
+          .map((tag: string) => tag.trim())
+          .filter(Boolean);
+      }
+
       const transactionData = {
         ...data,
         amount: parseFloat(data.amount),
         user_id: user.id,
         attachment_url: attachmentUrl,
+        tags,
       };
 
       if (transaction) {
@@ -243,6 +256,18 @@ export const TransactionDialog = ({ open, onOpenChange, transaction, onSave }: T
               placeholder="Adicione uma descrição"
               rows={3}
             />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="tags">Tags (opcional)</Label>
+            <Input
+              id="tags"
+              {...register("tags")}
+              placeholder="Ex: trabalho, essencial (separadas por vírgula)"
+            />
+            <p className="text-xs text-muted-foreground">
+              Separe múltiplas tags com vírgula
+            </p>
           </div>
 
           <div className="space-y-2">
