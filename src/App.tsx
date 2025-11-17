@@ -12,6 +12,7 @@ import Dashboard from "./pages/Dashboard";
 import Admin from "./pages/Admin";
 import Operations from "./pages/Operations";
 import OperationDetail from "./pages/OperationDetail";
+import Profile from "./pages/Profile";
 import NotFound from "./pages/NotFound";
 import { useEffect } from "react";
 import { registerServiceWorker } from "@/lib/register-sw";
@@ -40,6 +41,7 @@ const App = () => {
                 <Route path="/admin" element={<Admin />} />
                 <Route path="/operations" element={<Operations />} />
                 <Route path="/operation/:id" element={<OperationDetail />} />
+                <Route path="/profile" element={<Profile />} />
                 {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                 <Route path="*" element={<NotFound />} />
               </Routes>
