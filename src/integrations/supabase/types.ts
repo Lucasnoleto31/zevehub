@@ -444,6 +444,12 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      distinct_strategies: {
+        Args: never
+        Returns: {
+          strategy: string
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["user_role"]

@@ -25,24 +25,19 @@ const DeleteOperationsByStrategy = ({ userId }: DeleteOperationsByStrategyProps)
 
   const loadStrategies = async () => {
     try {
-      // Buscar todas as estratégias únicas sem limite de paginação
-      const { data, error } = await supabase
-        .from("trading_operations")
-        .select("strategy")
-        .not("strategy", "is", null)
-        .order("strategy")
-        .limit(10000); // Aumentar limite para pegar todas as operações
+      // Buscar estratégias distintas no servidor (evita paginação gigante)
+      const { data, error } = await supabase.rpc('distinct_strategies');
 
       if (error) throw error;
 
-      // Obter estratégias únicas e ordenar
-      const uniqueStrategies = [...new Set(data?.map(op => op.strategy).filter(Boolean) as string[])].sort();
+      const values = (data || []).map((row: any) => (typeof row === 'string' ? row : row?.strategy)).filter(Boolean) as string[];
+      const uniqueStrategies = [...new Set(values)].sort();
       setStrategies(uniqueStrategies);
-      
+
       if (uniqueStrategies.length === 0) {
         toast.info("Nenhuma estratégia encontrada");
       } else {
-        console.log(`${uniqueStrategies.length} estratégia(s) encontrada(s):`, uniqueStrategies);
+        console.info(`${uniqueStrategies.length} estratégia(s) encontrada(s):`, uniqueStrategies);
       }
     } catch (error) {
       console.error("Erro ao carregar estratégias:", error);
@@ -115,7 +110,7 @@ const DeleteOperationsByStrategy = ({ userId }: DeleteOperationsByStrategyProps)
                   <SelectTrigger className="w-full mt-2">
                     <SelectValue placeholder="Selecione uma estratégia" />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="z-50 bg-popover text-popover-foreground">
                     {strategies.map((strategy) => (
                       <SelectItem key={strategy} value={strategy}>
                         {strategy}
