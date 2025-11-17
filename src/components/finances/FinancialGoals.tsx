@@ -85,6 +85,7 @@ export const FinancialGoals = () => {
     setIsDialogOpen(true);
   };
 
+
   const handleDelete = async (id: string) => {
     try {
       const { error } = await supabase
@@ -212,11 +213,7 @@ export const FinancialGoals = () => {
           if (!open) setEditingGoal(null);
         }}
         goal={editingGoal}
-        onSave={() => {
-          loadGoals();
-          setIsDialogOpen(false);
-          setEditingGoal(null);
-        }}
+        onSave={loadGoals}
       />
     </div>
   );
