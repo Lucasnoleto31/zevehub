@@ -6,19 +6,7 @@ import { Progress } from "@/components/ui/progress";
 import { Plus, Target, TrendingUp, Calendar } from "lucide-react";
 import { GoalDialog } from "./GoalDialog";
 import { toast } from "sonner";
-
-export interface FinancialGoal {
-  id: string;
-  user_id: string;
-  goal_type: string;
-  target_value: number;
-  period_type: string;
-  start_date: string;
-  end_date: string;
-  is_active: boolean;
-  created_at: string;
-  updated_at: string;
-}
+import { FinancialGoal } from "@/types/finances";
 
 export const FinancialGoals = () => {
   const [goals, setGoals] = useState<FinancialGoal[]>([]);

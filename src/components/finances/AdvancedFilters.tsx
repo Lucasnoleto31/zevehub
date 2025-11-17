@@ -12,7 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Transaction } from "@/pages/PersonalFinances";
+import { Transaction } from "@/types/finances";
 
 interface AdvancedFiltersProps {
   transactions: Transaction[];

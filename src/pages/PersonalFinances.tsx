@@ -24,18 +24,7 @@ import { useGoalNotifications } from "@/hooks/useGoalNotifications";
 import { toast } from "sonner";
 import * as XLSX from 'xlsx';
 
-export interface Transaction {
-  id: string;
-  title: string;
-  amount: number;
-  type: "income" | "expense";
-  category: string;
-  description?: string;
-  transaction_date: string;
-  created_at: string;
-  updated_at: string;
-  user_id: string;
-}
+import { Transaction } from "@/types/finances";
 
 const PersonalFinances = () => {
   const navigate = useNavigate();

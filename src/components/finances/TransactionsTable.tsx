@@ -22,7 +22,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import type { Transaction } from "@/pages/PersonalFinances";
+import type { Transaction } from "@/types/finances";
 
 interface TransactionsTableProps {
   transactions: Transaction[];
