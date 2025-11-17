@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, lazy, Suspense } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -11,29 +11,31 @@ import { FinancialSummary } from "@/components/finances/FinancialSummary";
 import { FinancialCharts } from "@/components/finances/FinancialCharts";
 import { FinancialGoals } from "@/components/finances/FinancialGoals";
 import { PeriodFilter } from "@/components/finances/PeriodFilter";
-import { AdvancedMetrics } from "@/components/finances/AdvancedMetrics";
-import { AdvancedFilters } from "@/components/finances/AdvancedFilters";
-import { ImportTransactions } from "@/components/finances/ImportTransactions";
-import { BudgetManager } from "@/components/finances/BudgetManager";
-import { CategoryDrilldown } from "@/components/finances/CategoryDrilldown";
-import { AccountManager } from "@/components/finances/AccountManager";
-import { RecurringManager } from "@/components/finances/RecurringManager";
-import { CashflowPrediction } from "@/components/finances/CashflowPrediction";
-import { PDFExport } from "@/components/finances/PDFExport";
 import { useGoalNotifications } from "@/hooks/useGoalNotifications";
 import { toast } from "sonner";
 import * as XLSX from 'xlsx';
-
 import { Transaction } from "@/types/finances";
+import { Skeleton } from "@/components/ui/skeleton";
+
+// Lazy load heavy components
+const AdvancedMetrics = lazy(() => import("@/components/finances/AdvancedMetrics").then(m => ({ default: m.AdvancedMetrics })));
+const AdvancedFilters = lazy(() => import("@/components/finances/AdvancedFilters").then(m => ({ default: m.AdvancedFilters })));
+const ImportTransactions = lazy(() => import("@/components/finances/ImportTransactions").then(m => ({ default: m.ImportTransactions })));
+const BudgetManager = lazy(() => import("@/components/finances/BudgetManager").then(m => ({ default: m.BudgetManager })));
+const CategoryDrilldown = lazy(() => import("@/components/finances/CategoryDrilldown").then(m => ({ default: m.CategoryDrilldown })));
+const AccountManager = lazy(() => import("@/components/finances/AccountManager").then(m => ({ default: m.AccountManager })));
+const RecurringManager = lazy(() => import("@/components/finances/RecurringManager").then(m => ({ default: m.RecurringManager })));
+const CashflowPrediction = lazy(() => import("@/components/finances/CashflowPrediction").then(m => ({ default: m.CashflowPrediction })));
+const PDFExport = lazy(() => import("@/components/finances/PDFExport").then(m => ({ default: m.PDFExport })));
 
 const PersonalFinances = () => {
   const navigate = useNavigate();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [filteredTransactions, setFilteredTransactions] = useState<Transaction[]>([]);
   const [displayTransactions, setDisplayTransactions] = useState<Transaction[]>([]);
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isDialogOpen, setIsDialogOpen] = useState<boolean>(false);
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState<boolean>(true);
   const [periodFilter, setPeriodFilter] = useState<'month' | 'quarter' | 'year' | 'all'>('month');
   const [categories, setCategories] = useState<string[]>([]);
   
@@ -250,25 +252,33 @@ const PersonalFinances = () => {
           </TabsContent>
 
           <TabsContent value="analytics" className="space-y-4">
-            <AdvancedMetrics transactions={filteredTransactions} />
+            <Suspense fallback={<Skeleton className="h-[400px] w-full" />}>
+              <AdvancedMetrics transactions={filteredTransactions} />
+            </Suspense>
           </TabsContent>
 
           <TabsContent value="prediction" className="space-y-4">
-            <CashflowPrediction />
-            <PDFExport transactions={filteredTransactions} />
+            <Suspense fallback={<Skeleton className="h-[300px] w-full" />}>
+              <CashflowPrediction />
+              <PDFExport transactions={filteredTransactions} />
+            </Suspense>
           </TabsContent>
 
           <TabsContent value="drilldown" className="space-y-4">
-            <CategoryDrilldown transactions={filteredTransactions} />
+            <Suspense fallback={<Skeleton className="h-[400px] w-full" />}>
+              <CategoryDrilldown transactions={filteredTransactions} />
+            </Suspense>
           </TabsContent>
 
           <TabsContent value="transactions" className="space-y-4">
-            <AdvancedFilters
-              transactions={filteredTransactions}
-              onFilterChange={setDisplayTransactions}
-              categories={categories}
-            />
-            <ImportTransactions onImportComplete={loadTransactions} />
+            <Suspense fallback={<Skeleton className="h-[200px] w-full" />}>
+              <AdvancedFilters
+                transactions={filteredTransactions}
+                onFilterChange={setDisplayTransactions}
+                categories={categories}
+              />
+              <ImportTransactions onImportComplete={loadTransactions} />
+            </Suspense>
             <Card>
               <CardHeader>
                 <CardTitle>Todas as Transações</CardTitle>
@@ -285,16 +295,22 @@ const PersonalFinances = () => {
           </TabsContent>
 
           <TabsContent value="accounts">
-            <AccountManager />
+            <Suspense fallback={<Skeleton className="h-[400px] w-full" />}>
+              <AccountManager />
+            </Suspense>
           </TabsContent>
 
           <TabsContent value="recurring">
-            <RecurringManager />
+            <Suspense fallback={<Skeleton className="h-[400px] w-full" />}>
+              <RecurringManager />
+            </Suspense>
           </TabsContent>
 
           <TabsContent value="goals" className="space-y-4">
             <FinancialGoals />
-            <BudgetManager categories={categories} />
+            <Suspense fallback={<Skeleton className="h-[300px] w-full" />}>
+              <BudgetManager categories={categories} />
+            </Suspense>
           </TabsContent>
         </Tabs>
 

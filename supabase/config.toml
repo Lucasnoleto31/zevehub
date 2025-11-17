@@ -1,1 +1,10 @@
 project_id = "zsylxitrkmaihpfvnjny"
+
+[functions.predict-cashflow]
+verify_jwt = true
+
+[functions.process-recurring]
+verify_jwt = false
+
+[functions.check-new-device]
+verify_jwt = true
