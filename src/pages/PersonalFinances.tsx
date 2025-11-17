@@ -16,11 +16,13 @@ import { toast } from "sonner";
 import * as XLSX from 'xlsx';
 import { Transaction } from "@/types/finances";
 import { Skeleton } from "@/components/ui/skeleton";
+import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
+import { AppSidebar } from "@/components/dashboard/AppSidebar";
 
 // Lazy load heavy components
 const AdvancedMetrics = lazy(() => import("@/components/finances/AdvancedMetrics").then(m => ({ default: m.AdvancedMetrics })));
 const AdvancedFilters = lazy(() => import("@/components/finances/AdvancedFilters").then(m => ({ default: m.AdvancedFilters })));
-const ImportTransactions = lazy(() => import("@/components/finances/ImportTransactions").then(m => ({ default: m.ImportTransactions })));
+const ImportTransactions = lazy(() => import("@/components/finances/ImportTransactions"));
 const BudgetManager = lazy(() => import("@/components/finances/BudgetManager").then(m => ({ default: m.BudgetManager })));
 const CategoryDrilldown = lazy(() => import("@/components/finances/CategoryDrilldown").then(m => ({ default: m.CategoryDrilldown })));
 const AccountManager = lazy(() => import("@/components/finances/AccountManager").then(m => ({ default: m.AccountManager })));
@@ -38,6 +40,7 @@ const PersonalFinances = () => {
   const [loading, setLoading] = useState<boolean>(true);
   const [periodFilter, setPeriodFilter] = useState<'month' | 'quarter' | 'year' | 'all'>('month');
   const [categories, setCategories] = useState<string[]>([]);
+  const [roles, setRoles] = useState<string[]>([]);
   
   useGoalNotifications();
 
@@ -52,6 +55,16 @@ const PersonalFinances = () => {
       navigate("/auth");
       return;
     }
+    
+    const { data: rolesData } = await supabase
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", session.user.id);
+
+    if (rolesData) {
+      setRoles(rolesData.map((r) => r.role));
+    }
+    
     await loadTransactions();
   };
 
@@ -199,10 +212,19 @@ const PersonalFinances = () => {
     .reduce((sum, t) => sum + Number(t.amount), 0);
 
   const balance = totalIncome - totalExpense;
+  const isAdmin = roles.includes("admin");
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20 p-4 md:p-6">
-      <div className="max-w-7xl mx-auto space-y-6">
+    <SidebarProvider>
+      <div className="min-h-screen flex w-full bg-gradient-to-br from-background via-background to-muted/20">
+        <AppSidebar isAdmin={isAdmin} />
+        
+        <main className="flex-1 p-4 md:p-6">
+          <div className="mb-4">
+            <SidebarTrigger />
+          </div>
+          
+          <div className="max-w-7xl mx-auto space-y-6">
         <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4">
           <div>
             <h1 className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
@@ -314,14 +336,16 @@ const PersonalFinances = () => {
           </TabsContent>
         </Tabs>
 
-        <TransactionDialog
-          open={isDialogOpen}
-          onOpenChange={handleCloseDialog}
-          transaction={editingTransaction}
-          onSave={handleSaveTransaction}
-        />
-      </div>
+          <TransactionDialog
+            open={isDialogOpen}
+            onOpenChange={handleCloseDialog}
+            transaction={editingTransaction}
+            onSave={handleSaveTransaction}
+          />
+        </div>
+      </main>
     </div>
+    </SidebarProvider>
   );
 };
 

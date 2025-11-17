@@ -22,7 +22,7 @@ const transactionSchema = z.object({
   tags: z.array(z.string().max(50)).optional(),
 });
 
-export const ImportTransactions = ({ onImportComplete }: ImportTransactionsProps) => {
+export default function ImportTransactions({ onImportComplete }: ImportTransactionsProps) {
   const [importing, setImporting] = useState(false);
   const [errors, setErrors] = useState<string[]>([]);
 
@@ -221,4 +221,4 @@ Aluguel,1200.00,expense,Moradia,2024-01-01,Aluguel mensal,fixo;moradia`;
       </CardContent>
     </Card>
   );
-};
+}
