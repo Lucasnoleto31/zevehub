@@ -156,6 +156,12 @@ const Dashboard = () => {
                 >
                   Operações
                 </Link>
+                <Link 
+                  to="/profile" 
+                  className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors"
+                >
+                  Perfil
+                </Link>
               </nav>
             </div>
             
