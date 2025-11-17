@@ -4,19 +4,22 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, Download, Target, Settings } from "lucide-react";
+import { Plus, Download } from "lucide-react";
 import { TransactionDialog } from "@/components/finances/TransactionDialog";
 import { TransactionsTable } from "@/components/finances/TransactionsTable";
 import { FinancialSummary } from "@/components/finances/FinancialSummary";
 import { FinancialCharts } from "@/components/finances/FinancialCharts";
 import { FinancialGoals } from "@/components/finances/FinancialGoals";
 import { PeriodFilter } from "@/components/finances/PeriodFilter";
-import { CategoryManager } from "@/components/finances/CategoryManager";
 import { AdvancedMetrics } from "@/components/finances/AdvancedMetrics";
 import { AdvancedFilters } from "@/components/finances/AdvancedFilters";
 import { ImportTransactions } from "@/components/finances/ImportTransactions";
 import { BudgetManager } from "@/components/finances/BudgetManager";
 import { CategoryDrilldown } from "@/components/finances/CategoryDrilldown";
+import { AccountManager } from "@/components/finances/AccountManager";
+import { RecurringManager } from "@/components/finances/RecurringManager";
+import { CashflowPrediction } from "@/components/finances/CashflowPrediction";
+import { PDFExport } from "@/components/finances/PDFExport";
 import { useGoalNotifications } from "@/hooks/useGoalNotifications";
 import { toast } from "sonner";
 import * as XLSX from 'xlsx';
@@ -45,7 +48,6 @@ const PersonalFinances = () => {
   const [periodFilter, setPeriodFilter] = useState<'month' | 'quarter' | 'year' | 'all'>('month');
   const [categories, setCategories] = useState<string[]>([]);
   
-  // Hook para notificações de metas
   useGoalNotifications();
 
   useEffect(() => {
@@ -216,7 +218,7 @@ const PersonalFinances = () => {
               Finanças Pessoais
             </h1>
             <p className="text-muted-foreground mt-2">
-              Controle completo das suas finanças
+              Controle completo com IA e automação
             </p>
           </div>
           <div className="flex gap-2 flex-wrap">
@@ -243,14 +245,15 @@ const PersonalFinances = () => {
         />
 
         <Tabs defaultValue="overview" className="space-y-4">
-          <TabsList className="grid w-full grid-cols-7">
-            <TabsTrigger value="overview">Visão Geral</TabsTrigger>
+          <TabsList className="grid w-full grid-cols-4 lg:grid-cols-8">
+            <TabsTrigger value="overview">Geral</TabsTrigger>
             <TabsTrigger value="analytics">Análise</TabsTrigger>
-            <TabsTrigger value="drilldown">Drill-down</TabsTrigger>
+            <TabsTrigger value="prediction">IA</TabsTrigger>
+            <TabsTrigger value="drilldown">Categorias</TabsTrigger>
             <TabsTrigger value="transactions">Transações</TabsTrigger>
+            <TabsTrigger value="accounts">Contas</TabsTrigger>
+            <TabsTrigger value="recurring">Recorrentes</TabsTrigger>
             <TabsTrigger value="goals">Metas</TabsTrigger>
-            <TabsTrigger value="budgets">Orçamentos</TabsTrigger>
-            <TabsTrigger value="categories">Categorias</TabsTrigger>
           </TabsList>
 
           <TabsContent value="overview" className="space-y-4">
@@ -259,6 +262,11 @@ const PersonalFinances = () => {
 
           <TabsContent value="analytics" className="space-y-4">
             <AdvancedMetrics transactions={filteredTransactions} />
+          </TabsContent>
+
+          <TabsContent value="prediction" className="space-y-4">
+            <CashflowPrediction />
+            <PDFExport transactions={filteredTransactions} />
           </TabsContent>
 
           <TabsContent value="drilldown" className="space-y-4">
@@ -287,23 +295,17 @@ const PersonalFinances = () => {
             </Card>
           </TabsContent>
 
-          <TabsContent value="goals">
+          <TabsContent value="accounts">
+            <AccountManager />
+          </TabsContent>
+
+          <TabsContent value="recurring">
+            <RecurringManager />
+          </TabsContent>
+
+          <TabsContent value="goals" className="space-y-4">
             <FinancialGoals />
-          </TabsContent>
-
-          <TabsContent value="budgets">
             <BudgetManager categories={categories} />
-          </TabsContent>
-
-          <TabsContent value="categories">
-            <Card>
-              <CardHeader>
-                <CardTitle>Gerenciar Categorias</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <CategoryManager />
-              </CardContent>
-            </Card>
           </TabsContent>
         </Tabs>
 

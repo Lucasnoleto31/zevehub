@@ -44,6 +44,54 @@ export type Database = {
         }
         Relationships: []
       }
+      account_transfers: {
+        Row: {
+          amount: number
+          created_at: string | null
+          description: string | null
+          from_account_id: string
+          id: string
+          to_account_id: string
+          transfer_date: string
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string | null
+          description?: string | null
+          from_account_id: string
+          id?: string
+          to_account_id: string
+          transfer_date: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string | null
+          description?: string | null
+          from_account_id?: string
+          id?: string
+          to_account_id?: string
+          transfer_date?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "account_transfers_from_account_id_fkey"
+            columns: ["from_account_id"]
+            isOneToOne: false
+            referencedRelation: "financial_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "account_transfers_to_account_id_fkey"
+            columns: ["to_account_id"]
+            isOneToOne: false
+            referencedRelation: "financial_accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       activity_logs: {
         Row: {
           activity_type: string
@@ -206,6 +254,45 @@ export type Database = {
         }
         Relationships: []
       }
+      financial_accounts: {
+        Row: {
+          balance: number
+          color: string | null
+          created_at: string | null
+          currency: string
+          id: string
+          is_active: boolean | null
+          name: string
+          type: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          balance?: number
+          color?: string | null
+          created_at?: string | null
+          currency?: string
+          id?: string
+          is_active?: boolean | null
+          name: string
+          type: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          balance?: number
+          color?: string | null
+          created_at?: string | null
+          currency?: string
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          type?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       messages: {
         Row: {
           content: string
@@ -285,6 +372,7 @@ export type Database = {
       }
       personal_finances: {
         Row: {
+          account_id: string | null
           amount: number
           attachment_url: string | null
           category: string
@@ -299,6 +387,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          account_id?: string | null
           amount: number
           attachment_url?: string | null
           category: string
@@ -313,6 +402,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          account_id?: string | null
           amount?: number
           attachment_url?: string | null
           category?: string
@@ -326,7 +416,15 @@ export type Database = {
           updated_at?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "personal_finances_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "financial_accounts"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       profiles: {
         Row: {
@@ -381,6 +479,74 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      recurring_transactions: {
+        Row: {
+          account_id: string | null
+          amount: number
+          category: string
+          created_at: string | null
+          day_of_month: number | null
+          description: string | null
+          end_date: string | null
+          frequency: string
+          id: string
+          is_active: boolean | null
+          next_execution_date: string
+          start_date: string
+          tags: string[] | null
+          title: string
+          type: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          account_id?: string | null
+          amount: number
+          category: string
+          created_at?: string | null
+          day_of_month?: number | null
+          description?: string | null
+          end_date?: string | null
+          frequency: string
+          id?: string
+          is_active?: boolean | null
+          next_execution_date: string
+          start_date: string
+          tags?: string[] | null
+          title: string
+          type: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          account_id?: string | null
+          amount?: number
+          category?: string
+          created_at?: string | null
+          day_of_month?: number | null
+          description?: string | null
+          end_date?: string | null
+          frequency?: string
+          id?: string
+          is_active?: boolean | null
+          next_execution_date?: string
+          start_date?: string
+          tags?: string[] | null
+          title?: string
+          type?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "recurring_transactions_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "financial_accounts"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       strategies: {
         Row: {
@@ -579,6 +745,10 @@ export type Database = {
         Returns: boolean
       }
       is_admin: { Args: { _user_id: string }; Returns: boolean }
+      update_account_balance: {
+        Args: { account_id: string; delta: number }
+        Returns: undefined
+      }
     }
     Enums: {
       investment_profile:
