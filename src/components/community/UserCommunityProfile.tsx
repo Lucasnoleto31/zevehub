@@ -1,11 +1,25 @@
-import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { Trophy, TrendingUp, MessageCircle, Award } from "lucide-react";
+import { Trophy, TrendingUp, MessageCircle, Award, Edit, Trash2 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { EditPostDialog } from "./EditPostDialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { toast } from "sonner";
 
 const LEVELS = [
   { level: 1, name: "Iniciante", points: 0 },
@@ -15,7 +29,22 @@ const LEVELS = [
   { level: 5, name: "Master", points: 7000 },
 ];
 
+const CATEGORIES = [
+  "Análises Técnicas",
+  "Ações",
+  "FIIs",
+  "Criptomoedas",
+  "Estratégias de Trading",
+  "Macroeconomia",
+  "Resultados dos Robôs",
+  "Dúvidas",
+  "Avisos Importantes"
+];
+
 export function UserCommunityProfile() {
+  const [editingPost, setEditingPost] = useState<any>(null);
+  const [deletingPostId, setDeletingPostId] = useState<string | null>(null);
+  const queryClient = useQueryClient();
   const { data: user, isLoading } = useQuery({
     queryKey: ["user-profile"],
     queryFn: async () => {
@@ -69,6 +98,26 @@ export function UserCommunityProfile() {
 
       if (error) throw error;
       return data;
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (postId: string) => {
+      const { error } = await supabase
+        .from("community_posts")
+        .delete()
+        .eq("id", postId);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Post excluído com sucesso");
+      queryClient.invalidateQueries({ queryKey: ["user-posts"] });
+      queryClient.invalidateQueries({ queryKey: ["community-posts"] });
+      setDeletingPostId(null);
+    },
+    onError: () => {
+      toast.error("Erro ao excluir post");
     },
   });
 
@@ -185,14 +234,37 @@ export function UserCommunityProfile() {
         {userPosts && userPosts.length > 0 ? (
           <div className="space-y-4">
             {userPosts.slice(0, 5).map((post) => (
-              <div key={post.id} className="border-l-4 border-primary pl-4">
+              <div key={post.id} className="border-l-4 border-primary pl-4 relative group">
                 <div className="flex justify-between items-start mb-2">
                   <Badge variant="outline">{post.category}</Badge>
-                  <span className="text-xs text-muted-foreground">
-                    {new Date(post.created_at).toLocaleDateString("pt-BR")}
-                  </span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-muted-foreground">
+                      {new Date(post.created_at).toLocaleDateString("pt-BR")}
+                    </span>
+                    <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8"
+                        onClick={() => setEditingPost(post)}
+                      >
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-destructive"
+                        onClick={() => setDeletingPostId(post.id)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
                 </div>
                 <p className="text-sm line-clamp-2">{post.content}</p>
+                <div className="flex gap-4 mt-2 text-xs text-muted-foreground">
+                  <span>❤️ {post.likes} curtidas</span>
+                </div>
               </div>
             ))}
           </div>
@@ -202,6 +274,43 @@ export function UserCommunityProfile() {
           </p>
         )}
       </Card>
+
+      {editingPost && (
+        <EditPostDialog
+          open={!!editingPost}
+          onOpenChange={(open) => !open && setEditingPost(null)}
+          post={{
+            id: editingPost.id,
+            content: editingPost.content,
+            category: editingPost.category,
+          }}
+          categories={CATEGORIES}
+        />
+      )}
+
+      <AlertDialog
+        open={!!deletingPostId}
+        onOpenChange={(open) => !open && setDeletingPostId(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja excluir este post? Esta ação não pode ser
+              desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => deletingPostId && deleteMutation.mutate(deletingPostId)}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

@@ -323,6 +323,7 @@ export type Database = {
           id: string
           image_url: string | null
           likes: number
+          status: string
           updated_at: string
           user_id: string
         }
@@ -333,6 +334,7 @@ export type Database = {
           id?: string
           image_url?: string | null
           likes?: number
+          status?: string
           updated_at?: string
           user_id: string
         }
@@ -343,6 +345,7 @@ export type Database = {
           id?: string
           image_url?: string | null
           likes?: number
+          status?: string
           updated_at?: string
           user_id?: string
         }
@@ -575,6 +578,95 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "post_likes_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "community_posts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      post_mentions: {
+        Row: {
+          comment_id: string | null
+          created_at: string
+          id: string
+          is_read: boolean
+          mentioned_by: string
+          mentioned_user_id: string
+          post_id: string | null
+        }
+        Insert: {
+          comment_id?: string | null
+          created_at?: string
+          id?: string
+          is_read?: boolean
+          mentioned_by: string
+          mentioned_user_id: string
+          post_id?: string | null
+        }
+        Update: {
+          comment_id?: string | null
+          created_at?: string
+          id?: string
+          is_read?: boolean
+          mentioned_by?: string
+          mentioned_user_id?: string
+          post_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "post_mentions_comment_id_fkey"
+            columns: ["comment_id"]
+            isOneToOne: false
+            referencedRelation: "community_comments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "post_mentions_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "community_posts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      post_reports: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          post_id: string
+          reason: string
+          reported_by: string
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          post_id: string
+          reason: string
+          reported_by: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          post_id?: string
+          reason?: string
+          reported_by?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "post_reports_post_id_fkey"
             columns: ["post_id"]
             isOneToOne: false
             referencedRelation: "community_posts"
@@ -979,6 +1071,15 @@ export type Database = {
         Returns: undefined
       }
       is_admin: { Args: { _user_id: string }; Returns: boolean }
+      process_mentions: {
+        Args: {
+          p_comment_id?: string
+          p_content: string
+          p_mentioned_by?: string
+          p_post_id?: string
+        }
+        Returns: undefined
+      }
       update_account_balance: {
         Args: { account_id: string; delta: number }
         Returns: undefined

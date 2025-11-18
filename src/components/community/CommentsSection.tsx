@@ -40,13 +40,26 @@ export function CommentsSection({ postId }: CommentsSectionProps) {
       } = await supabase.auth.getUser();
       if (!user) throw new Error("Usuário não autenticado");
 
-      const { error } = await supabase.from("community_comments").insert({
-        post_id: postId,
-        user_id: user.id,
-        content: newComment,
-      });
+      const { data: newCommentData, error } = await supabase
+        .from("community_comments")
+        .insert({
+          post_id: postId,
+          user_id: user.id,
+          content: newComment,
+        })
+        .select()
+        .single();
 
       if (error) throw error;
+
+      // Processar menções
+      if (newCommentData) {
+        await supabase.rpc("process_mentions", {
+          p_content: newComment,
+          p_comment_id: newCommentData.id,
+          p_mentioned_by: user.id,
+        });
+      }
 
       // Adicionar 5 pontos por comentar
       await supabase.rpc("increment_column", {
@@ -119,13 +132,18 @@ export function CommentsSection({ postId }: CommentsSectionProps) {
       </div>
 
       <div className="flex gap-2">
-        <Textarea
-          placeholder="Adicione um comentário..."
-          value={newComment}
-          onChange={(e) => setNewComment(e.target.value)}
-          rows={2}
-          className="resize-none"
-        />
+        <div className="flex-1 space-y-1">
+          <Textarea
+            placeholder="Adicione um comentário..."
+            value={newComment}
+            onChange={(e) => setNewComment(e.target.value)}
+            rows={2}
+            className="resize-none"
+          />
+          <p className="text-xs text-muted-foreground">
+            Use @nome para mencionar outros usuários
+          </p>
+        </div>
         <Button
           onClick={handleSubmit}
           disabled={createCommentMutation.isPending || !newComment.trim()}

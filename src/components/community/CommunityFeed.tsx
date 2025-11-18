@@ -41,6 +41,7 @@ export function CommunityFeed() {
             points
           )
         `)
+        .eq("status", "approved")
         .order("created_at", { ascending: false });
 
       if (selectedCategory !== "Todos") {
