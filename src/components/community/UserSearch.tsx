@@ -33,29 +33,25 @@ export const UserSearch = () => {
     queryKey: ["user-search", searchTerm],
     queryFn: async () => {
       try {
-        const validatedSearch = searchSchema.parse(searchTerm);
-        
-        if (!validatedSearch || validatedSearch.length === 0) {
-          return [];
-        }
-
         let query = supabase
           .from("profiles")
           .select("id, full_name, avatar_url, email, level, points, followers_count")
-          .limit(10);
+          .order("points", { ascending: false })
+          .limit(50);
 
-        query = query.or(`full_name.ilike.%${validatedSearch}%,email.ilike.%${validatedSearch}%`);
-        query = query.order("points", { ascending: false });
+        if (searchTerm && searchTerm.trim().length > 0) {
+          const validatedSearch = searchSchema.parse(searchTerm);
+          query = query.or(`full_name.ilike.%${validatedSearch}%,email.ilike.%${validatedSearch}%`);
+        }
 
         const { data, error } = await query;
         if (error) throw error;
         return data as Profile[];
       } catch (error) {
-        console.error("Search validation error:", error);
+        console.error("Search error:", error);
         return [];
       }
     },
-    enabled: searchTerm.trim().length > 0,
   });
 
   // Get user titles for each user
@@ -109,26 +105,25 @@ export const UserSearch = () => {
         <div className="relative">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="Digite pelo menos 1 caractere para buscar..."
+            placeholder="Buscar por nome ou email..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="pl-10"
             maxLength={100}
           />
         </div>
-        {searchTerm && searchTerm.trim().length < 1 && (
+        {!searchTerm && (
           <p className="text-sm text-muted-foreground mt-2">
-            Digite pelo menos 1 caractere para buscar
+            Mostrando top 50 usuários por pontos
           </p>
         )}
 
-        {searchTerm && searchTerm.trim().length > 0 && (
-          <ScrollArea className="h-[400px] mt-4">
-            <div className="space-y-2">
-              {isLoading ? (
-                <p className="text-center text-muted-foreground py-4">Buscando...</p>
-              ) : users && users.length > 0 ? (
-                users.map((user) => (
+        <ScrollArea className="h-[400px] mt-4">
+          <div className="space-y-2">
+            {isLoading ? (
+              <p className="text-center text-muted-foreground py-4">Carregando...</p>
+            ) : users && users.length > 0 ? (
+              users.map((user) => (
                   <div
                     key={user.id}
                     onClick={() => navigate(`/perfil/${user.id}`)}
@@ -165,21 +160,14 @@ export const UserSearch = () => {
                       </div>
                     </div>
                   </div>
-                ))
-              ) : (
-                <p className="text-center text-muted-foreground py-4">
-                  Nenhum usuário encontrado
-                </p>
-              )}
-            </div>
-          </ScrollArea>
-        )}
-
-        {!searchTerm || searchTerm.trim().length === 0 && (
-          <p className="text-center text-muted-foreground text-sm mt-4">
-            Digite pelo menos 1 caractere para iniciar a busca
-          </p>
-        )}
+              ))
+            ) : (
+              <p className="text-center text-muted-foreground py-4">
+                Nenhum usuário encontrado
+              </p>
+            )}
+          </div>
+        </ScrollArea>
       </CardContent>
     </Card>
   );
