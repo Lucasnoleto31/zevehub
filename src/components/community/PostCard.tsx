@@ -19,6 +19,7 @@ import { toast } from "sonner";
 import { CommentsSection } from "./CommentsSection";
 import { ReportPostDialog } from "./ReportPostDialog";
 import { EditPostDialog } from "./EditPostDialog";
+import { PostContent } from "./PostContent";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -225,7 +226,9 @@ export function PostCard({ post }: PostCardProps) {
 
       {/* Conteúdo */}
       <div className="space-y-3">
-        <p className="text-foreground whitespace-pre-wrap">{post.content}</p>
+        <p className="text-foreground whitespace-pre-wrap">
+          <PostContent content={post.content} />
+        </p>
         {post.image_url && (
           <img
             src={post.image_url}
