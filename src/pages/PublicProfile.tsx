@@ -96,6 +96,27 @@ export default function PublicProfile() {
     },
   });
 
+  const { data: userTitles } = useQuery({
+    queryKey: ["user-titles", userId],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("user_community_titles")
+        .select(`
+          community_titles (
+            name,
+            color,
+            icon,
+            priority
+          )
+        `)
+        .eq("user_id", userId);
+
+      return data?.map(item => item.community_titles)
+        .filter(Boolean)
+        .sort((a: any, b: any) => b.priority - a.priority) || [];
+    },
+  });
+
   const { data: stats } = useQuery({
     queryKey: ["user-stats", userId],
     queryFn: async () => {
@@ -188,6 +209,15 @@ export default function PublicProfile() {
               <div className="flex items-center gap-3 justify-center sm:justify-start mb-2 flex-wrap">
                 <h1 className="text-2xl font-bold">{profile.full_name}</h1>
                 <Badge variant="secondary">Level {profile.level}</Badge>
+                {userTitles?.map((title: any, index: number) => (
+                  <Badge
+                    key={index}
+                    style={{ backgroundColor: title.color }}
+                    className="text-white hover:animate-glow transition-all cursor-default"
+                  >
+                    {title.icon} {title.name}
+                  </Badge>
+                ))}
                 {profile.daily_login_streak > 0 && (
                   <Badge variant="outline" className="gap-1">
                     🔥 {profile.daily_login_streak} dias

@@ -147,6 +147,16 @@ export default {
             transform: "scale(1)",
           },
         },
+        "glow": {
+          "0%, 100%": {
+            boxShadow: "0 0 5px currentColor, 0 0 10px currentColor",
+            transform: "scale(1)",
+          },
+          "50%": {
+            boxShadow: "0 0 10px currentColor, 0 0 20px currentColor, 0 0 30px currentColor",
+            transform: "scale(1.05)",
+          },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
@@ -156,6 +166,7 @@ export default {
         "slide-in-left": "slide-in-left 0.6s ease-out forwards",
         "slide-in-right": "slide-in-right 0.6s ease-out forwards",
         "scale-in": "scale-in 0.5s ease-out forwards",
+        "glow": "glow 2s ease-in-out infinite",
       },
     },
   },

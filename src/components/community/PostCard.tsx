@@ -202,7 +202,7 @@ export function PostCard({ post }: PostCardProps) {
                 <Badge 
                   key={index}
                   style={{ backgroundColor: title.color }}
-                  className="text-white text-xs"
+                  className="text-white text-xs hover:animate-glow transition-all cursor-default"
                 >
                   {title.icon} {title.name}
                 </Badge>
