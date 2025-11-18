@@ -14,6 +14,7 @@ import Operations from "./pages/Operations";
 import OperationDetail from "./pages/OperationDetail";
 import Profile from "./pages/Profile";
 import PersonalFinances from "./pages/PersonalFinances";
+import MarketIntelligence from "./pages/MarketIntelligence";
 import NotFound from "./pages/NotFound";
 import { useEffect } from "react";
 import { registerServiceWorker } from "@/lib/register-sw";
@@ -44,6 +45,7 @@ const App = () => {
                 <Route path="/operation/:id" element={<OperationDetail />} />
                 <Route path="/profile" element={<Profile />} />
                 <Route path="/financas" element={<PersonalFinances />} />
+                <Route path="/inteligencia-mercado" element={<MarketIntelligence />} />
                 {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                 <Route path="*" element={<NotFound />} />
               </Routes>

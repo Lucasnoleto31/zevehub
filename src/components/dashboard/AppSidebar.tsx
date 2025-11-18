@@ -6,6 +6,7 @@ import {
   User,
   Shield,
   Wallet,
+  TrendingUp,
 } from "lucide-react";
 
 import {
@@ -39,6 +40,11 @@ const menuItems = [
     title: "Finanças Pessoais",
     url: "/financas",
     icon: Wallet,
+  },
+  {
+    title: "Inteligência de Mercado",
+    url: "/inteligencia-mercado",
+    icon: TrendingUp,
   },
   {
     title: "Perfil",
