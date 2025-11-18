@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -15,6 +15,7 @@ import { toast } from "sonner";
 import { ImagePlus, X } from "lucide-react";
 import { BadgeUnlockModal } from "./BadgeUnlockModal";
 import { HashtagAutocomplete } from "./HashtagAutocomplete";
+import { UserMentionSelector } from "./UserMentionSelector";
 
 interface CreatePostDialogProps {
   open: boolean;
@@ -33,7 +34,11 @@ export function CreatePostDialog({
   const [showHashtagAutocomplete, setShowHashtagAutocomplete] = useState(false);
   const [hashtagSearch, setHashtagSearch] = useState("");
   const [hashtagPosition, setHashtagPosition] = useState({ top: 0, left: 0 });
+  const [showMentionSelector, setShowMentionSelector] = useState(false);
+  const [mentionSearch, setMentionSearch] = useState("");
+  const [mentionPosition, setMentionPosition] = useState({ top: 0, left: 0 });
   const [cursorPosition, setCursorPosition] = useState(0);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
   const queryClient = useQueryClient();
 
   // Detectar hashtags no conteúdo
@@ -53,17 +58,67 @@ export function CreatePostDialog({
     setCursorPosition(selectionStart);
     detectHashtags(value);
 
-    // Detectar se está digitando hashtag
+    // Detectar se está digitando hashtag ou menção
     const textBeforeCursor = value.substring(0, selectionStart);
     const words = textBeforeCursor.split(/\s/);
     const lastWord = words[words.length - 1];
 
+    // Hashtag
     if (lastWord.startsWith("#") && lastWord.length > 1) {
       setShowHashtagAutocomplete(true);
       setHashtagSearch(lastWord.slice(1));
-      setHashtagPosition({ top: 200, left: 100 });
+      setShowMentionSelector(false);
+      
+      if (textareaRef.current) {
+        const rect = textareaRef.current.getBoundingClientRect();
+        setHashtagPosition({
+          top: rect.bottom + window.scrollY + 5,
+          left: rect.left + window.scrollX,
+        });
+      }
+    } 
+    // Menção
+    else if (lastWord.startsWith("@") && lastWord.length > 1) {
+      setShowMentionSelector(true);
+      setMentionSearch(lastWord.slice(1));
+      setShowHashtagAutocomplete(false);
+      
+      if (textareaRef.current) {
+        const rect = textareaRef.current.getBoundingClientRect();
+        setMentionPosition({
+          top: rect.bottom + window.scrollY + 5,
+          left: rect.left + window.scrollX,
+        });
+      }
+    } 
+    // Apenas @ ou #
+    else if (lastWord === "@") {
+      setShowMentionSelector(true);
+      setMentionSearch("");
+      setShowHashtagAutocomplete(false);
+      
+      if (textareaRef.current) {
+        const rect = textareaRef.current.getBoundingClientRect();
+        setMentionPosition({
+          top: rect.bottom + window.scrollY + 5,
+          left: rect.left + window.scrollX,
+        });
+      }
+    } else if (lastWord === "#") {
+      setShowHashtagAutocomplete(true);
+      setHashtagSearch("");
+      setShowMentionSelector(false);
+      
+      if (textareaRef.current) {
+        const rect = textareaRef.current.getBoundingClientRect();
+        setHashtagPosition({
+          top: rect.bottom + window.scrollY + 5,
+          left: rect.left + window.scrollX,
+        });
+      }
     } else {
       setShowHashtagAutocomplete(false);
+      setShowMentionSelector(false);
     }
   };
 
@@ -76,6 +131,16 @@ export function CreatePostDialog({
     setContent(newContent);
     setShowHashtagAutocomplete(false);
     detectHashtags(newContent);
+  };
+
+  const handleSelectUser = (username: string) => {
+    const textBeforeCursor = content.substring(0, cursorPosition);
+    const textAfterCursor = content.substring(cursorPosition);
+    const words = textBeforeCursor.split(/\s/);
+    words[words.length - 1] = `@${username} `;
+    const newContent = words.join(" ") + textAfterCursor;
+    setContent(newContent);
+    setShowMentionSelector(false);
   };
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -201,7 +266,8 @@ export function CreatePostDialog({
           <div className="space-y-2">
             <Label>Conteúdo</Label>
             <Textarea
-              placeholder="Compartilhe sua análise, estratégia ou dúvida... Use # para adicionar tags (ex: #WINFUT #analise)"
+              ref={textareaRef}
+              placeholder="Compartilhe sua análise, estratégia ou dúvida... Use # para tags e @ para mencionar usuários"
               value={content}
               onChange={(e) => handleContentChange(e.target.value, e.target.selectionStart)}
               rows={8}
@@ -289,6 +355,14 @@ export function CreatePostDialog({
           searchTerm={hashtagSearch}
           onSelectHashtag={handleSelectHashtag}
           position={hashtagPosition}
+        />
+      )}
+
+      {showMentionSelector && (
+        <UserMentionSelector
+          searchTerm={mentionSearch}
+          onSelectUser={handleSelectUser}
+          position={mentionPosition}
         />
       )}
 
