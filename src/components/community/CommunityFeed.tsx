@@ -34,7 +34,7 @@ export function CommunityFeed() {
         .from("community_posts")
         .select(`
           *,
-          profiles:user_id (
+          profiles!community_posts_user_id_fkey (
             full_name,
             avatar_url,
             level,
