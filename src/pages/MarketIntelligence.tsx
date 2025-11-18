@@ -50,7 +50,7 @@ const MarketIntelligence = () => {
 
   const fetchMarketData = async () => {
     try {
-      const { data, error } = await supabase.functions.invoke('fetch-market-data');
+      const { data, error } = await supabase.functions.invoke('market-data');
       
       if (error) throw error;
       
