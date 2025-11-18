@@ -7,18 +7,6 @@ import { CreatePostDialog } from "./CreatePostDialog";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
-const CATEGORIES = [
-  "Análises Técnicas",
-  "Ações",
-  "FIIs",
-  "Criptomoedas",
-  "Estratégias de Trading",
-  "Macroeconomia",
-  "Resultados dos Robôs",
-  "Dúvidas",
-  "Avisos Importantes"
-];
-
 export function QuickPostCard() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
 
@@ -86,7 +74,6 @@ export function QuickPostCard() {
       <CreatePostDialog
         open={isDialogOpen}
         onOpenChange={setIsDialogOpen}
-        categories={CATEGORIES}
       />
     </>
   );
