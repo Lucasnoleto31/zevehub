@@ -11,7 +11,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Heart, MessageCircle, Share2, MoreVertical, Edit, Trash2, Flag } from "lucide-react";
+import { Heart, ThumbsUp, ThumbsDown, MessageCircle, Share2, MoreVertical, Edit, Trash2, Flag } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
@@ -65,13 +65,13 @@ export function PostCard({ post }: PostCardProps) {
     }
   });
 
-  // Check if user liked this post
-  const { data: userLike } = useQuery({
-    queryKey: ["post-like", post.id, currentUserId],
+  // Check user's reaction on this post
+  const { data: userReaction } = useQuery({
+    queryKey: ["post-reaction", post.id, currentUserId],
     queryFn: async () => {
       if (!currentUserId) return null;
       const { data } = await supabase
-        .from("post_likes")
+        .from("post_reactions")
         .select("*")
         .eq("post_id", post.id)
         .eq("user_id", currentUserId)
@@ -79,6 +79,17 @@ export function PostCard({ post }: PostCardProps) {
       return data;
     },
     enabled: !!currentUserId,
+  });
+
+  // Get reaction counts
+  const { data: reactionCounts } = useQuery({
+    queryKey: ["post-reaction-counts", post.id],
+    queryFn: async () => {
+      const { data } = await supabase.rpc("get_post_reactions", {
+        p_post_id: post.id,
+      });
+      return data?.[0] || { love_count: 0, like_count: 0, dislike_count: 0 };
+    },
   });
 
   // Get comments count
@@ -112,39 +123,36 @@ export function PostCard({ post }: PostCardProps) {
     },
   });
 
-  const likeMutation = useMutation({
-    mutationFn: async () => {
+  const reactionMutation = useMutation({
+    mutationFn: async (reactionType: 'love' | 'like' | 'dislike') => {
       if (!currentUserId) throw new Error("Usuário não autenticado");
 
-      if (userLike) {
-        // Unlike
-        await supabase.from("post_likes").delete().eq("id", userLike.id);
-        await supabase.rpc("increment_column", {
-          table_name: "community_posts",
-          row_id: post.id,
-          column_name: "likes",
-          increment_value: -1,
-        });
+      if (userReaction) {
+        if (userReaction.reaction_type === reactionType) {
+          // Remove reaction if clicking the same one
+          await supabase.from("post_reactions").delete().eq("id", userReaction.id);
+        } else {
+          // Update to new reaction
+          await supabase
+            .from("post_reactions")
+            .update({ reaction_type: reactionType })
+            .eq("id", userReaction.id);
+        }
       } else {
-        // Like
-        await supabase.from("post_likes").insert({
+        // Create new reaction
+        await supabase.from("post_reactions").insert({
           post_id: post.id,
           user_id: currentUserId,
-        });
-        await supabase.rpc("increment_column", {
-          table_name: "community_posts",
-          row_id: post.id,
-          column_name: "likes",
-          increment_value: 1,
+          reaction_type: reactionType,
         });
       }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["community-posts"] });
-      queryClient.invalidateQueries({ queryKey: ["post-like", post.id] });
+      queryClient.invalidateQueries({ queryKey: ["post-reaction", post.id] });
+      queryClient.invalidateQueries({ queryKey: ["post-reaction-counts", post.id] });
     },
     onError: () => {
-      toast.error("Erro ao curtir post");
+      toast.error("Erro ao reagir");
     },
   });
 
@@ -222,19 +230,47 @@ export function PostCard({ post }: PostCardProps) {
         )}
       </div>
 
-      {/* Ações */}
+      {/* Reações */}
       <div className="flex items-center gap-4 pt-2 border-t">
         <Button
           variant="ghost"
           size="sm"
-          onClick={() => likeMutation.mutate()}
-          className="gap-2"
+          onClick={() => reactionMutation.mutate('love')}
+          className={`gap-2 ${userReaction?.reaction_type === 'love' ? 'text-red-500' : ''}`}
         >
           <Heart
-            className={`h-4 w-4 ${userLike ? "fill-red-500 text-red-500" : ""}`}
+            className={`h-4 w-4 ${userReaction?.reaction_type === 'love' ? 'fill-red-500' : ''}`}
           />
-          <span>{post.likes}</span>
+          <span>{reactionCounts?.love_count || 0}</span>
+          <span className="text-xs">Amei</span>
         </Button>
+        
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => reactionMutation.mutate('like')}
+          className={`gap-2 ${userReaction?.reaction_type === 'like' ? 'text-primary' : ''}`}
+        >
+          <ThumbsUp
+            className={`h-4 w-4 ${userReaction?.reaction_type === 'like' ? 'fill-primary' : ''}`}
+          />
+          <span>{reactionCounts?.like_count || 0}</span>
+          <span className="text-xs">Joinha</span>
+        </Button>
+        
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => reactionMutation.mutate('dislike')}
+          className={`gap-2 ${userReaction?.reaction_type === 'dislike' ? 'text-muted-foreground' : ''}`}
+        >
+          <ThumbsDown
+            className={`h-4 w-4 ${userReaction?.reaction_type === 'dislike' ? 'fill-muted-foreground' : ''}`}
+          />
+          <span>{reactionCounts?.dislike_count || 0}</span>
+          <span className="text-xs">Deslike</span>
+        </Button>
+
         <Button
           variant="ghost"
           size="sm"
@@ -244,6 +280,7 @@ export function PostCard({ post }: PostCardProps) {
           <MessageCircle className="h-4 w-4" />
           <span>{commentsCount}</span>
         </Button>
+        
         <Button variant="ghost" size="sm" className="gap-2">
           <Share2 className="h-4 w-4" />
           Compartilhar

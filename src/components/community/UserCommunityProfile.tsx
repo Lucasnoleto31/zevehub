@@ -263,7 +263,7 @@ export function UserCommunityProfile() {
                 </div>
                 <p className="text-sm line-clamp-2">{post.content}</p>
                 <div className="flex gap-4 mt-2 text-xs text-muted-foreground">
-                  <span>❤️ {post.likes} curtidas</span>
+                  <span>💬 comentários</span>
                 </div>
               </div>
             ))}
