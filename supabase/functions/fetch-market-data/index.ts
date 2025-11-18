@@ -33,19 +33,19 @@ serve(async (req) => {
     let usdData: any = null;
 
     if (brapiToken) {
-      console.log('Using Brapi with token for real indices...');
+      console.log('Using Brapi with token query param for real indices...');
       try {
-        const headers = { 'Authorization': `Bearer ${brapiToken}` };
+        const qp = (url: string) => url + (url.includes('?') ? '&' : '?') + `token=${brapiToken}`;
         const [ibov, sp, usd] = await Promise.all([
-          fetchJSON(`https://brapi.dev/api/quote/%5EBVSP?range=1d&interval=1d`, headers).catch((e) => {
+          fetchJSON(qp(`https://brapi.dev/api/quote/%5EBVSP?range=1d&interval=1d`)).catch((e) => {
             console.warn('Brapi ^BVSP error:', e);
             return null;
           }),
-          fetchJSON(`https://brapi.dev/api/quote/%5EGSPC?range=1d&interval=1d`, headers).catch((e) => {
+          fetchJSON(qp(`https://brapi.dev/api/quote/%5EGSPC?range=1d&interval=1d`)).catch((e) => {
             console.warn('Brapi ^GSPC error:', e);
             return null;
           }),
-          fetchJSON(`https://brapi.dev/api/quote/USDBRL%3DX?range=1d&interval=1d`, headers).catch((e) => {
+          fetchJSON(qp(`https://brapi.dev/api/quote/USDBRL%3DX?range=1d&interval=1d`)).catch((e) => {
             console.warn('Brapi USDBRL=X error:', e);
             return null;
           }),
@@ -71,12 +71,13 @@ serve(async (req) => {
     if (!ibovData || !sp500Data) {
       console.log('Falling back to Brapi ETFs (BOVA11, IVVB11)...');
       try {
+        const qp = (url: string) => brapiToken ? url + (url.includes('?') ? '&' : '?') + `token=${brapiToken}` : url;
         const [bova, ivvb] = await Promise.all([
-          fetchJSON('https://brapi.dev/api/quote/BOVA11?range=1d&interval=1d').catch((e) => {
+          fetchJSON(qp('https://brapi.dev/api/quote/BOVA11?range=1d&interval=1d')).catch((e) => {
             console.warn('Brapi BOVA11 error:', e);
             return null;
           }),
-          fetchJSON('https://brapi.dev/api/quote/IVVB11?range=1d&interval=1d').catch((e) => {
+          fetchJSON(qp('https://brapi.dev/api/quote/IVVB11?range=1d&interval=1d')).catch((e) => {
             console.warn('Brapi IVVB11 error:', e);
             return null;
           }),
@@ -96,7 +97,48 @@ serve(async (req) => {
       }
     }
 
-    // Fallback 2: AwesomeAPI for USD/BRL
+    // Fallback 2: Yahoo Finance (no token) for indices
+    if (!ibovData || !sp500Data) {
+      console.log('Falling back to Yahoo Finance for indices...');
+      try {
+        const [yIbov, ySp] = await Promise.all([
+          fetchJSON('https://query1.finance.yahoo.com/v8/finance/chart/%5EBVSP?range=1d&interval=1d').catch((e) => {
+            console.warn('Yahoo ^BVSP error:', e);
+            return null;
+          }),
+          fetchJSON('https://query1.finance.yahoo.com/v8/finance/chart/%5EGSPC?range=1d&interval=1d').catch((e) => {
+            console.warn('Yahoo ^GSPC error:', e);
+            return null;
+          }),
+        ]);
+
+        if (!ibovData) {
+          const meta = yIbov?.chart?.result?.[0]?.meta;
+          if (meta) {
+            const price = num(meta?.regularMarketPrice ?? meta?.previousClose);
+            const prev = num(meta?.previousClose);
+            const changePct = prev ? ((price - prev) / prev) * 100 : 0;
+            ibovData = { regularMarketPrice: price, regularMarketChangePercent: changePct };
+            console.log('Using Yahoo Finance for Ibovespa');
+          }
+        }
+
+        if (!sp500Data) {
+          const meta = ySp?.chart?.result?.[0]?.meta;
+          if (meta) {
+            const price = num(meta?.regularMarketPrice ?? meta?.previousClose);
+            const prev = num(meta?.previousClose);
+            const changePct = prev ? ((price - prev) / prev) * 100 : 0;
+            sp500Data = { regularMarketPrice: price, regularMarketChangePercent: changePct };
+            console.log('Using Yahoo Finance for S&P500');
+          }
+        }
+      } catch (e) {
+        console.warn('Yahoo Finance fallback failed', e);
+      }
+    }
+
+    // Fallback 3: AwesomeAPI for USD/BRL
     if (!usdData) {
       console.log('Falling back to AwesomeAPI for USD/BRL...');
       try {
