@@ -1,12 +1,12 @@
-import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useState, useEffect, useRef } from "react";
+import { useQuery, useInfiniteQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { CreatePostDialog } from "./CreatePostDialog";
 import { PostCard } from "./PostCard";
 import { CategoryFilter } from "./CategoryFilter";
 import { Input } from "@/components/ui/input";
-import { Search, Plus } from "lucide-react";
+import { Search, Plus, Loader2 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 
 const CATEGORIES = [
@@ -22,11 +22,14 @@ const CATEGORIES = [
   "Avisos Importantes"
 ];
 
+const POSTS_PER_PAGE = 10;
+
 export function CommunityFeed() {
   const [selectedCategory, setSelectedCategory] = useState("Todos");
   const [searchQuery, setSearchQuery] = useState("");
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [showFollowingOnly, setShowFollowingOnly] = useState(false);
+  const observerTarget = useRef(null);
 
   const { data: currentUser } = useQuery({
     queryKey: ["current-user"],
@@ -36,9 +39,16 @@ export function CommunityFeed() {
     },
   });
 
-  const { data: posts, isLoading } = useQuery({
+  const {
+    data,
+    isLoading,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+  } = useInfiniteQuery({
     queryKey: ["community-posts", selectedCategory, searchQuery, showFollowingOnly, currentUser?.id],
-    queryFn: async () => {
+    initialPageParam: 0,
+    queryFn: async ({ pageParam = 0 }) => {
       let query = supabase
         .from("community_posts")
         .select(`
@@ -51,7 +61,8 @@ export function CommunityFeed() {
           )
         `)
         .eq("status", "approved")
-        .order("created_at", { ascending: false });
+        .order("created_at", { ascending: false})
+        .range(pageParam * POSTS_PER_PAGE, (pageParam + 1) * POSTS_PER_PAGE - 1);
 
       if (selectedCategory !== "Todos") {
         query = query.eq("category", selectedCategory);
@@ -61,10 +72,10 @@ export function CommunityFeed() {
         query = query.ilike("content", `%${searchQuery}%`);
       }
 
-      let data = (await query).data;
-      if ((await query).error) throw (await query).error;
+      const { data: postsData, error } = await query;
+      if (error) throw error;
 
-      // Filtrar por seguindo se ativado
+      let filteredData = postsData || [];
       if (showFollowingOnly && currentUser) {
         const { data: following } = await supabase
           .from("user_follows")
@@ -72,16 +83,38 @@ export function CommunityFeed() {
           .eq("follower_id", currentUser.id);
 
         const followingIds = following?.map(f => f.following_id) || [];
-        data = data?.filter(post => followingIds.includes(post.user_id));
+        filteredData = postsData?.filter(post => followingIds.includes(post.user_id)) || [];
       }
 
-      return data;
+      return {
+        posts: filteredData,
+        nextPage: filteredData.length === POSTS_PER_PAGE ? (pageParam as number) + 1 : undefined,
+      };
     },
+    getNextPageParam: (lastPage) => lastPage.nextPage,
   });
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && hasNextPage && !isFetchingNextPage) {
+          fetchNextPage();
+        }
+      },
+      { threshold: 1 }
+    );
+
+    if (observerTarget.current) {
+      observer.observe(observerTarget.current);
+    }
+
+    return () => observer.disconnect();
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
+
+  const posts = data?.pages.flatMap((page) => page.posts) || [];
 
   return (
     <div className="space-y-6">
-      {/* Header com busca e criar post */}
       <div className="flex flex-col sm:flex-row gap-4 items-center justify-between">
         <div className="relative w-full sm:w-96">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -98,7 +131,6 @@ export function CommunityFeed() {
         </Button>
       </div>
 
-      {/* Filtro de categorias e seguindo */}
       <div className="space-y-4">
         <CategoryFilter
           categories={CATEGORIES}
@@ -119,7 +151,6 @@ export function CommunityFeed() {
         )}
       </div>
 
-      {/* Lista de posts */}
       <div className="space-y-4">
         {isLoading ? (
           <>
@@ -137,7 +168,19 @@ export function CommunityFeed() {
             ))}
           </>
         ) : posts && posts.length > 0 ? (
-          posts.map((post) => <PostCard key={post.id} post={post} />)
+          <>
+            {posts.map((post) => (
+              <PostCard key={post.id} post={post} />
+            ))}
+            <div ref={observerTarget} className="flex justify-center py-4">
+              {isFetchingNextPage && (
+                <div className="flex items-center gap-2 text-muted-foreground">
+                  <Loader2 className="h-5 w-5 animate-spin" />
+                  <span>Carregando mais posts...</span>
+                </div>
+              )}
+            </div>
+          </>
         ) : (
           <div className="text-center py-12 border rounded-lg">
             <p className="text-muted-foreground">Nenhum post encontrado</p>

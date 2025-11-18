@@ -2,12 +2,15 @@ import { useParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PostCard } from "@/components/community/PostCard";
-import { UserPlus, UserMinus, Award, TrendingUp, Users } from "lucide-react";
+import { UserPlus, UserMinus, Award, TrendingUp, Users, Calendar, MessageCircle, Heart } from "lucide-react";
 import { toast } from "sonner";
+import { formatDistanceToNow } from "date-fns";
+import { ptBR } from "date-fns/locale";
 
 export default function PublicProfile() {
   const { userId } = useParams();
@@ -130,6 +133,30 @@ export default function PublicProfile() {
 
   const isOwnProfile = currentUser?.id === userId;
 
+  const { data: stats } = useQuery({
+    queryKey: ["user-stats", userId],
+    queryFn: async () => {
+      // Contar total de reações
+      const { data: reactionsData } = await supabase
+        .from("post_reactions")
+        .select("id")
+        .in("post_id", posts?.map(p => p.id) || []);
+
+      // Contar total de comentários
+      const { data: commentsData } = await supabase
+        .from("community_comments")
+        .select("id")
+        .in("post_id", posts?.map(p => p.id) || []);
+
+      return {
+        totalPosts: posts?.length || 0,
+        totalReactions: reactionsData?.length || 0,
+        totalComments: commentsData?.length || 0,
+      };
+    },
+    enabled: !!posts,
+  });
+
   return (
     <div className="container mx-auto py-8 px-4 max-w-6xl">
       <Card className="mb-6">
@@ -143,12 +170,17 @@ export default function PublicProfile() {
             </Avatar>
 
             <div className="flex-1 text-center sm:text-left">
-              <div className="flex items-center gap-3 justify-center sm:justify-start mb-2">
+              <div className="flex items-center gap-3 justify-center sm:justify-start mb-2 flex-wrap">
                 <h1 className="text-2xl font-bold">{profile.full_name}</h1>
                 <Badge variant="secondary">Level {profile.level}</Badge>
+                {profile.daily_login_streak > 0 && (
+                  <Badge variant="outline" className="gap-1">
+                    🔥 {profile.daily_login_streak} dias
+                  </Badge>
+                )}
               </div>
               
-              <div className="flex items-center gap-6 text-sm text-muted-foreground justify-center sm:justify-start">
+              <div className="flex items-center gap-6 text-sm text-muted-foreground justify-center sm:justify-start flex-wrap">
                 <div className="flex items-center gap-1">
                   <TrendingUp className="h-4 w-4" />
                   <span>{profile.points} pontos</span>
@@ -160,6 +192,15 @@ export default function PublicProfile() {
                 <div className="flex items-center gap-1">
                   <Users className="h-4 w-4" />
                   <span>{profile.following_count || 0} seguindo</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <Calendar className="h-4 w-4" />
+                  <span>
+                    Membro desde {formatDistanceToNow(new Date(profile.created_at), {
+                      addSuffix: false,
+                      locale: ptBR,
+                    })}
+                  </span>
                 </div>
               </div>
 
@@ -186,35 +227,97 @@ export default function PublicProfile() {
           </div>
         </CardHeader>
 
-        {badges && badges.length > 0 && (
-          <CardContent>
-            <div className="flex items-center gap-2 mb-3">
-              <Award className="h-5 w-5" />
-              <h3 className="font-semibold">Badges Conquistadas</h3>
+        <CardContent>
+          <div className="grid grid-cols-3 gap-4 mb-6">
+            <Card>
+              <CardContent className="pt-6 text-center">
+                <div className="text-2xl font-bold">{stats?.totalPosts || 0}</div>
+                <div className="text-sm text-muted-foreground">Posts</div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="pt-6 text-center">
+                <div className="text-2xl font-bold flex items-center justify-center gap-1">
+                  <Heart className="h-5 w-5 text-red-500" />
+                  {stats?.totalReactions || 0}
+                </div>
+                <div className="text-sm text-muted-foreground">Reações</div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="pt-6 text-center">
+                <div className="text-2xl font-bold flex items-center justify-center gap-1">
+                  <MessageCircle className="h-5 w-5" />
+                  {stats?.totalComments || 0}
+                </div>
+                <div className="text-sm text-muted-foreground">Comentários</div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {badges && badges.length > 0 && (
+            <div>
+              <div className="flex items-center gap-2 mb-3">
+                <Award className="h-5 w-5" />
+                <h3 className="font-semibold">Conquistas</h3>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {badges.map((badge) => (
+                  <Badge key={badge.id} variant="secondary" className="text-base py-2 px-3">
+                    {badge.badge_id === 'primeiro_post' && '🎯 Primeiro Post'}
+                    {badge.badge_id === 'helper' && '⭐ Helper'}
+                    {badge.badge_id === 'analista' && '🏆 Analista Pro'}
+                    {badge.badge_id === 'consistencia' && '⚡ Herói da Recorrência'}
+                  </Badge>
+                ))}
+              </div>
             </div>
-            <div className="flex flex-wrap gap-2">
-              {badges.map((badge) => (
-                <Badge key={badge.id} variant="outline">
-                  {badge.badge_id}
-                </Badge>
-              ))}
-            </div>
-          </CardContent>
-        )}
+          )}
+        </CardContent>
       </Card>
 
-      <div className="space-y-4">
-        <h2 className="text-xl font-bold">Posts de {profile.full_name}</h2>
-        {posts && posts.length > 0 ? (
-          posts.map((post) => <PostCard key={post.id} post={post} />)
-        ) : (
+      <Tabs defaultValue="posts" className="space-y-4">
+        <TabsList>
+          <TabsTrigger value="posts">Posts</TabsTrigger>
+          <TabsTrigger value="about">Sobre</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="posts" className="space-y-4">
+          {posts && posts.length > 0 ? (
+            posts.map((post) => <PostCard key={post.id} post={post} />)
+          ) : (
+            <Card>
+              <CardContent className="py-12 text-center text-muted-foreground">
+                Nenhum post ainda
+              </CardContent>
+            </Card>
+          )}
+        </TabsContent>
+
+        <TabsContent value="about">
           <Card>
-            <CardContent className="py-12 text-center text-muted-foreground">
-              Nenhum post ainda
+            <CardHeader>
+              <CardTitle>Informações do Perfil</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <h4 className="font-semibold mb-1">Email</h4>
+                <p className="text-muted-foreground">{profile.email}</p>
+              </div>
+              <div>
+                <h4 className="font-semibold mb-1">Nível</h4>
+                <p className="text-muted-foreground">Level {profile.level} - {profile.points} pontos</p>
+              </div>
+              <div>
+                <h4 className="font-semibold mb-1">Status</h4>
+                <Badge variant={profile.status === 'active' ? 'default' : 'secondary'}>
+                  {profile.status === 'active' ? 'Ativo' : 'Inativo'}
+                </Badge>
+              </div>
             </CardContent>
           </Card>
-        )}
-      </div>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
