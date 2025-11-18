@@ -32,7 +32,7 @@ const menuItems = [
   },
   {
     title: "Operações",
-    url: "/operacoes",
+    url: "/operations",
     icon: LineChart,
   },
   {
