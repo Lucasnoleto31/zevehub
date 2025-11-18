@@ -2,11 +2,10 @@ import { useState, useEffect, useRef } from "react";
 import { useQuery, useInfiniteQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { CreatePostDialog } from "./CreatePostDialog";
 import { PostCard } from "./PostCard";
 import { CategoryFilter } from "./CategoryFilter";
 import { Input } from "@/components/ui/input";
-import { Search, Plus, Loader2 } from "lucide-react";
+import { Search, Loader2 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 
 const CATEGORIES = [
@@ -27,7 +26,6 @@ const POSTS_PER_PAGE = 10;
 export function CommunityFeed() {
   const [selectedCategory, setSelectedCategory] = useState("Todos");
   const [searchQuery, setSearchQuery] = useState("");
-  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [showFollowingOnly, setShowFollowingOnly] = useState(false);
   const observerTarget = useRef(null);
 
@@ -114,9 +112,9 @@ export function CommunityFeed() {
   const posts = data?.pages.flatMap((page) => page.posts) || [];
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <div className="flex flex-col sm:flex-row gap-4 items-center justify-between">
-        <div className="relative w-full sm:w-96">
+        <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder="Buscar posts..."
@@ -125,31 +123,25 @@ export function CommunityFeed() {
             className="pl-10"
           />
         </div>
-        <Button onClick={() => setIsCreateDialogOpen(true)} className="gap-2 w-full sm:w-auto">
-          <Plus className="h-4 w-4" />
-          Criar Post
-        </Button>
       </div>
 
-      <div className="space-y-4">
-        <CategoryFilter
-          categories={CATEGORIES}
-          selectedCategory={selectedCategory}
-          onSelectCategory={setSelectedCategory}
-        />
-        
-        {currentUser && (
-          <div className="flex justify-center">
-            <Button
-              variant={showFollowingOnly ? "default" : "outline"}
-              onClick={() => setShowFollowingOnly(!showFollowingOnly)}
-              size="sm"
-            >
-              {showFollowingOnly ? "Mostrando: Seguindo" : "Mostrar apenas seguindo"}
-            </Button>
-          </div>
-        )}
-      </div>
+      <CategoryFilter
+        categories={CATEGORIES}
+        selectedCategory={selectedCategory}
+        onSelectCategory={setSelectedCategory}
+      />
+      
+      {currentUser && (
+        <div className="flex justify-center">
+          <Button
+            variant={showFollowingOnly ? "default" : "outline"}
+            onClick={() => setShowFollowingOnly(!showFollowingOnly)}
+            size="sm"
+          >
+            {showFollowingOnly ? "Mostrando: Seguindo" : "Mostrar apenas seguindo"}
+          </Button>
+        </div>
+      )}
 
       <div className="space-y-4">
         {isLoading ? (
@@ -187,12 +179,6 @@ export function CommunityFeed() {
           </div>
         )}
       </div>
-
-      <CreatePostDialog
-        open={isCreateDialogOpen}
-        onOpenChange={setIsCreateDialogOpen}
-        categories={CATEGORIES.filter((c) => c !== "Todos")}
-      />
     </div>
   );
 }
