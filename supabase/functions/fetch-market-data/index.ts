@@ -14,6 +14,7 @@ serve(async (req) => {
     console.log('Fetching market data (Brapi with token + fallbacks)...');
 
     const brapiToken = Deno.env.get('BRAPI_TOKEN');
+    console.log('BRAPI_TOKEN available:', brapiToken ? 'YES' : 'NO');
 
     const fetchJSON = async (url: string, headers?: HeadersInit) => {
       const res = await fetch(url, { headers });
@@ -34,11 +35,27 @@ serve(async (req) => {
     if (brapiToken) {
       console.log('Using Brapi with token for real indices...');
       try {
+        const headers = { 'Authorization': `Bearer ${brapiToken}` };
         const [ibov, sp, usd] = await Promise.all([
-          fetchJSON(`https://brapi.dev/api/quote/%5EBVSP?range=1d&interval=1d&token=${brapiToken}`).catch(() => null),
-          fetchJSON(`https://brapi.dev/api/quote/%5EGSPC?range=1d&interval=1d&token=${brapiToken}`).catch(() => null),
-          fetchJSON(`https://brapi.dev/api/quote/USDBRL%3DX?range=1d&interval=1d&token=${brapiToken}`).catch(() => null),
+          fetchJSON(`https://brapi.dev/api/quote/%5EBVSP?range=1d&interval=1d`, headers).catch((e) => {
+            console.warn('Brapi ^BVSP error:', e);
+            return null;
+          }),
+          fetchJSON(`https://brapi.dev/api/quote/%5EGSPC?range=1d&interval=1d`, headers).catch((e) => {
+            console.warn('Brapi ^GSPC error:', e);
+            return null;
+          }),
+          fetchJSON(`https://brapi.dev/api/quote/USDBRL%3DX?range=1d&interval=1d`, headers).catch((e) => {
+            console.warn('Brapi USDBRL=X error:', e);
+            return null;
+          }),
         ]);
+        
+        console.log('Brapi responses:', { 
+          ibov: ibov?.results?.[0] ? 'OK' : 'EMPTY', 
+          sp: sp?.results?.[0] ? 'OK' : 'EMPTY',
+          usd: usd?.results?.[0] ? 'OK' : 'EMPTY'
+        });
         
         ibovData = ibov?.results?.[0];
         sp500Data = sp?.results?.[0];
@@ -46,6 +63,8 @@ serve(async (req) => {
       } catch (e) {
         console.warn('Brapi with token failed, falling back', e);
       }
+    } else {
+      console.log('No BRAPI_TOKEN found, skipping Brapi with token');
     }
 
     // Fallback 1: Brapi ETFs (no token needed for BOVA11/IVVB11)
@@ -53,16 +72,24 @@ serve(async (req) => {
       console.log('Falling back to Brapi ETFs (BOVA11, IVVB11)...');
       try {
         const [bova, ivvb] = await Promise.all([
-          fetchJSON('https://brapi.dev/api/quote/BOVA11?range=1d&interval=1d').catch(() => null),
-          fetchJSON('https://brapi.dev/api/quote/IVVB11?range=1d&interval=1d').catch(() => null),
+          fetchJSON('https://brapi.dev/api/quote/BOVA11?range=1d&interval=1d').catch((e) => {
+            console.warn('Brapi BOVA11 error:', e);
+            return null;
+          }),
+          fetchJSON('https://brapi.dev/api/quote/IVVB11?range=1d&interval=1d').catch((e) => {
+            console.warn('Brapi IVVB11 error:', e);
+            return null;
+          }),
         ]);
         
         if (!ibovData && bova?.results?.[0]) {
           ibovData = bova.results[0];
+          console.log('Using BOVA11 as Ibovespa proxy');
         }
         
         if (!sp500Data && ivvb?.results?.[0]) {
           sp500Data = ivvb.results[0];
+          console.log('Using IVVB11 as S&P500 proxy');
         }
       } catch (e) {
         console.warn('Brapi ETFs fallback failed', e);
@@ -75,6 +102,9 @@ serve(async (req) => {
       try {
         const awesome = await fetchJSON('https://economia.awesomeapi.com.br/json/last/USD-BRL');
         usdData = awesome?.USDBRL;
+        if (usdData) {
+          console.log('AwesomeAPI USD/BRL success');
+        }
       } catch (e) {
         console.warn('AwesomeAPI fallback failed', e);
       }
@@ -90,6 +120,14 @@ serve(async (req) => {
     const usdChange = num(usdData?.pctChange ?? usdData?.regularMarketChangePercent ?? usdData?.changePercent);
 
     const fmt = (p: number) => `${p > 0 ? '▲' : '▼'} ${Math.abs(p).toFixed(2)}%`;
+
+    // Format date in Brazil timezone
+    const now = new Date();
+    const brazilTime = new Intl.DateTimeFormat('pt-BR', {
+      timeZone: 'America/Sao_Paulo',
+      dateStyle: 'short',
+      timeStyle: 'medium'
+    }).format(now);
 
     const marketData = {
       ibovespa: {
@@ -110,7 +148,7 @@ serve(async (req) => {
         formatted: fmt(sp500Change),
         isPositive: sp500Change > 0,
       },
-      lastUpdate: new Date().toLocaleString('pt-BR'),
+      lastUpdate: brazilTime,
     };
 
     console.log('Market data compiled successfully:', marketData);
