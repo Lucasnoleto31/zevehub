@@ -14,6 +14,7 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import { TwoFactorAuth } from "@/components/profile/TwoFactorAuth";
 import { ActivityLog } from "@/components/profile/ActivityLog";
 import { ActiveSessions } from "@/components/profile/ActiveSessions";
+import { AvatarCropDialog } from "@/components/profile/AvatarCropDialog";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -53,6 +54,8 @@ const Profile = () => {
   });
 
   const [deleteConfirmation, setDeleteConfirmation] = useState("");
+  const [cropDialogOpen, setCropDialogOpen] = useState(false);
+  const [imageToCrop, setImageToCrop] = useState<string | null>(null);
 
   useEffect(() => {
     checkUser();
@@ -91,18 +94,34 @@ const Profile = () => {
     }
   };
 
-  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleAvatarSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file || !user) return;
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      setImageToCrop(reader.result as string);
+      setCropDialogOpen(true);
+    };
+    reader.readAsDataURL(file);
+    
+    // Limpar o input para permitir selecionar a mesma imagem novamente
+    e.target.value = "";
+  };
+
+  const handleCroppedImage = async (croppedBlob: Blob) => {
+    if (!user) return;
 
     setUploading(true);
     try {
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${user.id}/${Math.random()}.${fileExt}`;
+      const fileName = `${user.id}/${Date.now()}.jpg`;
 
-      const { error: uploadError, data } = await supabase.storage
+      const { error: uploadError } = await supabase.storage
         .from('avatars')
-        .upload(fileName, file, { upsert: true });
+        .upload(fileName, croppedBlob, { 
+          upsert: true,
+          contentType: 'image/jpeg'
+        });
 
       if (uploadError) throw uploadError;
 
@@ -273,7 +292,7 @@ const Profile = () => {
                     type="file"
                     accept="image/*"
                     className="hidden"
-                    onChange={handleAvatarUpload}
+                    onChange={handleAvatarSelect}
                     disabled={uploading}
                   />
                 </label>
@@ -515,6 +534,15 @@ const Profile = () => {
           </div>
         </div>
       </main>
+
+      {imageToCrop && (
+        <AvatarCropDialog
+          open={cropDialogOpen}
+          onOpenChange={setCropDialogOpen}
+          imageSrc={imageToCrop}
+          onCropComplete={handleCroppedImage}
+        />
+      )}
     </div>
   );
 };
