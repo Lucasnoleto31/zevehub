@@ -19,15 +19,24 @@ serve(async (req) => {
     console.log('Fetching BCB economic indicators...');
 
     // Fetch Selic (series 432)
-    const selicResponse = await fetch('https://api.bcb.gov.br/dados/serie/bcdata.sgs.432/dados/ultimos/1');
+    const selicResponse = await fetch('https://api.bcb.gov.br/dados/serie/bcdata.sgs.432/dados/ultimos/1?formato=json');
+    if (!selicResponse.ok) {
+      throw new Error(`Selic API returned ${selicResponse.status}`);
+    }
     const selicData: BCBDataPoint[] = await selicResponse.json();
     
     // Fetch IPCA (series 433)
-    const ipcaResponse = await fetch('https://api.bcb.gov.br/dados/serie/bcdata.sgs.433/dados/ultimos/1');
+    const ipcaResponse = await fetch('https://api.bcb.gov.br/dados/serie/bcdata.sgs.433/dados/ultimos/1?formato=json');
+    if (!ipcaResponse.ok) {
+      throw new Error(`IPCA API returned ${ipcaResponse.status}`);
+    }
     const ipcaData: BCBDataPoint[] = await ipcaResponse.json();
     
     // Fetch CDI (series 12)
-    const cdiResponse = await fetch('https://api.bcb.gov.br/dados/serie/bcdata.sgs.12/dados/ultimos/1');
+    const cdiResponse = await fetch('https://api.bcb.gov.br/dados/serie/bcdata.sgs.12/dados/ultimos/1?formato=json');
+    if (!cdiResponse.ok) {
+      throw new Error(`CDI API returned ${cdiResponse.status}`);
+    }
     const cdiData: BCBDataPoint[] = await cdiResponse.json();
 
     const indicators = {
