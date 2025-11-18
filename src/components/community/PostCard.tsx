@@ -5,6 +5,7 @@ import { Card } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { useNavigate } from "react-router-dom";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -51,6 +52,7 @@ export function PostCard({ post }: PostCardProps) {
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
 
@@ -160,7 +162,10 @@ export function PostCard({ post }: PostCardProps) {
     <Card className="p-6 space-y-4 hover:shadow-lg transition-shadow">
       {/* Header do post */}
       <div className="flex items-start justify-between">
-        <div className="flex items-center gap-3 flex-1">
+        <div 
+          className="flex items-center gap-3 flex-1 cursor-pointer hover:opacity-80 transition-opacity"
+          onClick={() => navigate(`/perfil/${post.user_id}`)}
+        >
           <Avatar>
             <AvatarImage src={post.profiles?.avatar_url} />
             <AvatarFallback>

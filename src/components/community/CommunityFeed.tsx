@@ -26,9 +26,18 @@ export function CommunityFeed() {
   const [selectedCategory, setSelectedCategory] = useState("Todos");
   const [searchQuery, setSearchQuery] = useState("");
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [showFollowingOnly, setShowFollowingOnly] = useState(false);
+
+  const { data: currentUser } = useQuery({
+    queryKey: ["current-user"],
+    queryFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      return user;
+    },
+  });
 
   const { data: posts, isLoading } = useQuery({
-    queryKey: ["community-posts", selectedCategory, searchQuery],
+    queryKey: ["community-posts", selectedCategory, searchQuery, showFollowingOnly, currentUser?.id],
     queryFn: async () => {
       let query = supabase
         .from("community_posts")
@@ -52,8 +61,20 @@ export function CommunityFeed() {
         query = query.ilike("content", `%${searchQuery}%`);
       }
 
-      const { data, error } = await query;
-      if (error) throw error;
+      let data = (await query).data;
+      if ((await query).error) throw (await query).error;
+
+      // Filtrar por seguindo se ativado
+      if (showFollowingOnly && currentUser) {
+        const { data: following } = await supabase
+          .from("user_follows")
+          .select("following_id")
+          .eq("follower_id", currentUser.id);
+
+        const followingIds = following?.map(f => f.following_id) || [];
+        data = data?.filter(post => followingIds.includes(post.user_id));
+      }
+
       return data;
     },
   });
@@ -77,12 +98,26 @@ export function CommunityFeed() {
         </Button>
       </div>
 
-      {/* Filtro de categorias */}
-      <CategoryFilter
-        categories={CATEGORIES}
-        selectedCategory={selectedCategory}
-        onSelectCategory={setSelectedCategory}
-      />
+      {/* Filtro de categorias e seguindo */}
+      <div className="space-y-4">
+        <CategoryFilter
+          categories={CATEGORIES}
+          selectedCategory={selectedCategory}
+          onSelectCategory={setSelectedCategory}
+        />
+        
+        {currentUser && (
+          <div className="flex justify-center">
+            <Button
+              variant={showFollowingOnly ? "default" : "outline"}
+              onClick={() => setShowFollowingOnly(!showFollowingOnly)}
+              size="sm"
+            >
+              {showFollowingOnly ? "Mostrando: Seguindo" : "Mostrar apenas seguindo"}
+            </Button>
+          </div>
+        )}
+      </div>
 
       {/* Lista de posts */}
       <div className="space-y-4">
