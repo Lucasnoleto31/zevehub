@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/dashboard/AppSidebar";
 import { Input } from "@/components/ui/input";
@@ -7,7 +7,10 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Label } from "@/components/ui/label";
-import { Search, TrendingUp, Activity, Clock, AlertCircle } from "lucide-react";
+import { Search, TrendingUp, Activity, Clock, AlertCircle, Loader2 } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
+import { format } from "date-fns";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 
 interface Robot {
@@ -15,114 +18,159 @@ interface Robot {
   name: string;
   summary: string;
   riskLevel: "Baixo" | "Médio" | "Alto";
-  setup: string;
-  logic: string;
-  schedule: string;
-  risk: string;
+  totalOperations: number;
+  winRate: number;
+  totalResult: number;
   return30d: number;
   return3m: number;
   return12m: number;
   chartData: { date: string; value: number }[];
   operations: {
     date: string;
-    entry: string;
-    exit: string;
+    time: string;
+    asset: string;
+    contracts: number;
     result: number;
   }[];
 }
 
-const mockRobots: Robot[] = [
-  {
-    id: "1",
-    name: "Scalper Intraday",
-    summary: "Operações rápidas no mini-índice com alvo de 200 pontos",
-    riskLevel: "Médio",
-    setup: "Mini-índice (WIN), stop 150 pontos, alvo 200 pontos",
-    logic: "Identifica rompimentos de suportes/resistências em timeframe de 5min",
-    schedule: "9h30 - 16h30",
-    risk: "Médio - Exposição limitada por operação",
-    return30d: 8.5,
-    return3m: 24.3,
-    return12m: 98.7,
-    chartData: [
-      { date: "Jan", value: 100 },
-      { date: "Fev", value: 108 },
-      { date: "Mar", value: 115 },
-      { date: "Abr", value: 122 },
-      { date: "Mai", value: 135 },
-      { date: "Jun", value: 142 },
-    ],
-    operations: [
-      { date: "17/11/2024 14:30", entry: "125.500", exit: "125.700", result: 200 },
-      { date: "17/11/2024 11:15", entry: "125.200", exit: "125.400", result: 200 },
-      { date: "16/11/2024 15:45", entry: "124.800", exit: "124.650", result: -150 },
-      { date: "16/11/2024 10:20", entry: "124.500", exit: "124.700", result: 200 },
-    ],
-  },
-  {
-    id: "2",
-    name: "Swing Trader",
-    summary: "Posições de 2-5 dias em ações blue-chip",
-    riskLevel: "Baixo",
-    setup: "Ações Ibovespa, stop 3%, alvo 8-12%",
-    logic: "Segue tendências de médio prazo usando médias móveis e RSI",
-    schedule: "Análise diária após fechamento",
-    risk: "Baixo - Diversificação em 5-8 ativos",
-    return30d: 5.2,
-    return3m: 18.9,
-    return12m: 67.4,
-    chartData: [
-      { date: "Jan", value: 100 },
-      { date: "Fev", value: 105 },
-      { date: "Mar", value: 112 },
-      { date: "Abr", value: 118 },
-      { date: "Mai", value: 125 },
-      { date: "Jun", value: 133 },
-    ],
-    operations: [
-      { date: "15/11/2024", entry: "PETR4 R$ 38.50", exit: "PETR4 R$ 42.10", result: 935 },
-      { date: "10/11/2024", entry: "VALE3 R$ 62.30", exit: "VALE3 R$ 68.90", result: 1060 },
-      { date: "05/11/2024", entry: "ITUB4 R$ 28.10", exit: "ITUB4 R$ 27.25", result: -425 },
-    ],
-  },
-  {
-    id: "3",
-    name: "Volatility Hunter",
-    summary: "Aproveita gaps e alta volatilidade no pré-mercado",
-    riskLevel: "Alto",
-    setup: "Mini-índice, stop 300 pontos, alvo 500+ pontos",
-    logic: "Opera gaps de abertura e notícias de forte impacto",
-    schedule: "8h30 - 10h30 (pré-mercado e abertura)",
-    risk: "Alto - Operações agressivas com maior exposição",
-    return30d: 12.8,
-    return3m: 38.5,
-    return12m: 142.3,
-    chartData: [
-      { date: "Jan", value: 100 },
-      { date: "Fev", value: 115 },
-      { date: "Mar", value: 125 },
-      { date: "Abr", value: 138 },
-      { date: "Mai", value: 155 },
-      { date: "Jun", value: 172 },
-    ],
-    operations: [
-      { date: "17/11/2024 09:00", entry: "126.000", exit: "126.500", result: 500 },
-      { date: "16/11/2024 08:45", entry: "125.500", exit: "125.200", result: -300 },
-      { date: "15/11/2024 09:15", entry: "125.000", exit: "125.700", result: 700 },
-    ],
-  },
-];
-
 const Robos = () => {
-  const [roles] = useState<string[]>([]);
+  const [roles, setRoles] = useState<string[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedRobot, setSelectedRobot] = useState<Robot | null>(null);
   const [simulatorValue, setSimulatorValue] = useState<number>(10000);
   const [simulatedReturn, setSimulatedReturn] = useState<number | null>(null);
+  const [robots, setRobots] = useState<Robot[]>([]);
+  const [loading, setLoading] = useState(true);
+  const { toast } = useToast();
 
   const isAdmin = roles.includes("admin");
 
-  const filteredRobots = mockRobots.filter(
+  useEffect(() => {
+    fetchUserRoles();
+    fetchRobotsData();
+  }, []);
+
+  const fetchUserRoles = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    const { data } = await supabase
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", user.id);
+
+    if (data) {
+      setRoles(data.map((r) => r.role));
+    }
+  };
+
+  const fetchRobotsData = async () => {
+    try {
+      setLoading(true);
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data: operations, error } = await supabase
+        .from("trading_operations")
+        .select("*")
+        .eq("user_id", user.id)
+        .not("strategy", "is", null)
+        .order("operation_date", { ascending: true });
+
+      if (error) throw error;
+
+      // Group operations by strategy (robot)
+      const robotsMap = new Map<string, any>();
+
+      operations?.forEach((op) => {
+        const strategy = op.strategy!;
+        if (!robotsMap.has(strategy)) {
+          robotsMap.set(strategy, {
+            name: strategy,
+            operations: [],
+            results: [],
+            dates: [],
+          });
+        }
+        const robot = robotsMap.get(strategy);
+        robot.operations.push(op);
+        robot.results.push(op.result);
+        robot.dates.push(op.operation_date);
+      });
+
+      // Calculate metrics for each robot
+      const robotsList: Robot[] = Array.from(robotsMap.entries()).map(([name, data]) => {
+        const totalOperations = data.operations.length;
+        const winningOps = data.results.filter((r: number) => r > 0).length;
+        const winRate = (winningOps / totalOperations) * 100;
+        const totalResult = data.results.reduce((sum: number, r: number) => sum + r, 0);
+
+        // Calculate returns by period
+        const now = new Date();
+        const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+        const threeMonthsAgo = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
+        const twelveMonthsAgo = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000);
+
+        const ops30d = data.operations.filter((op: any) => new Date(op.operation_date) >= thirtyDaysAgo);
+        const ops3m = data.operations.filter((op: any) => new Date(op.operation_date) >= threeMonthsAgo);
+        const ops12m = data.operations.filter((op: any) => new Date(op.operation_date) >= twelveMonthsAgo);
+
+        const return30d = ops30d.reduce((sum: number, op: any) => sum + op.result, 0);
+        const return3m = ops3m.reduce((sum: number, op: any) => sum + op.result, 0);
+        const return12m = ops12m.reduce((sum: number, op: any) => sum + op.result, 0);
+
+        // Generate chart data (cumulative)
+        let cumulative = 0;
+        const chartData = data.operations.map((op: any) => {
+          cumulative += op.result;
+          return {
+            date: format(new Date(op.operation_date), "dd/MM"),
+            value: cumulative,
+          };
+        });
+
+        // Determine risk level based on win rate and volatility
+        let riskLevel: "Baixo" | "Médio" | "Alto" = "Médio";
+        if (winRate > 70) riskLevel = "Baixo";
+        else if (winRate < 50) riskLevel = "Alto";
+
+        return {
+          id: name,
+          name,
+          summary: `${totalOperations} operações realizadas com ${winRate.toFixed(1)}% de assertividade`,
+          riskLevel,
+          totalOperations,
+          winRate,
+          totalResult,
+          return30d: ops30d.length > 0 ? (return30d / ops30d.length) * 100 : 0,
+          return3m: ops3m.length > 0 ? (return3m / ops3m.length) * 100 : 0,
+          return12m: ops12m.length > 0 ? (return12m / ops12m.length) * 100 : 0,
+          chartData,
+          operations: data.operations.map((op: any) => ({
+            date: format(new Date(op.operation_date), "dd/MM/yyyy"),
+            time: op.operation_time,
+            asset: op.asset,
+            contracts: op.contracts,
+            result: op.result,
+          })),
+        };
+      });
+
+      setRobots(robotsList);
+    } catch (error) {
+      console.error("Error fetching robots data:", error);
+      toast({
+        title: "Erro ao carregar robôs",
+        description: "Não foi possível carregar os dados dos robôs.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const filteredRobots = robots.filter(
     (robot) =>
       robot.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       robot.summary.toLowerCase().includes(searchTerm.toLowerCase())
@@ -181,8 +229,20 @@ const Robos = () => {
 
             {/* Robot List */}
             {!selectedRobot && (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {filteredRobots.map((robot) => (
+              <>
+                {loading ? (
+                  <div className="flex items-center justify-center py-12">
+                    <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                  </div>
+                ) : filteredRobots.length === 0 ? (
+                  <Card className="p-8 text-center">
+                    <p className="text-muted-foreground">
+                      Nenhum robô encontrado. Registre operações com estratégias para ver seus robôs aqui.
+                    </p>
+                  </Card>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {filteredRobots.map((robot) => (
                   <Card
                     key={robot.id}
                     className="cursor-pointer hover:shadow-lg transition-shadow"
@@ -204,8 +264,10 @@ const Robos = () => {
                       </div>
                     </CardContent>
                   </Card>
-                ))}
-              </div>
+                    ))}
+                  </div>
+                )}
+              </>
             )}
 
             {/* Robot Details */}
@@ -233,36 +295,36 @@ const Robos = () => {
                   </CardHeader>
                 </Card>
 
-                {/* Ficha Técnica */}
+                {/* Estatísticas */}
                 <Card>
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2">
                       <Activity className="h-5 w-5" />
-                      Ficha Técnica
+                      Estatísticas
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-4">
                     <div>
-                      <Label className="text-muted-foreground">Setup</Label>
-                      <p className="mt-1">{selectedRobot.setup}</p>
+                      <Label className="text-muted-foreground">Total de Operações</Label>
+                      <p className="mt-1 text-2xl font-bold">{selectedRobot.totalOperations}</p>
                     </div>
                     <div>
-                      <Label className="text-muted-foreground">Lógica de Operação</Label>
-                      <p className="mt-1">{selectedRobot.logic}</p>
-                    </div>
-                    <div>
-                      <Label className="text-muted-foreground">Horários</Label>
-                      <p className="mt-1 flex items-center gap-2">
-                        <Clock className="h-4 w-4" />
-                        {selectedRobot.schedule}
+                      <Label className="text-muted-foreground">Taxa de Acerto</Label>
+                      <p className="mt-1 text-2xl font-bold text-green-600">
+                        {selectedRobot.winRate.toFixed(1)}%
                       </p>
                     </div>
                     <div>
-                      <Label className="text-muted-foreground">Perfil de Risco</Label>
-                      <p className="mt-1 flex items-center gap-2">
-                        <AlertCircle className="h-4 w-4" />
-                        {selectedRobot.risk}
+                      <Label className="text-muted-foreground">Resultado Total</Label>
+                      <p className={`mt-1 text-2xl font-bold ${selectedRobot.totalResult >= 0 ? "text-green-600" : "text-red-600"}`}>
+                        R$ {selectedRobot.totalResult.toFixed(2)}
                       </p>
+                    </div>
+                    <div>
+                      <Label className="text-muted-foreground">Nível de Risco</Label>
+                      <Badge className={`mt-1 ${getRiskColor(selectedRobot.riskLevel)}`}>
+                        {selectedRobot.riskLevel}
+                      </Badge>
                     </div>
                   </CardContent>
                 </Card>
@@ -350,20 +412,6 @@ const Robos = () => {
                   </CardContent>
                 </Card>
 
-                {/* Integração */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Integração com Corretoras</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <Button className="w-full" variant="outline">
-                      Conectar Corretora
-                    </Button>
-                    <p className="text-xs text-muted-foreground mt-2 text-center">
-                      Em breve: integração automática com suas ordens
-                    </p>
-                  </CardContent>
-                </Card>
 
                 {/* Histórico */}
                 <Card>
@@ -375,8 +423,9 @@ const Robos = () => {
                       <TableHeader>
                         <TableRow>
                           <TableHead>Data</TableHead>
-                          <TableHead>Entrada</TableHead>
-                          <TableHead>Saída</TableHead>
+                          <TableHead>Horário</TableHead>
+                          <TableHead>Ativo</TableHead>
+                          <TableHead>Contratos</TableHead>
                           <TableHead className="text-right">Resultado</TableHead>
                         </TableRow>
                       </TableHeader>
@@ -384,15 +433,15 @@ const Robos = () => {
                         {selectedRobot.operations.map((op, idx) => (
                           <TableRow key={idx}>
                             <TableCell>{op.date}</TableCell>
-                            <TableCell>{op.entry}</TableCell>
-                            <TableCell>{op.exit}</TableCell>
+                            <TableCell>{op.time}</TableCell>
+                            <TableCell>{op.asset}</TableCell>
+                            <TableCell>{op.contracts}</TableCell>
                             <TableCell
                               className={`text-right font-medium ${
                                 op.result > 0 ? "text-green-600" : "text-red-600"
                               }`}
                             >
-                              {op.result > 0 ? "+" : ""}
-                              {op.result}
+                              {op.result > 0 ? "+" : ""}R$ {op.result.toFixed(2)}
                             </TableCell>
                           </TableRow>
                         ))}
