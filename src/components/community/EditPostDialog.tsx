@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -9,14 +9,8 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 
 interface EditPostDialogProps {
@@ -26,19 +20,30 @@ interface EditPostDialogProps {
     id: string;
     content: string;
     category: string;
+    tags?: string[];
   };
-  categories: string[];
 }
 
 export function EditPostDialog({
   open,
   onOpenChange,
   post,
-  categories,
 }: EditPostDialogProps) {
   const [content, setContent] = useState(post.content);
-  const [category, setCategory] = useState(post.category);
+  const [detectedTags, setDetectedTags] = useState<string[]>(post.tags || []);
   const queryClient = useQueryClient();
+
+  // Detectar hashtags no conteúdo
+  useEffect(() => {
+    const hashtagRegex = /#([a-zA-Z0-9_]+)/g;
+    const matches = content.match(hashtagRegex);
+    if (matches) {
+      const tags = matches.map(tag => tag.slice(1).toLowerCase());
+      setDetectedTags([...new Set(tags)]);
+    } else {
+      setDetectedTags([]);
+    }
+  }, [content]);
 
   const editMutation = useMutation({
     mutationFn: async () => {
@@ -46,7 +51,8 @@ export function EditPostDialog({
         .from("community_posts")
         .update({
           content,
-          category,
+          category: detectedTags[0] || "geral",
+          tags: detectedTags,
         })
         .eq("id", post.id);
 
@@ -76,8 +82,8 @@ export function EditPostDialog({
   });
 
   const handleSubmit = () => {
-    if (!content.trim() || !category) {
-      toast.error("Preencha todos os campos");
+    if (!content.trim()) {
+      toast.error("Escreva algo para publicar");
       return;
     }
     editMutation.mutate();
@@ -91,33 +97,29 @@ export function EditPostDialog({
         </DialogHeader>
         <div className="space-y-4">
           <div className="space-y-2">
-            <Label>Categoria</Label>
-            <Select value={category} onValueChange={setCategory}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {categories.map((cat) => (
-                  <SelectItem key={cat} value={cat}>
-                    {cat}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-2">
             <Label>Conteúdo</Label>
             <Textarea
-              placeholder="Compartilhe sua análise, estratégia ou dúvida..."
+              placeholder="Compartilhe sua análise, estratégia ou dúvida... Use # para tags"
               value={content}
               onChange={(e) => setContent(e.target.value)}
               rows={8}
               className="resize-none"
             />
-            <p className="text-xs text-muted-foreground">
-              Use @nome para mencionar outros usuários
-            </p>
+            <div className="space-y-2">
+              <p className="text-xs text-muted-foreground">
+                Use @nome para mencionar outros usuários e # para adicionar hashtags
+              </p>
+              {detectedTags.length > 0 && (
+                <div className="flex flex-wrap gap-2">
+                  <span className="text-xs font-medium">Tags detectadas:</span>
+                  {detectedTags.map((tag) => (
+                    <Badge key={tag} variant="secondary" className="text-xs">
+                      #{tag}
+                    </Badge>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
 
           <div className="flex justify-end gap-2">

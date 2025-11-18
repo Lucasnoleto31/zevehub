@@ -330,8 +330,8 @@ export function PostCard({ post }: PostCardProps) {
           id: post.id,
           content: post.content,
           category: post.category,
+          tags: post.tags,
         }}
-        categories={CATEGORIES}
       />
 
       <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
