@@ -8,6 +8,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Hash, TrendingUp } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
+import { format, subDays } from "date-fns";
+import { ptBR } from "date-fns/locale";
 
 export default function HashtagPage() {
   const { hashtag } = useParams();
@@ -65,6 +68,40 @@ export default function HashtagPage() {
       const last7dCount = data.filter(p => new Date(p.created_at) > last7d).length;
 
       return { total, last24h: last24hCount, last7d: last7dCount };
+    },
+  });
+
+  const { data: chartData } = useQuery({
+    queryKey: ["hashtag-chart", hashtag],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("community_posts")
+        .select("created_at")
+        .contains("tags", [hashtag?.toLowerCase()])
+        .gte("created_at", subDays(new Date(), 30).toISOString());
+
+      if (error) throw error;
+
+      // Agrupar posts por dia nos últimos 30 dias
+      const last30Days = Array.from({ length: 30 }, (_, i) => {
+        const date = subDays(new Date(), 29 - i);
+        return {
+          date: format(date, "dd/MM", { locale: ptBR }),
+          fullDate: format(date, "yyyy-MM-dd"),
+          posts: 0,
+        };
+      });
+
+      // Contar posts por dia
+      data.forEach((post) => {
+        const postDate = format(new Date(post.created_at), "yyyy-MM-dd");
+        const dayData = last30Days.find((d) => d.fullDate === postDate);
+        if (dayData) {
+          dayData.posts += 1;
+        }
+      });
+
+      return last30Days;
     },
   });
 
@@ -127,6 +164,51 @@ export default function HashtagPage() {
                   </CardContent>
                 </Card>
               </div>
+
+              <Card className="mb-6">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <TrendingUp className="h-5 w-5" />
+                    Crescimento nos Últimos 30 Dias
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {chartData ? (
+                    <ResponsiveContainer width="100%" height={300}>
+                      <LineChart data={chartData}>
+                        <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                        <XAxis 
+                          dataKey="date" 
+                          className="text-xs"
+                          tick={{ fill: "hsl(var(--muted-foreground))" }}
+                        />
+                        <YAxis 
+                          className="text-xs"
+                          tick={{ fill: "hsl(var(--muted-foreground))" }}
+                        />
+                        <Tooltip 
+                          contentStyle={{ 
+                            backgroundColor: "hsl(var(--background))",
+                            border: "1px solid hsl(var(--border))",
+                            borderRadius: "0.5rem",
+                          }}
+                          labelStyle={{ color: "hsl(var(--foreground))" }}
+                        />
+                        <Line 
+                          type="monotone" 
+                          dataKey="posts" 
+                          stroke="hsl(var(--primary))" 
+                          strokeWidth={2}
+                          dot={{ fill: "hsl(var(--primary))" }}
+                          name="Posts"
+                        />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  ) : (
+                    <Skeleton className="h-[300px] w-full" />
+                  )}
+                </CardContent>
+              </Card>
 
               <div className="space-y-4">
                 <h2 className="text-xl font-semibold">Posts Recentes</h2>

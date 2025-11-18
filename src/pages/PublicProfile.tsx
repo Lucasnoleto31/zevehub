@@ -91,6 +91,30 @@ export default function PublicProfile() {
     },
   });
 
+  const { data: stats } = useQuery({
+    queryKey: ["user-stats", userId],
+    queryFn: async () => {
+      // Contar total de reações
+      const { data: reactionsData } = await supabase
+        .from("post_reactions")
+        .select("id")
+        .in("post_id", posts?.map(p => p.id) || []);
+
+      // Contar total de comentários
+      const { data: commentsData } = await supabase
+        .from("community_comments")
+        .select("id")
+        .in("post_id", posts?.map(p => p.id) || []);
+
+      return {
+        totalPosts: posts?.length || 0,
+        totalReactions: reactionsData?.length || 0,
+        totalComments: commentsData?.length || 0,
+      };
+    },
+    enabled: !!posts,
+  });
+
   const followMutation = useMutation({
     mutationFn: async () => {
       if (isFollowing) {
@@ -132,30 +156,6 @@ export default function PublicProfile() {
   }
 
   const isOwnProfile = currentUser?.id === userId;
-
-  const { data: stats } = useQuery({
-    queryKey: ["user-stats", userId],
-    queryFn: async () => {
-      // Contar total de reações
-      const { data: reactionsData } = await supabase
-        .from("post_reactions")
-        .select("id")
-        .in("post_id", posts?.map(p => p.id) || []);
-
-      // Contar total de comentários
-      const { data: commentsData } = await supabase
-        .from("community_comments")
-        .select("id")
-        .in("post_id", posts?.map(p => p.id) || []);
-
-      return {
-        totalPosts: posts?.length || 0,
-        totalReactions: reactionsData?.length || 0,
-        totalComments: commentsData?.length || 0,
-      };
-    },
-    enabled: !!posts,
-  });
 
   return (
     <div className="container mx-auto py-8 px-4 max-w-6xl">
