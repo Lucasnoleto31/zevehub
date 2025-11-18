@@ -41,23 +41,31 @@ export function PostContent({ content }: PostContentProps) {
             </Link>
           );
         } else if (matchText.startsWith("@")) {
-          const username = matchText.slice(1);
-          const { data: profile } = await supabase
+          const username = matchText.slice(1).toLowerCase();
+          const { data: profiles } = await supabase
             .from("profiles")
-            .select("id")
-            .ilike("full_name", username)
-            .single();
+            .select("id, full_name")
+            .ilike("full_name", `%${username}%`);
+
+          // Buscar correspondência exata primeiro, depois parcial
+          const profile = profiles?.find(p => 
+            p.full_name?.toLowerCase() === username ||
+            p.full_name?.toLowerCase().includes(username)
+          );
 
           if (profile) {
-          parts.push(
-            <Link
-              key={`mention-${index++}`}
-              to={`/perfil/${profile.id}`}
-              className="text-[#10b981] hover:underline font-medium"
-            >
-              {matchText}
-            </Link>
-          );
+            parts.push(
+              <Link
+                key={`mention-${index++}`}
+                to={`/perfil/${profile.id}`}
+                className="text-[#10b981] hover:underline font-medium"
+                onClick={(e) => {
+                  e.stopPropagation();
+                }}
+              >
+                {matchText}
+              </Link>
+            );
           } else {
             parts.push(
               <span key={`mention-${index++}`} className="text-[#10b981] font-medium">
