@@ -1,4 +1,4 @@
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -7,7 +7,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PostCard } from "@/components/community/PostCard";
-import { UserPlus, UserMinus, Award, TrendingUp, Users, Calendar, MessageCircle, Heart } from "lucide-react";
+import { UserPlus, UserMinus, Award, TrendingUp, Users, Calendar, MessageCircle, Heart, ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
 import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -16,6 +16,7 @@ import { FollowersDialog } from "@/components/community/FollowersDialog";
 
 export default function PublicProfile() {
   const { userId } = useParams();
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [followersDialogOpen, setFollowersDialogOpen] = useState(false);
   const [followersDialogTab, setFollowersDialogTab] = useState<"followers" | "following">("followers");
@@ -163,6 +164,16 @@ export default function PublicProfile() {
 
   return (
     <div className="container mx-auto py-8 px-4 max-w-6xl">
+      <Button
+        variant="ghost"
+        size="sm"
+        onClick={() => navigate(-1)}
+        className="mb-4 gap-2"
+      >
+        <ArrowLeft className="h-4 w-4" />
+        Voltar
+      </Button>
+      
       <Card className="mb-6">
         <CardHeader>
           <div className="flex flex-col sm:flex-row items-center gap-6">

@@ -49,16 +49,15 @@ export function PostContent({ content }: PostContentProps) {
             .single();
 
           if (profile) {
-            parts.push(
-              <Link
-                key={`mention-${index++}`}
-                to={`/perfil/${profile.id}`}
-                className="text-[#10b981] hover:underline font-medium"
-                onClick={(e) => e.stopPropagation()}
-              >
-                {matchText}
-              </Link>
-            );
+          parts.push(
+            <Link
+              key={`mention-${index++}`}
+              to={`/perfil/${profile.id}`}
+              className="text-[#10b981] hover:underline font-medium"
+            >
+              {matchText}
+            </Link>
+          );
           } else {
             parts.push(
               <span key={`mention-${index++}`} className="text-[#10b981] font-medium">
