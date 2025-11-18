@@ -1,23 +1,28 @@
 import { useState } from "react";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/dashboard/AppSidebar";
+import { QuickPostCard } from "@/components/community/QuickPostCard";
 import { CommunityFeed } from "@/components/community/CommunityFeed";
-import { CommunityRanking } from "@/components/community/CommunityRanking";
-import { UserCommunityProfile } from "@/components/community/UserCommunityProfile";
-import { ModerationPanel } from "@/components/community/ModerationPanel";
 import { MentionsPopover } from "@/components/community/MentionsPopover";
 import { NotificationsPopover } from "@/components/community/NotificationsPopover";
 import { SuggestedFollows } from "@/components/community/SuggestedFollows";
-import { ActivityFeed } from "@/components/community/ActivityFeed";
 import { TrendingTopics } from "@/components/community/TrendingTopics";
-import { Trophy, Users, User, Shield } from "lucide-react";
+import { UserCommunityProfile } from "@/components/community/UserCommunityProfile";
+import { CommunityRanking } from "@/components/community/CommunityRanking";
+import { Button } from "@/components/ui/button";
+import { Trophy, User } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
 
 export default function Community() {
-  const [activeTab, setActiveTab] = useState("feed");
-
   const { data: isAdmin } = useQuery({
     queryKey: ["is-admin"],
     queryFn: async () => {
@@ -40,71 +45,72 @@ export default function Community() {
         <AppSidebar isAdmin={isAdmin || false} />
         
         <main className="flex-1 bg-background">
-          <header className="sticky top-0 z-10 flex h-14 items-center gap-4 border-b bg-background px-4">
+          <header className="sticky top-0 z-10 flex h-14 items-center gap-4 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-4">
             <SidebarTrigger />
             <div className="flex-1" />
             <NotificationsPopover />
             <MentionsPopover />
+            
+            <Sheet>
+              <SheetTrigger asChild>
+                <Button variant="ghost" size="sm" className="gap-2">
+                  <User className="h-4 w-4" />
+                  Perfil
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="right" className="w-full sm:max-w-lg overflow-y-auto">
+                <SheetHeader>
+                  <SheetTitle>Meu Perfil na Comunidade</SheetTitle>
+                  <SheetDescription>
+                    Veja suas estatísticas e conquistas
+                  </SheetDescription>
+                </SheetHeader>
+                <div className="mt-6">
+                  <UserCommunityProfile />
+                </div>
+              </SheetContent>
+            </Sheet>
+
+            <Sheet>
+              <SheetTrigger asChild>
+                <Button variant="ghost" size="sm" className="gap-2">
+                  <Trophy className="h-4 w-4" />
+                  Ranking
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="right" className="w-full sm:max-w-lg overflow-y-auto">
+                <SheetHeader>
+                  <SheetTitle>Ranking da Comunidade</SheetTitle>
+                  <SheetDescription>
+                    Top traders da semana
+                  </SheetDescription>
+                </SheetHeader>
+                <div className="mt-6">
+                  <CommunityRanking />
+                </div>
+              </SheetContent>
+            </Sheet>
           </header>
 
-          <div className="p-4 md:p-6">
-            <div className="max-w-7xl mx-auto">
-              <div className="mb-6">
-                <h1 className="text-3xl font-bold mb-2">Zeve Hub - Comunidade</h1>
-                <p className="text-muted-foreground">
-                  Compartilhe análises, estratégias e conecte-se com outros traders
-                </p>
+          <div className="container max-w-7xl mx-auto p-4 md:p-6">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+              {/* Feed Principal */}
+              <div className="lg:col-span-8 space-y-4">
+                <div>
+                  <h1 className="text-2xl font-bold mb-1">Feed da Comunidade</h1>
+                  <p className="text-muted-foreground text-sm">
+                    Compartilhe análises, estratégias e conecte-se com outros traders
+                  </p>
+                </div>
+                
+                <QuickPostCard />
+                <CommunityFeed />
               </div>
 
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <div className="lg:col-span-2">
-                  <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-                    <TabsList className={`grid w-full ${isAdmin ? 'grid-cols-4' : 'grid-cols-3'}`}>
-                      <TabsTrigger value="feed" className="gap-2">
-                        <Users className="h-4 w-4" />
-                        Feed
-                      </TabsTrigger>
-                      <TabsTrigger value="ranking" className="gap-2">
-                        <Trophy className="h-4 w-4" />
-                        Ranking
-                      </TabsTrigger>
-                      <TabsTrigger value="profile" className="gap-2">
-                        <User className="h-4 w-4" />
-                        Meu Perfil
-                      </TabsTrigger>
-                      {isAdmin && (
-                        <TabsTrigger value="moderation" className="gap-2">
-                          <Shield className="h-4 w-4" />
-                          Moderação
-                        </TabsTrigger>
-                      )}
-                    </TabsList>
-
-                    <TabsContent value="feed" className="space-y-6">
-                      <CommunityFeed />
-                    </TabsContent>
-
-                    <TabsContent value="ranking" className="space-y-6">
-                      <CommunityRanking />
-                    </TabsContent>
-
-                    <TabsContent value="profile" className="space-y-6">
-                      <UserCommunityProfile />
-                    </TabsContent>
-
-                    {isAdmin && (
-                      <TabsContent value="moderation" className="space-y-6">
-                        <ModerationPanel />
-                      </TabsContent>
-                    )}
-                  </Tabs>
-                </div>
-
-                <div className="space-y-6">
-                  <TrendingTopics />
-                  <SuggestedFollows />
-                  <ActivityFeed />
-                </div>
+              {/* Sidebar Direita */}
+              <div className="lg:col-span-4 space-y-4">
+                <TrendingTopics />
+                <SuggestedFollows />
               </div>
             </div>
           </div>
