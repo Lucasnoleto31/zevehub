@@ -11,41 +11,51 @@ serve(async (req) => {
   }
 
   try {
-    console.log('Fetching market data...');
+    console.log('Fetching market data using Yahoo Finance...');
 
-    // Fetch Ibovespa data from Brasil API
-    const ibovespaResponse = await fetch('https://brapi.dev/api/quote/%5EBVSP?range=1d&interval=1d&token=demo');
-    const ibovespaData = await ibovespaResponse.json();
-    console.log('Ibovespa response:', JSON.stringify(ibovespaData));
-    
-    // Fetch USD/BRL (Dólar) from Brasil API
-    const dolarResponse = await fetch('https://brapi.dev/api/quote/USDBRL%3DX?range=1d&interval=1d&token=demo');
-    const dolarData = await dolarResponse.json();
-    console.log('Dolar response:', JSON.stringify(dolarData));
-    
-    // Fetch S&P500 from Brasil API
-    const sp500Response = await fetch('https://brapi.dev/api/quote/%5EGSPC?range=1d&interval=1d&token=demo');
-    const sp500Data = await sp500Response.json();
-    console.log('SP500 response:', JSON.stringify(sp500Data));
+    const yahooUrl = 'https://query1.finance.yahoo.com/v7/finance/quote?symbols=%5EBVSP,%5EGSPC,USDBRL%3DX';
+    const response = await fetch(yahooUrl, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0',
+      },
+    });
+
+    if (!response.ok) {
+      console.error('Yahoo API response not OK:', response.status, response.statusText);
+      throw new Error(`Yahoo API error: ${response.status}`);
+    }
+
+    const data = await response.json();
+    const results = data?.quoteResponse?.result || [];
+
+    console.log('Yahoo results count:', results.length);
+
+    const getBySymbol = (symbol: string) => results.find((r: any) => r.symbol === symbol) || {};
+
+    const ibov = getBySymbol('^BVSP');
+    const dolar = getBySymbol('USDBRL=X');
+    const sp500 = getBySymbol('^GSPC');
+
+    const safePercent = (v: number | undefined) => (typeof v === 'number' && isFinite(v) ? v : 0);
 
     const marketData = {
       ibovespa: {
-        value: ibovespaData.results?.[0]?.regularMarketPrice || 0,
-        change: ibovespaData.results?.[0]?.regularMarketChangePercent || 0,
-        formatted: `${(ibovespaData.results?.[0]?.regularMarketChangePercent || 0) > 0 ? '▲' : '▼'} ${Math.abs(ibovespaData.results?.[0]?.regularMarketChangePercent || 0).toFixed(2)}%`,
-        isPositive: (ibovespaData.results?.[0]?.regularMarketChangePercent || 0) > 0
+        value: ibov.regularMarketPrice ?? 0,
+        change: safePercent(ibov.regularMarketChangePercent),
+        formatted: `${safePercent(ibov.regularMarketChangePercent) > 0 ? '▲' : '▼'} ${Math.abs(safePercent(ibov.regularMarketChangePercent)).toFixed(2)}%`,
+        isPositive: safePercent(ibov.regularMarketChangePercent) > 0
       },
       dolar: {
-        value: dolarData.results?.[0]?.regularMarketPrice || 0,
-        change: dolarData.results?.[0]?.regularMarketChangePercent || 0,
-        formatted: `${(dolarData.results?.[0]?.regularMarketChangePercent || 0) > 0 ? '▲' : '▼'} ${Math.abs(dolarData.results?.[0]?.regularMarketChangePercent || 0).toFixed(2)}%`,
-        isPositive: (dolarData.results?.[0]?.regularMarketChangePercent || 0) > 0
+        value: dolar.regularMarketPrice ?? 0,
+        change: safePercent(dolar.regularMarketChangePercent),
+        formatted: `${safePercent(dolar.regularMarketChangePercent) > 0 ? '▲' : '▼'} ${Math.abs(safePercent(dolar.regularMarketChangePercent)).toFixed(2)}%`,
+        isPositive: safePercent(dolar.regularMarketChangePercent) > 0
       },
       sp500: {
-        value: sp500Data.results?.[0]?.regularMarketPrice || 0,
-        change: sp500Data.results?.[0]?.regularMarketChangePercent || 0,
-        formatted: `${(sp500Data.results?.[0]?.regularMarketChangePercent || 0) > 0 ? '▲' : '▼'} ${Math.abs(sp500Data.results?.[0]?.regularMarketChangePercent || 0).toFixed(2)}%`,
-        isPositive: (sp500Data.results?.[0]?.regularMarketChangePercent || 0) > 0
+        value: sp500.regularMarketPrice ?? 0,
+        change: safePercent(sp500.regularMarketChangePercent),
+        formatted: `${safePercent(sp500.regularMarketChangePercent) > 0 ? '▲' : '▼'} ${Math.abs(safePercent(sp500.regularMarketChangePercent)).toFixed(2)}%`,
+        isPositive: safePercent(sp500.regularMarketChangePercent) > 0
       },
       lastUpdate: new Date().toLocaleString('pt-BR')
     };
