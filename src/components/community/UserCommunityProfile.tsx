@@ -283,8 +283,8 @@ export function UserCommunityProfile() {
             id: editingPost.id,
             content: editingPost.content,
             category: editingPost.category,
+            tags: editingPost.tags,
           }}
-          categories={CATEGORIES}
         />
       )}
 

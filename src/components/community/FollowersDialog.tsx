@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -11,6 +12,9 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Search } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 interface FollowersDialogProps {
@@ -27,6 +31,8 @@ export function FollowersDialog({
   defaultTab = "followers",
 }: FollowersDialogProps) {
   const navigate = useNavigate();
+  const [searchTerm, setSearchTerm] = useState("");
+  const [levelFilter, setLevelFilter] = useState<string>("all");
 
   const { data: followers, isLoading: followersLoading } = useQuery({
     queryKey: ["user-followers", userId],
@@ -104,9 +110,33 @@ export function FollowersDialog({
       );
     }
 
+    // Filtrar usuários por busca e nível
+    const filteredUsers = users.filter((item: any) => {
+      const profile = item.profiles;
+      if (!profile) return false;
+
+      const matchesSearch = !searchTerm || 
+        profile.full_name?.toLowerCase().includes(searchTerm.toLowerCase());
+      
+      const matchesLevel = levelFilter === "all" || 
+        (levelFilter === "1-5" && profile.level >= 1 && profile.level <= 5) ||
+        (levelFilter === "6-10" && profile.level >= 6 && profile.level <= 10) ||
+        (levelFilter === "11+" && profile.level >= 11);
+
+      return matchesSearch && matchesLevel;
+    });
+
+    if (filteredUsers.length === 0) {
+      return (
+        <div className="text-center py-8 text-muted-foreground">
+          Nenhum usuário encontrado com os filtros aplicados
+        </div>
+      );
+    }
+
     return (
       <div className="space-y-2">
-        {users.map((item: any) => {
+        {filteredUsers.map((item: any) => {
           const profile = item.profiles;
           if (!profile) return null;
 
@@ -149,15 +179,39 @@ export function FollowersDialog({
           <DialogTitle>Conexões</DialogTitle>
         </DialogHeader>
 
-        <Tabs defaultValue={defaultTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="followers">
-              Seguidores ({followers?.length || 0})
-            </TabsTrigger>
-            <TabsTrigger value="following">
-              Seguindo ({following?.length || 0})
-            </TabsTrigger>
-          </TabsList>
+        <div className="space-y-4">
+          <div className="flex gap-2">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Buscar por nome..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-9"
+              />
+            </div>
+            <Select value={levelFilter} onValueChange={setLevelFilter}>
+              <SelectTrigger className="w-[130px]">
+                <SelectValue placeholder="Nível" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos</SelectItem>
+                <SelectItem value="1-5">Nível 1-5</SelectItem>
+                <SelectItem value="6-10">Nível 6-10</SelectItem>
+                <SelectItem value="11+">Nível 11+</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <Tabs defaultValue={defaultTab} className="w-full">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="followers">
+                Seguidores ({followers?.length || 0})
+              </TabsTrigger>
+              <TabsTrigger value="following">
+                Seguindo ({following?.length || 0})
+              </TabsTrigger>
+            </TabsList>
 
           <TabsContent value="followers">
             <ScrollArea className="h-[400px] pr-4">
@@ -170,7 +224,8 @@ export function FollowersDialog({
               {renderUsersList(following, followingLoading)}
             </ScrollArea>
           </TabsContent>
-        </Tabs>
+          </Tabs>
+        </div>
       </DialogContent>
     </Dialog>
   );
