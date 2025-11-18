@@ -8,3 +8,6 @@ verify_jwt = false
 
 [functions.check-new-device]
 verify_jwt = true
+
+[functions.fetch-market-data]
+verify_jwt = false
