@@ -16,14 +16,23 @@ interface BCBIndicators {
   cdi: { value: number; date: string; formatted: string };
 }
 
+interface MarketData {
+  ibovespa: { value: number; change: number; formatted: string; isPositive: boolean };
+  dolar: { value: number; change: number; formatted: string; isPositive: boolean };
+  sp500: { value: number; change: number; formatted: string; isPositive: boolean };
+  lastUpdate: string;
+}
+
 const MarketIntelligence = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [roles, setRoles] = useState<string[]>([]);
   const [bcbIndicators, setBcbIndicators] = useState<BCBIndicators | null>(null);
+  const [marketData, setMarketData] = useState<MarketData | null>(null);
 
   useEffect(() => {
     fetchBCBIndicators();
+    fetchMarketData();
   }, []);
 
   const fetchBCBIndicators = async () => {
@@ -39,11 +48,24 @@ const MarketIntelligence = () => {
     }
   };
 
+  const fetchMarketData = async () => {
+    try {
+      const { data, error } = await supabase.functions.invoke('fetch-market-data');
+      
+      if (error) throw error;
+      
+      setMarketData(data);
+    } catch (error) {
+      console.error('Error fetching market data:', error);
+      toast.error("Erro ao buscar dados do mercado");
+    }
+  };
+
   const handleRefresh = async () => {
     setLoading(true);
     toast.info("Atualizando dados do mercado...");
     
-    await fetchBCBIndicators();
+    await Promise.all([fetchBCBIndicators(), fetchMarketData()]);
     
     setTimeout(() => {
       setLoading(false);
@@ -101,22 +123,68 @@ const MarketIntelligence = () => {
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-2">
-                    <div className="space-y-1">
-                      <p className="flex items-center gap-2">
-                        <TrendingUp className="h-4 w-4 text-green-600" />
-                        Ibovespa: <Badge variant="default" className="bg-green-600">▲ 0.85%</Badge>
-                      </p>
-                      <p className="flex items-center gap-2">
-                        <TrendingDown className="h-4 w-4 text-red-600" />
-                        Dólar: <Badge variant="destructive">▼ 0.40%</Badge>
-                      </p>
-                      <p className="flex items-center gap-2">
-                        <TrendingUp className="h-4 w-4 text-green-600" />
-                        S&P500: <Badge variant="default" className="bg-green-600">▲ 0.32%</Badge>
-                      </p>
-                      <p className="text-sm text-muted-foreground">• Juros Futuros: estáveis</p>
-                      <p className="text-sm text-muted-foreground">• Principais destaques do dia</p>
-                    </div>
+                    {marketData ? (
+                      <>
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              {marketData.ibovespa.isPositive ? (
+                                <TrendingUp className="h-4 w-4 text-green-600" />
+                              ) : (
+                                <TrendingDown className="h-4 w-4 text-red-600" />
+                              )}
+                              <span>Ibovespa:</span>
+                            </div>
+                            <Badge 
+                              variant={marketData.ibovespa.isPositive ? "default" : "destructive"}
+                              className={marketData.ibovespa.isPositive ? "bg-green-600" : ""}
+                            >
+                              {marketData.ibovespa.formatted}
+                            </Badge>
+                          </div>
+                          
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              {marketData.dolar.isPositive ? (
+                                <TrendingUp className="h-4 w-4 text-green-600" />
+                              ) : (
+                                <TrendingDown className="h-4 w-4 text-red-600" />
+                              )}
+                              <span>Dólar:</span>
+                            </div>
+                            <Badge 
+                              variant={marketData.dolar.isPositive ? "default" : "destructive"}
+                              className={marketData.dolar.isPositive ? "bg-green-600" : ""}
+                            >
+                              {marketData.dolar.formatted}
+                            </Badge>
+                          </div>
+                          
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              {marketData.sp500.isPositive ? (
+                                <TrendingUp className="h-4 w-4 text-green-600" />
+                              ) : (
+                                <TrendingDown className="h-4 w-4 text-red-600" />
+                              )}
+                              <span>S&P500:</span>
+                            </div>
+                            <Badge 
+                              variant={marketData.sp500.isPositive ? "default" : "destructive"}
+                              className={marketData.sp500.isPositive ? "bg-green-600" : ""}
+                            >
+                              {marketData.sp500.formatted}
+                            </Badge>
+                          </div>
+                        </div>
+                        
+                        <p className="text-xs text-muted-foreground mt-3">
+                          Última atualização: {marketData.lastUpdate}
+                        </p>
+                      </>
+                    ) : (
+                      <p className="text-muted-foreground">Carregando dados do mercado...</p>
+                    )}
                     <Button variant="outline" size="sm" className="w-full mt-4">
                       Ver relatório completo
                     </Button>
