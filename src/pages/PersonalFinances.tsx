@@ -30,6 +30,8 @@ const AccountManager = lazy(() => import("@/components/finances/AccountManager")
 const RecurringManager = lazy(() => import("@/components/finances/RecurringManager").then(m => ({ default: m.RecurringManager })));
 const CashflowPrediction = lazy(() => import("@/components/finances/CashflowPrediction").then(m => ({ default: m.CashflowPrediction })));
 const PDFExport = lazy(() => import("@/components/finances/PDFExport").then(m => ({ default: m.PDFExport })));
+const WealthSimulator = lazy(() => import("@/components/finances/WealthSimulator").then(m => ({ default: m.WealthSimulator })));
+const InvestmentTracker = lazy(() => import("@/components/finances/InvestmentTracker").then(m => ({ default: m.InvestmentTracker })));
 
 const PersonalFinances = () => {
   const navigate = useNavigate();
@@ -259,7 +261,7 @@ const PersonalFinances = () => {
         />
 
         <Tabs defaultValue="overview" className="space-y-4">
-          <TabsList className="grid w-full grid-cols-4 lg:grid-cols-8">
+          <TabsList className="grid w-full grid-cols-5 lg:grid-cols-10">
             <TabsTrigger value="overview">Geral</TabsTrigger>
             <TabsTrigger value="analytics">Análise</TabsTrigger>
             <TabsTrigger value="prediction">IA</TabsTrigger>
@@ -268,6 +270,8 @@ const PersonalFinances = () => {
             <TabsTrigger value="accounts">Contas</TabsTrigger>
             <TabsTrigger value="recurring">Recorrentes</TabsTrigger>
             <TabsTrigger value="goals">Metas</TabsTrigger>
+            <TabsTrigger value="wealth">Patrimônio</TabsTrigger>
+            <TabsTrigger value="investments">Investimentos</TabsTrigger>
           </TabsList>
 
           <TabsContent value="overview" className="space-y-4">
@@ -346,6 +350,18 @@ const PersonalFinances = () => {
             <FinancialGoals />
             <Suspense fallback={<Skeleton className="h-[300px] w-full" />}>
               <BudgetManager categories={categories} />
+            </Suspense>
+          </TabsContent>
+
+          <TabsContent value="wealth" className="space-y-4">
+            <Suspense fallback={<Skeleton className="h-[400px] w-full" />}>
+              <WealthSimulator />
+            </Suspense>
+          </TabsContent>
+
+          <TabsContent value="investments" className="space-y-4">
+            <Suspense fallback={<Skeleton className="h-[400px] w-full" />}>
+              <InvestmentTracker />
             </Suspense>
           </TabsContent>
         </Tabs>
