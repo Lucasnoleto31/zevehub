@@ -11,10 +11,14 @@ import { UserPlus, UserMinus, Award, TrendingUp, Users, Calendar, MessageCircle,
 import { toast } from "sonner";
 import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { useState } from "react";
+import { FollowersDialog } from "@/components/community/FollowersDialog";
 
 export default function PublicProfile() {
   const { userId } = useParams();
   const queryClient = useQueryClient();
+  const [followersDialogOpen, setFollowersDialogOpen] = useState(false);
+  const [followersDialogTab, setFollowersDialogTab] = useState<"followers" | "following">("followers");
 
   const { data: currentUser } = useQuery({
     queryKey: ["current-user"],
@@ -181,17 +185,29 @@ export default function PublicProfile() {
               </div>
               
               <div className="flex items-center gap-6 text-sm text-muted-foreground justify-center sm:justify-start flex-wrap">
+                <button
+                  onClick={() => {
+                    setFollowersDialogTab("followers");
+                    setFollowersDialogOpen(true);
+                  }}
+                  className="flex items-center gap-1 hover:text-primary transition-colors"
+                >
+                  <Users className="h-4 w-4" />
+                  <span>{profile.followers_count || 0} seguidores</span>
+                </button>
+                <button
+                  onClick={() => {
+                    setFollowersDialogTab("following");
+                    setFollowersDialogOpen(true);
+                  }}
+                  className="flex items-center gap-1 hover:text-primary transition-colors"
+                >
+                  <Users className="h-4 w-4" />
+                  <span>{profile.following_count || 0} seguindo</span>
+                </button>
                 <div className="flex items-center gap-1">
                   <TrendingUp className="h-4 w-4" />
                   <span>{profile.points} pontos</span>
-                </div>
-                <div className="flex items-center gap-1">
-                  <Users className="h-4 w-4" />
-                  <span>{profile.followers_count || 0} seguidores</span>
-                </div>
-                <div className="flex items-center gap-1">
-                  <Users className="h-4 w-4" />
-                  <span>{profile.following_count || 0} seguindo</span>
                 </div>
                 <div className="flex items-center gap-1">
                   <Calendar className="h-4 w-4" />
@@ -318,6 +334,13 @@ export default function PublicProfile() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      <FollowersDialog
+        open={followersDialogOpen}
+        onOpenChange={setFollowersDialogOpen}
+        userId={userId!}
+        defaultTab={followersDialogTab}
+      />
     </div>
   );
 }
