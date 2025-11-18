@@ -24,7 +24,10 @@ export function CommentsSection({ postId }: CommentsSectionProps) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("community_comments")
-        .select("*, profiles(*)")
+        .select(`
+          *,
+          profiles!community_comments_user_id_fkey (*)
+        `)
         .eq("post_id", postId)
         .order("created_at", { ascending: true });
 

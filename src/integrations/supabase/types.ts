@@ -1000,6 +1000,68 @@ export type Database = {
           },
         ]
       }
+      user_notifications: {
+        Row: {
+          actor_id: string
+          comment_id: string | null
+          created_at: string | null
+          id: string
+          is_read: boolean | null
+          post_id: string | null
+          type: string
+          user_id: string
+        }
+        Insert: {
+          actor_id: string
+          comment_id?: string | null
+          created_at?: string | null
+          id?: string
+          is_read?: boolean | null
+          post_id?: string | null
+          type: string
+          user_id: string
+        }
+        Update: {
+          actor_id?: string
+          comment_id?: string | null
+          created_at?: string | null
+          id?: string
+          is_read?: boolean | null
+          post_id?: string | null
+          type?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_notifications_actor_id_fkey"
+            columns: ["actor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_notifications_comment_id_fkey"
+            columns: ["comment_id"]
+            isOneToOne: false
+            referencedRelation: "community_comments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_notifications_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "community_posts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_notifications_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_permissions: {
         Row: {
           can_edit: boolean | null
