@@ -139,7 +139,7 @@ const MarketIntelligence = () => {
                               variant={marketData.ibovespa.isPositive ? "default" : "destructive"}
                               className={marketData.ibovespa.isPositive ? "bg-green-600" : ""}
                             >
-                              {marketData.ibovespa.formatted}
+                              {`${marketData.ibovespa.formatted} • ${marketData.ibovespa.value.toLocaleString('pt-BR', { maximumFractionDigits: 2 })}`}
                             </Badge>
                           </div>
                           
@@ -156,7 +156,7 @@ const MarketIntelligence = () => {
                               variant={marketData.dolar.isPositive ? "default" : "destructive"}
                               className={marketData.dolar.isPositive ? "bg-green-600" : ""}
                             >
-                              {marketData.dolar.formatted}
+                              {`${marketData.dolar.formatted} • R$ ${marketData.dolar.value.toLocaleString('pt-BR', { minimumFractionDigits: 4, maximumFractionDigits: 4 })}`}
                             </Badge>
                           </div>
                           
@@ -173,7 +173,7 @@ const MarketIntelligence = () => {
                               variant={marketData.sp500.isPositive ? "default" : "destructive"}
                               className={marketData.sp500.isPositive ? "bg-green-600" : ""}
                             >
-                              {marketData.sp500.formatted}
+                              {`${marketData.sp500.formatted} • ${marketData.sp500.value.toLocaleString('pt-BR', { maximumFractionDigits: 2 })}`}
                             </Badge>
                           </div>
                         </div>
