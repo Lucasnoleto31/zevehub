@@ -8,6 +8,12 @@ import { Badge } from "@/components/ui/badge";
 import { Search, Users } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { z } from "zod";
+
+const searchSchema = z.string()
+  .trim()
+  .max(100, "Busca muito longa")
+  .transform(val => val.toLowerCase());
 
 interface Profile {
   id: string;
@@ -26,21 +32,30 @@ export const UserSearch = () => {
   const { data: users, isLoading } = useQuery({
     queryKey: ["user-search", searchTerm],
     queryFn: async () => {
-      let query = supabase
-        .from("profiles")
-        .select("id, full_name, avatar_url, email, level, points, followers_count")
-        .order("points", { ascending: false })
-        .limit(10);
+      try {
+        const validatedSearch = searchSchema.parse(searchTerm);
+        
+        if (!validatedSearch || validatedSearch.length === 0) {
+          return [];
+        }
 
-      if (searchTerm) {
-        query = query.or(`full_name.ilike.%${searchTerm}%,email.ilike.%${searchTerm}%`);
+        let query = supabase
+          .from("profiles")
+          .select("id, full_name, avatar_url, email, level, points, followers_count")
+          .limit(10);
+
+        query = query.or(`full_name.ilike.%${validatedSearch}%,email.ilike.%${validatedSearch}%`);
+        query = query.order("points", { ascending: false });
+
+        const { data, error } = await query;
+        if (error) throw error;
+        return data as Profile[];
+      } catch (error) {
+        console.error("Search validation error:", error);
+        return [];
       }
-
-      const { data, error } = await query;
-      if (error) throw error;
-      return data as Profile[];
     },
-    enabled: searchTerm.length > 0,
+    enabled: searchTerm.trim().length > 0,
   });
 
   // Get user titles for each user
@@ -94,14 +109,20 @@ export const UserSearch = () => {
         <div className="relative">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="Buscar por nome ou email..."
+            placeholder="Digite pelo menos 1 caractere para buscar..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="pl-10"
+            maxLength={100}
           />
         </div>
+        {searchTerm && searchTerm.trim().length < 1 && (
+          <p className="text-sm text-muted-foreground mt-2">
+            Digite pelo menos 1 caractere para buscar
+          </p>
+        )}
 
-        {searchTerm && (
+        {searchTerm && searchTerm.trim().length > 0 && (
           <ScrollArea className="h-[400px] mt-4">
             <div className="space-y-2">
               {isLoading ? (
@@ -154,9 +175,9 @@ export const UserSearch = () => {
           </ScrollArea>
         )}
 
-        {!searchTerm && (
+        {!searchTerm || searchTerm.trim().length === 0 && (
           <p className="text-center text-muted-foreground text-sm mt-4">
-            Digite para buscar usuários
+            Digite pelo menos 1 caractere para iniciar a busca
           </p>
         )}
       </CardContent>
