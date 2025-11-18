@@ -8,10 +8,12 @@ import { Badge } from "@/components/ui/badge";
 import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
-import { Send, ThumbsUp, Edit2, Trash2, MoreVertical } from "lucide-react";
+import { Send, ThumbsUp, Edit2, Trash2, MoreVertical, ImagePlus, X } from "lucide-react";
 import { BadgeUnlockModal } from "./BadgeUnlockModal";
 import { UserMentionSelector } from "./UserMentionSelector";
 import { EditCommentDialog } from "./EditCommentDialog";
+import { CommentContent } from "./CommentContent";
+import { Input } from "@/components/ui/input";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -35,6 +37,8 @@ interface CommentsSectionProps {
 
 export function CommentsSection({ postId }: CommentsSectionProps) {
   const [newComment, setNewComment] = useState("");
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [unlockedBadge, setUnlockedBadge] = useState<any>(null);
   const [showMentionSelector, setShowMentionSelector] = useState(false);
   const [mentionSearch, setMentionSearch] = useState("");
@@ -43,6 +47,7 @@ export function CommentsSection({ postId }: CommentsSectionProps) {
   const [deletingCommentId, setDeletingCommentId] = useState<string | null>(null);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const queryClient = useQueryClient();
 
   // Pegar usuário atual
@@ -200,12 +205,33 @@ export function CommentsSection({ postId }: CommentsSectionProps) {
       } = await supabase.auth.getUser();
       if (!user) throw new Error("Usuário não autenticado");
 
+      let imageUrl = null;
+
+      // Upload da imagem se existir
+      if (imageFile) {
+        const fileExt = imageFile.name.split(".").pop();
+        const fileName = `${user.id}/${Date.now()}.${fileExt}`;
+
+        const { error: uploadError } = await supabase.storage
+          .from("community-posts")
+          .upload(fileName, imageFile);
+
+        if (uploadError) throw uploadError;
+
+        const {
+          data: { publicUrl },
+        } = supabase.storage.from("community-posts").getPublicUrl(fileName);
+
+        imageUrl = publicUrl;
+      }
+
       const { data: newCommentData, error } = await supabase
         .from("community_comments")
         .insert({
           post_id: postId,
           user_id: user.id,
           content: newComment,
+          image_url: imageUrl,
         })
         .select()
         .single();
@@ -245,11 +271,37 @@ export function CommentsSection({ postId }: CommentsSectionProps) {
       queryClient.invalidateQueries({ queryKey: ["post-comments-count", postId] });
       queryClient.invalidateQueries({ queryKey: ["user-badges"] });
       setNewComment("");
+      setImageFile(null);
+      setImagePreview(null);
     },
     onError: () => {
       toast.error("Erro ao adicionar comentário");
     },
   });
+
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 5 * 1024 * 1024) {
+        toast.error("Imagem muito grande. Máximo 5MB");
+        return;
+      }
+      setImageFile(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImagePreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const removeImage = () => {
+    setImageFile(null);
+    setImagePreview(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
 
   const handleSubmit = () => {
     if (!newComment.trim()) return;
@@ -320,7 +372,18 @@ export function CommentsSection({ postId }: CommentsSectionProps) {
                     </DropdownMenu>
                   )}
                 </div>
-                <p className="text-sm">{comment.content}</p>
+                <div>
+                  <p className="text-sm">
+                    <CommentContent content={comment.content} />
+                  </p>
+                  {comment.image_url && (
+                    <img
+                      src={comment.image_url}
+                      alt="Imagem do comentário"
+                      className="mt-2 max-w-full h-auto rounded-lg max-h-64 object-cover"
+                    />
+                  )}
+                </div>
                 <Button
                   variant="ghost"
                   size="sm"
@@ -341,22 +404,59 @@ export function CommentsSection({ postId }: CommentsSectionProps) {
       </div>
 
       <div className="relative">
+        {imagePreview && (
+          <div className="relative mb-2">
+            <img
+              src={imagePreview}
+              alt="Preview"
+              className="max-h-32 rounded-lg"
+            />
+            <Button
+              variant="destructive"
+              size="icon"
+              className="absolute top-1 right-1 h-6 w-6"
+              onClick={removeImage}
+            >
+              <X className="h-3 w-3" />
+            </Button>
+          </div>
+        )}
+        
         <div className="flex gap-2">
-          <Textarea
-            ref={textareaRef}
-            placeholder="Adicione um comentário... Use @ para mencionar alguém"
-            value={newComment}
-            onChange={(e) => setNewComment(e.target.value)}
-            className="min-h-[80px]"
-          />
-          <Button
-            onClick={handleSubmit}
-            disabled={!newComment.trim() || createCommentMutation.isPending}
-            size="icon"
-          >
-            <Send className="h-4 w-4" />
-          </Button>
+          <div className="flex-1">
+            <Textarea
+              ref={textareaRef}
+              placeholder="Adicione um comentário... Use @ para mencionar alguém"
+              value={newComment}
+              onChange={(e) => setNewComment(e.target.value)}
+              className="min-h-[80px]"
+            />
+          </div>
+          <div className="flex flex-col gap-2">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => fileInputRef.current?.click()}
+            >
+              <ImagePlus className="h-4 w-4" />
+            </Button>
+            <Button
+              onClick={handleSubmit}
+              disabled={!newComment.trim() || createCommentMutation.isPending}
+              size="icon"
+            >
+              <Send className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
+        
+        <Input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          onChange={handleImageChange}
+          className="hidden"
+        />
         
         {showMentionSelector && (
           <UserMentionSelector

@@ -34,7 +34,7 @@ export async function linkifyContent(content: string): Promise<JSX.Element[]> {
         </Link>
       );
     } else if (matchText.startsWith("@")) {
-      // Menção
+      // Menção - cor verde/azul como na imagem de referência
       const username = matchText.slice(1);
       // Buscar o user_id pelo nome
       const { data: profile } = await supabase
@@ -48,7 +48,7 @@ export async function linkifyContent(content: string): Promise<JSX.Element[]> {
           <Link
             key={`mention-${index++}`}
             to={`/perfil/${profile.id}`}
-            className="text-primary hover:underline font-medium"
+            className="text-[#10b981] hover:underline font-medium"
             onClick={(e) => e.stopPropagation()}
           >
             {matchText}
@@ -56,7 +56,7 @@ export async function linkifyContent(content: string): Promise<JSX.Element[]> {
         );
       } else {
         parts.push(
-          <span key={`mention-${index++}`} className="text-primary font-medium">
+          <span key={`mention-${index++}`} className="text-[#10b981] font-medium">
             {matchText}
           </span>
         );
