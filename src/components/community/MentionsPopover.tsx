@@ -28,7 +28,7 @@ export function MentionsPopover() {
         .from("post_mentions")
         .select(`
           *,
-          profiles:mentioned_by (full_name)
+          profiles!post_mentions_mentioned_by_fkey (full_name)
         `)
         .eq("mentioned_user_id", user.id)
         .eq("is_read", false)
