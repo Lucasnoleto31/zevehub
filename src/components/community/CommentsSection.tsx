@@ -65,8 +65,8 @@ export function CommentsSection({ postId }: CommentsSectionProps) {
       if (textareaRef.current) {
         const rect = textareaRef.current.getBoundingClientRect();
         setMentionPosition({
-          top: rect.bottom + 5,
-          left: rect.left,
+          top: rect.bottom + window.scrollY + 5,
+          left: rect.left + window.scrollX,
         });
       }
     } else if (lastChar === "@") {
@@ -76,8 +76,8 @@ export function CommentsSection({ postId }: CommentsSectionProps) {
       if (textareaRef.current) {
         const rect = textareaRef.current.getBoundingClientRect();
         setMentionPosition({
-          top: rect.bottom + 5,
-          left: rect.left,
+          top: rect.bottom + window.scrollY + 5,
+          left: rect.left + window.scrollX,
         });
       }
     } else {

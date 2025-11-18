@@ -1,5 +1,7 @@
 import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
+import { AppSidebar } from "@/components/dashboard/AppSidebar";
 import { CommunityFeed } from "@/components/community/CommunityFeed";
 import { CommunityRanking } from "@/components/community/CommunityRanking";
 import { UserCommunityProfile } from "@/components/community/UserCommunityProfile";
@@ -33,72 +35,81 @@ export default function Community() {
   });
 
   return (
-    <div className="min-h-screen bg-background p-4 md:p-6">
-      <div className="max-w-7xl mx-auto">
-        <div className="mb-6 flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold mb-2">Zeve Hub - Comunidade</h1>
-            <p className="text-muted-foreground">
-              Compartilhe análises, estratégias e conecte-se com outros traders
-            </p>
-          </div>
-          <div className="flex items-center gap-2">
+    <SidebarProvider>
+      <div className="min-h-screen flex w-full">
+        <AppSidebar isAdmin={isAdmin || false} />
+        
+        <main className="flex-1 bg-background">
+          <header className="sticky top-0 z-10 flex h-14 items-center gap-4 border-b bg-background px-4">
+            <SidebarTrigger />
+            <div className="flex-1" />
             <NotificationsPopover />
             <MentionsPopover />
+          </header>
+
+          <div className="p-4 md:p-6">
+            <div className="max-w-7xl mx-auto">
+              <div className="mb-6">
+                <h1 className="text-3xl font-bold mb-2">Zeve Hub - Comunidade</h1>
+                <p className="text-muted-foreground">
+                  Compartilhe análises, estratégias e conecte-se com outros traders
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div className="lg:col-span-2">
+                  <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+                    <TabsList className={`grid w-full ${isAdmin ? 'grid-cols-4' : 'grid-cols-3'}`}>
+                      <TabsTrigger value="feed" className="gap-2">
+                        <Users className="h-4 w-4" />
+                        Feed
+                      </TabsTrigger>
+                      <TabsTrigger value="ranking" className="gap-2">
+                        <Trophy className="h-4 w-4" />
+                        Ranking
+                      </TabsTrigger>
+                      <TabsTrigger value="profile" className="gap-2">
+                        <User className="h-4 w-4" />
+                        Meu Perfil
+                      </TabsTrigger>
+                      {isAdmin && (
+                        <TabsTrigger value="moderation" className="gap-2">
+                          <Shield className="h-4 w-4" />
+                          Moderação
+                        </TabsTrigger>
+                      )}
+                    </TabsList>
+
+                    <TabsContent value="feed" className="space-y-6">
+                      <CommunityFeed />
+                    </TabsContent>
+
+                    <TabsContent value="ranking" className="space-y-6">
+                      <CommunityRanking />
+                    </TabsContent>
+
+                    <TabsContent value="profile" className="space-y-6">
+                      <UserCommunityProfile />
+                    </TabsContent>
+
+                    {isAdmin && (
+                      <TabsContent value="moderation" className="space-y-6">
+                        <ModerationPanel />
+                      </TabsContent>
+                    )}
+                  </Tabs>
+                </div>
+
+                <div className="space-y-6">
+                  <TrendingTopics />
+                  <SuggestedFollows />
+                  <ActivityFeed />
+                </div>
+              </div>
+            </div>
           </div>
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2">
-            <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-              <TabsList className={`grid w-full ${isAdmin ? 'grid-cols-4' : 'grid-cols-3'}`}>
-                <TabsTrigger value="feed" className="gap-2">
-                  <Users className="h-4 w-4" />
-                  Feed
-                </TabsTrigger>
-                <TabsTrigger value="ranking" className="gap-2">
-                  <Trophy className="h-4 w-4" />
-                  Ranking
-                </TabsTrigger>
-                <TabsTrigger value="profile" className="gap-2">
-                  <User className="h-4 w-4" />
-                  Meu Perfil
-                </TabsTrigger>
-                {isAdmin && (
-                  <TabsTrigger value="moderation" className="gap-2">
-                    <Shield className="h-4 w-4" />
-                    Moderação
-                  </TabsTrigger>
-                )}
-              </TabsList>
-
-              <TabsContent value="feed" className="space-y-6">
-                <CommunityFeed />
-              </TabsContent>
-
-              <TabsContent value="ranking" className="space-y-6">
-                <CommunityRanking />
-              </TabsContent>
-
-              <TabsContent value="profile" className="space-y-6">
-                <UserCommunityProfile />
-              </TabsContent>
-
-              {isAdmin && (
-                <TabsContent value="moderation" className="space-y-6">
-                  <ModerationPanel />
-                </TabsContent>
-              )}
-            </Tabs>
-          </div>
-
-          <div className="space-y-6">
-            <TrendingTopics />
-            <SuggestedFollows />
-            <ActivityFeed />
-          </div>
-        </div>
+        </main>
       </div>
-    </div>
+    </SidebarProvider>
   );
 }
