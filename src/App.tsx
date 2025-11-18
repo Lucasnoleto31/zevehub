@@ -16,6 +16,7 @@ import Profile from "./pages/Profile";
 import PersonalFinances from "./pages/PersonalFinances";
 import MarketIntelligence from "./pages/MarketIntelligence";
 import Robos from "./pages/Robos";
+import Community from "./pages/Community";
 import NotFound from "./pages/NotFound";
 import { useEffect } from "react";
 import { registerServiceWorker } from "@/lib/register-sw";
@@ -48,6 +49,7 @@ const App = () => {
                 <Route path="/financas" element={<PersonalFinances />} />
                 <Route path="/inteligencia-mercado" element={<MarketIntelligence />} />
                 <Route path="/robos" element={<Robos />} />
+                <Route path="/comunidade" element={<Community />} />
                 {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                 <Route path="*" element={<NotFound />} />
               </Routes>

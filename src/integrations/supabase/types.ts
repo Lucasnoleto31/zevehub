@@ -221,6 +221,103 @@ export type Database = {
         }
         Relationships: []
       }
+      comment_likes: {
+        Row: {
+          comment_id: string
+          created_at: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          comment_id: string
+          created_at?: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          comment_id?: string
+          created_at?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "comment_likes_comment_id_fkey"
+            columns: ["comment_id"]
+            isOneToOne: false
+            referencedRelation: "community_comments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      community_comments: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          likes: number
+          post_id: string
+          user_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          id?: string
+          likes?: number
+          post_id: string
+          user_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          likes?: number
+          post_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "community_comments_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "community_posts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      community_posts: {
+        Row: {
+          category: string
+          content: string
+          created_at: string
+          id: string
+          image_url: string | null
+          likes: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          category: string
+          content: string
+          created_at?: string
+          id?: string
+          image_url?: string | null
+          likes?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          category?: string
+          content?: string
+          created_at?: string
+          id?: string
+          image_url?: string | null
+          likes?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       finance_categories: {
         Row: {
           color: string | null
@@ -426,10 +523,40 @@ export type Database = {
           },
         ]
       }
+      post_likes: {
+        Row: {
+          created_at: string
+          id: string
+          post_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          post_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          post_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "post_likes_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "community_posts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null
           created_at: string
+          daily_login_streak: number
           email: string
           full_name: string | null
           id: string
@@ -437,7 +564,10 @@ export type Database = {
             | Database["public"]["Enums"]["investment_profile"]
             | null
           last_login: string | null
+          last_login_date: string | null
+          level: number
           phone: string | null
+          points: number
           status: string | null
           totp_enabled: boolean | null
           totp_secret: string | null
@@ -447,6 +577,7 @@ export type Database = {
         Insert: {
           avatar_url?: string | null
           created_at?: string
+          daily_login_streak?: number
           email: string
           full_name?: string | null
           id: string
@@ -454,7 +585,10 @@ export type Database = {
             | Database["public"]["Enums"]["investment_profile"]
             | null
           last_login?: string | null
+          last_login_date?: string | null
+          level?: number
           phone?: string | null
+          points?: number
           status?: string | null
           totp_enabled?: boolean | null
           totp_secret?: string | null
@@ -464,6 +598,7 @@ export type Database = {
         Update: {
           avatar_url?: string | null
           created_at?: string
+          daily_login_streak?: number
           email?: string
           full_name?: string | null
           id?: string
@@ -471,7 +606,10 @@ export type Database = {
             | Database["public"]["Enums"]["investment_profile"]
             | null
           last_login?: string | null
+          last_login_date?: string | null
+          level?: number
           phone?: string | null
+          points?: number
           status?: string | null
           totp_enabled?: boolean | null
           totp_secret?: string | null
@@ -662,6 +800,27 @@ export type Database = {
         }
         Relationships: []
       }
+      user_badges: {
+        Row: {
+          badge_id: string
+          earned_at: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          badge_id: string
+          earned_at?: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          badge_id?: string
+          earned_at?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_permissions: {
         Row: {
           can_edit: boolean | null
@@ -716,6 +875,33 @@ export type Database = {
         }
         Relationships: []
       }
+      weekly_points: {
+        Row: {
+          created_at: string
+          id: string
+          points: number
+          user_id: string
+          week_end: string
+          week_start: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          points?: number
+          user_id: string
+          week_end: string
+          week_start: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          points?: number
+          user_id?: string
+          week_end?: string
+          week_start?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -743,6 +929,15 @@ export type Database = {
           _user_id: string
         }
         Returns: boolean
+      }
+      increment_column: {
+        Args: {
+          column_name: string
+          increment_value: number
+          row_id: string
+          table_name: string
+        }
+        Returns: undefined
       }
       is_admin: { Args: { _user_id: string }; Returns: boolean }
       update_account_balance: {
