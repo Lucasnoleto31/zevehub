@@ -11,56 +11,119 @@ serve(async (req) => {
   }
 
   try {
-    console.log('Fetching market data using Yahoo Finance...');
+    console.log('Fetching market data (multi-source)...');
 
-    const yahooUrl = 'https://query1.finance.yahoo.com/v7/finance/quote?symbols=%5EBVSP,%5EGSPC,USDBRL%3DX';
-    const response = await fetch(yahooUrl, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0',
-      },
-    });
+    const cors = corsHeaders; // keep reference
 
-    if (!response.ok) {
-      console.error('Yahoo API response not OK:', response.status, response.statusText);
-      throw new Error(`Yahoo API error: ${response.status}`);
+    const safeNum = (v: unknown, d = 0) => {
+      const n = Number(v);
+      return Number.isFinite(n) ? n : d;
+    };
+
+    const fetchJSON = async (url: string, init?: RequestInit) => {
+      const res = await fetch(url, init);
+      if (!res.ok) throw new Error(`HTTP ${res.status} ${res.statusText}`);
+      return res.json();
+    };
+
+    const getFromBrapi = async (symbol: string) => {
+      try {
+        const data = await fetchJSON(`https://brapi.dev/api/quote/${encodeURIComponent(symbol)}?range=1d&interval=1d`);
+        return data?.results?.[0] ?? null;
+      } catch (e) {
+        console.warn('brapi error for', symbol, e);
+        return null;
+      }
+    };
+
+    const getFromYahoo = async (symbols: string[]) => {
+      try {
+        const url = `https://query1.finance.yahoo.com/v7/finance/quote?symbols=${symbols.map(encodeURIComponent).join(',')}`;
+        const data = await fetchJSON(url, { headers: { 'User-Agent': 'Mozilla/5.0' } });
+        const list = data?.quoteResponse?.result || [];
+        const map: Record<string, any> = {};
+        for (const s of symbols) {
+          map[s] = list.find((r: any) => r.symbol === s) || null;
+        }
+        return map;
+      } catch (e) {
+        console.warn('yahoo error', e);
+        return {} as Record<string, any>;
+      }
+    };
+
+    // Fetch in parallel: brapi for ETFs (proxies) and AwesomeAPI for USD/BRL
+    const [bovaBrapi, ivvbBrapi, usdAwesome] = await Promise.all([
+      getFromBrapi('BOVA11'),
+      getFromBrapi('IVVB11'),
+      (async () => {
+        try {
+          return await fetchJSON('https://economia.awesomeapi.com.br/json/last/USD-BRL');
+        } catch (e) {
+          console.warn('awesomeapi error', e);
+          return null;
+        }
+      })(),
+    ]);
+
+    // Prepare Yahoo fallbacks only for missing symbols
+    const yahooSymbols: string[] = [];
+    if (!bovaBrapi) yahooSymbols.push('BOVA11.SA');
+    if (!ivvbBrapi) yahooSymbols.push('IVVB11.SA');
+    if (!usdAwesome) yahooSymbols.push('USDBRL=X');
+
+    const yahooMap = yahooSymbols.length ? await getFromYahoo(yahooSymbols) : {};
+
+    const bova = bovaBrapi || yahooMap['BOVA11.SA'] || {};
+    const ivvb = ivvbBrapi || yahooMap['IVVB11.SA'] || {};
+    const usd = (usdAwesome && usdAwesome.USDBRL) || yahooMap['USDBRL=X'] || {};
+
+    // Build normalized fields (using ETFs as proxies for indices)
+    const ibovValue = safeNum(bova.regularMarketPrice ?? bova.price ?? bova.bid);
+    const ibovChange = safeNum(bova.regularMarketChangePercent ?? bova.pctChange ?? bova.changePercent);
+
+    const spValue = safeNum(ivvb.regularMarketPrice ?? ivvb.price);
+    const spChange = safeNum(ivvb.regularMarketChangePercent ?? ivvb.pctChange ?? ivvb.changePercent);
+
+    const usdValue = safeNum(usd.bid ?? usd.regularMarketPrice ?? usd.price);
+    const usdChange = safeNum(usd.pctChange ?? usd.regularMarketChangePercent ?? usd.changePercent);
+
+    if (
+      !Number.isFinite(ibovValue) && !Number.isFinite(spValue) && !Number.isFinite(usdValue)
+    ) {
+      throw new Error('All data sources failed');
     }
 
-    const data = await response.json();
-    const results = data?.quoteResponse?.result || [];
-
-    console.log('Yahoo results count:', results.length);
-
-    const getBySymbol = (symbol: string) => results.find((r: any) => r.symbol === symbol) || {};
-
-    const ibov = getBySymbol('^BVSP');
-    const dolar = getBySymbol('USDBRL=X');
-    const sp500 = getBySymbol('^GSPC');
-
-    const safePercent = (v: number | undefined) => (typeof v === 'number' && isFinite(v) ? v : 0);
+    const fmt = (p: number) => `${p > 0 ? '▲' : '▼'} ${Math.abs(p).toFixed(2)}%`;
 
     const marketData = {
       ibovespa: {
-        value: ibov.regularMarketPrice ?? 0,
-        change: safePercent(ibov.regularMarketChangePercent),
-        formatted: `${safePercent(ibov.regularMarketChangePercent) > 0 ? '▲' : '▼'} ${Math.abs(safePercent(ibov.regularMarketChangePercent)).toFixed(2)}%`,
-        isPositive: safePercent(ibov.regularMarketChangePercent) > 0
+        value: ibovValue || 0,
+        change: ibovChange || 0,
+        formatted: fmt(ibovChange || 0),
+        isPositive: (ibovChange || 0) > 0,
       },
       dolar: {
-        value: dolar.regularMarketPrice ?? 0,
-        change: safePercent(dolar.regularMarketChangePercent),
-        formatted: `${safePercent(dolar.regularMarketChangePercent) > 0 ? '▲' : '▼'} ${Math.abs(safePercent(dolar.regularMarketChangePercent)).toFixed(2)}%`,
-        isPositive: safePercent(dolar.regularMarketChangePercent) > 0
+        value: usdValue || 0,
+        change: usdChange || 0,
+        formatted: fmt(usdChange || 0),
+        isPositive: (usdChange || 0) > 0,
       },
       sp500: {
-        value: sp500.regularMarketPrice ?? 0,
-        change: safePercent(sp500.regularMarketChangePercent),
-        formatted: `${safePercent(sp500.regularMarketChangePercent) > 0 ? '▲' : '▼'} ${Math.abs(safePercent(sp500.regularMarketChangePercent)).toFixed(2)}%`,
-        isPositive: safePercent(sp500.regularMarketChangePercent) > 0
+        value: spValue || 0,
+        change: spChange || 0,
+        formatted: fmt(spChange || 0),
+        isPositive: (spChange || 0) > 0,
       },
-      lastUpdate: new Date().toLocaleString('pt-BR')
+      lastUpdate: new Date().toLocaleString('pt-BR'),
     };
 
     console.log('Market data fetched successfully:', marketData);
+
+    return new Response(
+      JSON.stringify(marketData),
+      { headers: { ...cors, 'Content-Type': 'application/json' }, status: 200 },
+    );
 
     return new Response(
       JSON.stringify(marketData),
