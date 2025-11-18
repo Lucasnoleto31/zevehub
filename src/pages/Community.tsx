@@ -8,6 +8,7 @@ import { MentionsPopover } from "@/components/community/MentionsPopover";
 import { NotificationsPopover } from "@/components/community/NotificationsPopover";
 import { SuggestedFollows } from "@/components/community/SuggestedFollows";
 import { ActivityFeed } from "@/components/community/ActivityFeed";
+import { TrendingTopics } from "@/components/community/TrendingTopics";
 import { Trophy, Users, User, Shield } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -92,6 +93,7 @@ export default function Community() {
           </div>
 
           <div className="space-y-6">
+            <TrendingTopics />
             <SuggestedFollows />
             <ActivityFeed />
           </div>
