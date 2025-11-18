@@ -8,6 +8,7 @@ import {
   Wallet,
   TrendingUp,
   Bot,
+  Users,
 } from "lucide-react";
 
 import {
@@ -41,6 +42,11 @@ const menuItems = [
     title: "Robôs",
     url: "/robos",
     icon: Bot,
+  },
+  {
+    title: "Comunidade",
+    url: "/comunidade",
+    icon: Users,
   },
   {
     title: "Finanças Pessoais",
