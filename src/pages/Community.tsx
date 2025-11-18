@@ -5,6 +5,9 @@ import { CommunityRanking } from "@/components/community/CommunityRanking";
 import { UserCommunityProfile } from "@/components/community/UserCommunityProfile";
 import { ModerationPanel } from "@/components/community/ModerationPanel";
 import { MentionsPopover } from "@/components/community/MentionsPopover";
+import { NotificationsPopover } from "@/components/community/NotificationsPopover";
+import { SuggestedFollows } from "@/components/community/SuggestedFollows";
+import { ActivityFeed } from "@/components/community/ActivityFeed";
 import { Trophy, Users, User, Shield } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -38,49 +41,61 @@ export default function Community() {
               Compartilhe análises, estratégias e conecte-se com outros traders
             </p>
           </div>
-          <MentionsPopover />
+          <div className="flex items-center gap-2">
+            <NotificationsPopover />
+            <MentionsPopover />
+          </div>
         </div>
 
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className={`grid w-full ${isAdmin ? 'grid-cols-4' : 'grid-cols-3'} lg:w-[${isAdmin ? '500px' : '400px'}]`}>
-            <TabsTrigger value="feed" className="gap-2">
-              <Users className="h-4 w-4" />
-              Feed
-            </TabsTrigger>
-            <TabsTrigger value="ranking" className="gap-2">
-              <Trophy className="h-4 w-4" />
-              Ranking
-            </TabsTrigger>
-            <TabsTrigger value="profile" className="gap-2">
-              <User className="h-4 w-4" />
-              Meu Perfil
-            </TabsTrigger>
-            {isAdmin && (
-              <TabsTrigger value="moderation" className="gap-2">
-                <Shield className="h-4 w-4" />
-                Moderação
-              </TabsTrigger>
-            )}
-          </TabsList>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="lg:col-span-2">
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+              <TabsList className={`grid w-full ${isAdmin ? 'grid-cols-4' : 'grid-cols-3'}`}>
+                <TabsTrigger value="feed" className="gap-2">
+                  <Users className="h-4 w-4" />
+                  Feed
+                </TabsTrigger>
+                <TabsTrigger value="ranking" className="gap-2">
+                  <Trophy className="h-4 w-4" />
+                  Ranking
+                </TabsTrigger>
+                <TabsTrigger value="profile" className="gap-2">
+                  <User className="h-4 w-4" />
+                  Meu Perfil
+                </TabsTrigger>
+                {isAdmin && (
+                  <TabsTrigger value="moderation" className="gap-2">
+                    <Shield className="h-4 w-4" />
+                    Moderação
+                  </TabsTrigger>
+                )}
+              </TabsList>
 
-          <TabsContent value="feed" className="space-y-6">
-            <CommunityFeed />
-          </TabsContent>
+              <TabsContent value="feed" className="space-y-6">
+                <CommunityFeed />
+              </TabsContent>
 
-          <TabsContent value="ranking" className="space-y-6">
-            <CommunityRanking />
-          </TabsContent>
+              <TabsContent value="ranking" className="space-y-6">
+                <CommunityRanking />
+              </TabsContent>
 
-          <TabsContent value="profile" className="space-y-6">
-            <UserCommunityProfile />
-          </TabsContent>
+              <TabsContent value="profile" className="space-y-6">
+                <UserCommunityProfile />
+              </TabsContent>
 
-          {isAdmin && (
-            <TabsContent value="moderation" className="space-y-6">
-              <ModerationPanel />
-            </TabsContent>
-          )}
-        </Tabs>
+              {isAdmin && (
+                <TabsContent value="moderation" className="space-y-6">
+                  <ModerationPanel />
+                </TabsContent>
+              )}
+            </Tabs>
+          </div>
+
+          <div className="space-y-6">
+            <SuggestedFollows />
+            <ActivityFeed />
+          </div>
+        </div>
       </div>
     </div>
   );
