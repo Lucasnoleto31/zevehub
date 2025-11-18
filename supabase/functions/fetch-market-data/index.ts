@@ -114,23 +114,25 @@ serve(async (req) => {
 
         if (!ibovData) {
           const meta = yIbov?.chart?.result?.[0]?.meta;
-          if (meta) {
-            const price = num(meta?.regularMarketPrice ?? meta?.previousClose);
-            const prev = num(meta?.previousClose);
+          const quotes = yIbov?.chart?.result?.[0]?.indicators?.quote?.[0];
+          if (meta && quotes) {
+            const price = num(meta?.regularMarketPrice ?? quotes?.close?.[quotes.close.length - 1]);
+            const prev = num(meta?.chartPreviousClose);
             const changePct = prev ? ((price - prev) / prev) * 100 : 0;
             ibovData = { regularMarketPrice: price, regularMarketChangePercent: changePct };
-            console.log('Using Yahoo Finance for Ibovespa');
+            console.log('Using Yahoo Finance for Ibovespa:', { price, prev, changePct });
           }
         }
 
         if (!sp500Data) {
           const meta = ySp?.chart?.result?.[0]?.meta;
-          if (meta) {
-            const price = num(meta?.regularMarketPrice ?? meta?.previousClose);
-            const prev = num(meta?.previousClose);
+          const quotes = ySp?.chart?.result?.[0]?.indicators?.quote?.[0];
+          if (meta && quotes) {
+            const price = num(meta?.regularMarketPrice ?? quotes?.close?.[quotes.close.length - 1]);
+            const prev = num(meta?.chartPreviousClose);
             const changePct = prev ? ((price - prev) / prev) * 100 : 0;
             sp500Data = { regularMarketPrice: price, regularMarketChangePercent: changePct };
-            console.log('Using Yahoo Finance for S&P500');
+            console.log('Using Yahoo Finance for S&P500:', { price, prev, changePct });
           }
         }
       } catch (e) {
