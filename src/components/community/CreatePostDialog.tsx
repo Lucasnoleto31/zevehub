@@ -25,20 +25,35 @@ import { BadgeUnlockModal } from "./BadgeUnlockModal";
 interface CreatePostDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  categories: string[];
 }
 
 export function CreatePostDialog({
   open,
   onOpenChange,
-  categories,
 }: CreatePostDialogProps) {
   const [content, setContent] = useState("");
-  const [category, setCategory] = useState("");
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [unlockedBadge, setUnlockedBadge] = useState<any>(null);
+  const [detectedTags, setDetectedTags] = useState<string[]>([]);
   const queryClient = useQueryClient();
+
+  // Detectar hashtags no conteúdo
+  const detectHashtags = (text: string) => {
+    const hashtagRegex = /#([a-zA-Z0-9_]+)/g;
+    const matches = text.match(hashtagRegex);
+    if (matches) {
+      const tags = matches.map(tag => tag.slice(1).toLowerCase());
+      setDetectedTags([...new Set(tags)]);
+    } else {
+      setDetectedTags([]);
+    }
+  };
+
+  const handleContentChange = (value: string) => {
+    setContent(value);
+    detectHashtags(value);
+  };
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -94,7 +109,8 @@ export function CreatePostDialog({
         .insert({
           user_id: user.id,
           content,
-          category,
+          category: detectedTags[0] || "geral",
+          tags: detectedTags,
           image_url: imageUrl,
         })
         .select()
@@ -134,7 +150,7 @@ export function CreatePostDialog({
       queryClient.invalidateQueries({ queryKey: ["community-posts"] });
       queryClient.invalidateQueries({ queryKey: ["user-badges"] });
       setContent("");
-      setCategory("");
+      setDetectedTags([]);
       setImageFile(null);
       setImagePreview(null);
       onOpenChange(false);
@@ -145,8 +161,8 @@ export function CreatePostDialog({
   });
 
   const handleSubmit = () => {
-    if (!content.trim() || !category) {
-      toast.error("Preencha todos os campos");
+    if (!content.trim()) {
+      toast.error("Escreva algo para publicar");
       return;
     }
     createPostMutation.mutate();
@@ -160,33 +176,32 @@ export function CreatePostDialog({
         </DialogHeader>
         <div className="space-y-4">
           <div className="space-y-2">
-            <Label>Categoria</Label>
-            <Select value={category} onValueChange={setCategory}>
-              <SelectTrigger>
-                <SelectValue placeholder="Selecione uma categoria" />
-              </SelectTrigger>
-              <SelectContent>
-                {categories.map((cat) => (
-                  <SelectItem key={cat} value={cat}>
-                    {cat}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-2">
             <Label>Conteúdo</Label>
             <Textarea
-              placeholder="Compartilhe sua análise, estratégia ou dúvida..."
+              placeholder="Compartilhe sua análise, estratégia ou dúvida... Use # para adicionar tags (ex: #WINFUT #analise)"
               value={content}
-              onChange={(e) => setContent(e.target.value)}
+              onChange={(e) => handleContentChange(e.target.value)}
               rows={8}
               className="resize-none"
             />
-            <p className="text-xs text-muted-foreground">
-              Use @nome para mencionar outros usuários
-            </p>
+            <div className="space-y-2">
+              <p className="text-xs text-muted-foreground">
+                Use @nome para mencionar outros usuários e # para adicionar hashtags
+              </p>
+              {detectedTags.length > 0 && (
+                <div className="flex flex-wrap gap-2">
+                  <span className="text-xs font-medium">Tags detectadas:</span>
+                  {detectedTags.map((tag) => (
+                    <span
+                      key={tag}
+                      className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-primary/10 text-primary font-medium"
+                    >
+                      #{tag}
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
 
           <div className="space-y-2">

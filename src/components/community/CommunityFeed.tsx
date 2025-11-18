@@ -3,28 +3,15 @@ import { useQuery, useInfiniteQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { PostCard } from "./PostCard";
-import { CategoryFilter } from "./CategoryFilter";
+import { HashtagFilter } from "./HashtagFilter";
 import { Input } from "@/components/ui/input";
 import { Search, Loader2 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 
-const CATEGORIES = [
-  "Todos",
-  "Análises Técnicas",
-  "Ações",
-  "FIIs",
-  "Criptomoedas",
-  "Estratégias de Trading",
-  "Macroeconomia",
-  "Resultados dos Robôs",
-  "Dúvidas",
-  "Avisos Importantes"
-];
-
 const POSTS_PER_PAGE = 10;
 
 export function CommunityFeed() {
-  const [selectedCategory, setSelectedCategory] = useState("Todos");
+  const [selectedHashtag, setSelectedHashtag] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [showFollowingOnly, setShowFollowingOnly] = useState(false);
   const observerTarget = useRef(null);
@@ -37,6 +24,33 @@ export function CommunityFeed() {
     },
   });
 
+  // Buscar hashtags populares
+  const { data: popularHashtags } = useQuery({
+    queryKey: ["popular-hashtags"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("community_posts")
+        .select("tags")
+        .not("tags", "is", null);
+
+      if (error) throw error;
+
+      const allTags = data
+        .flatMap(post => post.tags || [])
+        .filter(Boolean);
+
+      const tagCounts = allTags.reduce((acc, tag) => {
+        acc[tag] = (acc[tag] || 0) + 1;
+        return acc;
+      }, {} as Record<string, number>);
+
+      return Object.entries(tagCounts)
+        .sort(([, a], [, b]) => b - a)
+        .slice(0, 15)
+        .map(([tag]) => tag);
+    },
+  });
+
   const {
     data,
     isLoading,
@@ -44,7 +58,7 @@ export function CommunityFeed() {
     hasNextPage,
     isFetchingNextPage,
   } = useInfiniteQuery({
-    queryKey: ["community-posts", selectedCategory, searchQuery, showFollowingOnly, currentUser?.id],
+    queryKey: ["community-posts", selectedHashtag, searchQuery, showFollowingOnly, currentUser?.id],
     initialPageParam: 0,
     queryFn: async ({ pageParam = 0 }) => {
       let query = supabase
@@ -62,8 +76,8 @@ export function CommunityFeed() {
         .order("created_at", { ascending: false})
         .range(pageParam * POSTS_PER_PAGE, (pageParam + 1) * POSTS_PER_PAGE - 1);
 
-      if (selectedCategory !== "Todos") {
-        query = query.eq("category", selectedCategory);
+      if (selectedHashtag) {
+        query = query.contains("tags", [selectedHashtag]);
       }
 
       if (searchQuery) {
@@ -125,10 +139,10 @@ export function CommunityFeed() {
         </div>
       </div>
 
-      <CategoryFilter
-        categories={CATEGORIES}
-        selectedCategory={selectedCategory}
-        onSelectCategory={setSelectedCategory}
+      <HashtagFilter
+        hashtags={popularHashtags || []}
+        selectedHashtag={selectedHashtag}
+        onSelectHashtag={setSelectedHashtag}
       />
       
       {currentUser && (
