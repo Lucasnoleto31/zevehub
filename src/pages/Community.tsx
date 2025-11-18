@@ -11,6 +11,7 @@ import { UserCommunityProfile } from "@/components/community/UserCommunityProfil
 import { CommunityRanking } from "@/components/community/CommunityRanking";
 import { TitlesManagement } from "@/components/community/TitlesManagement";
 import { AssignTitles } from "@/components/community/AssignTitles";
+import { UserSearch } from "@/components/community/UserSearch";
 import { Button } from "@/components/ui/button";
 import { Trophy, User } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
@@ -118,6 +119,7 @@ export default function Community() {
 
               {/* Sidebar Direita */}
               <div className="lg:col-span-4 space-y-4">
+                <UserSearch />
                 <TrendingTopics />
                 <SuggestedFollows />
               </div>
