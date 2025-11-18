@@ -68,6 +68,25 @@ export function PostCard({ post }: PostCardProps) {
     }
   });
 
+  // Get user titles
+  const { data: userTitles } = useQuery({
+    queryKey: ["user-titles", post.user_id],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("user_community_titles")
+        .select(`
+          community_titles (
+            name,
+            color,
+            icon
+          )
+        `)
+        .eq("user_id", post.user_id);
+      
+      return data?.map(item => item.community_titles).filter(Boolean) || [];
+    },
+  });
+
   // Check user's reaction on this post
   const { data: userReaction } = useQuery({
     queryKey: ["post-reaction", post.id, currentUserId],
@@ -174,11 +193,20 @@ export function PostCard({ post }: PostCardProps) {
             </AvatarFallback>
           </Avatar>
           <div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <p className="font-semibold">{post.profiles?.full_name || "Usuário"}</p>
               <Badge variant="secondary" className="text-xs">
                 Nível {post.profiles?.level || 1}
               </Badge>
+              {userTitles?.map((title: any, index: number) => (
+                <Badge 
+                  key={index}
+                  style={{ backgroundColor: title.color }}
+                  className="text-white text-xs"
+                >
+                  {title.icon} {title.name}
+                </Badge>
+              ))}
             </div>
             <p className="text-xs text-muted-foreground">
               {formatDistanceToNow(new Date(post.created_at), {

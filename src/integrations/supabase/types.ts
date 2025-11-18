@@ -362,6 +362,36 @@ export type Database = {
           },
         ]
       }
+      community_titles: {
+        Row: {
+          color: string
+          created_at: string
+          icon: string | null
+          id: string
+          name: string
+          priority: number
+          updated_at: string
+        }
+        Insert: {
+          color?: string
+          created_at?: string
+          icon?: string | null
+          id?: string
+          name: string
+          priority?: number
+          updated_at?: string
+        }
+        Update: {
+          color?: string
+          created_at?: string
+          icon?: string | null
+          id?: string
+          name?: string
+          priority?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       finance_categories: {
         Row: {
           color: string | null
@@ -969,6 +999,52 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      user_community_titles: {
+        Row: {
+          granted_at: string
+          granted_by: string | null
+          id: string
+          title_id: string
+          user_id: string
+        }
+        Insert: {
+          granted_at?: string
+          granted_by?: string | null
+          id?: string
+          title_id: string
+          user_id: string
+        }
+        Update: {
+          granted_at?: string
+          granted_by?: string | null
+          id?: string
+          title_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_community_titles_granted_by_fkey"
+            columns: ["granted_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_community_titles_title_id_fkey"
+            columns: ["title_id"]
+            isOneToOne: false
+            referencedRelation: "community_titles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_community_titles_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_follows: {
         Row: {

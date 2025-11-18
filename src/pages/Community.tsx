@@ -9,6 +9,8 @@ import { SuggestedFollows } from "@/components/community/SuggestedFollows";
 import { TrendingTopics } from "@/components/community/TrendingTopics";
 import { UserCommunityProfile } from "@/components/community/UserCommunityProfile";
 import { CommunityRanking } from "@/components/community/CommunityRanking";
+import { TitlesManagement } from "@/components/community/TitlesManagement";
+import { AssignTitles } from "@/components/community/AssignTitles";
 import { Button } from "@/components/ui/button";
 import { Trophy, User } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
@@ -102,6 +104,13 @@ export default function Community() {
                     Compartilhe análises, estratégias e conecte-se com outros traders
                   </p>
                 </div>
+                
+                {isAdmin && (
+                  <div className="space-y-4">
+                    <TitlesManagement />
+                    <AssignTitles />
+                  </div>
+                )}
                 
                 <QuickPostCard />
                 <CommunityFeed />
