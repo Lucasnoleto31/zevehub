@@ -69,19 +69,32 @@ const Robos = () => {
     try {
       setLoading(true);
 
-      // Fetch ALL operations with strategies (no limit, no user filter to show all robots)
-      const { data: operations, error } = await supabase
-        .from("trading_operations")
-        .select("*")
-        .not("strategy", "is", null)
-        .order("operation_date", { ascending: true });
+      // Paginação para carregar TODAS as operações (sem limite de 1000)
+      const pageSize = 1000;
+      let from = 0;
+      let allOps: any[] = [];
 
-      if (error) throw error;
+      while (true) {
+        const { data, error } = await supabase
+          .from("trading_operations")
+          .select("id, operation_date, operation_time, asset, contracts, result, strategy")
+          .not("strategy", "is", null)
+          .order("operation_date", { ascending: true })
+          .range(from, from + pageSize - 1);
 
-      // Group operations by strategy (robot)
+        if (error) throw error;
+
+        const batch = data ?? [];
+        allOps = allOps.concat(batch);
+
+        if (batch.length < pageSize) break;
+        from += pageSize;
+      }
+
+      // Agrupa por estratégia (robô)
       const robotsMap = new Map<string, any>();
 
-      operations?.forEach((op) => {
+      allOps.forEach((op: any) => {
         const strategy = op.strategy!;
         if (!robotsMap.has(strategy)) {
           robotsMap.set(strategy, {
@@ -97,14 +110,14 @@ const Robos = () => {
         robot.dates.push(op.operation_date);
       });
 
-      // Calculate metrics for each robot
+      // Calcula métricas de cada robô
       const robotsList: Robot[] = Array.from(robotsMap.entries()).map(([name, data]) => {
         const totalOperations = data.operations.length;
         const winningOps = data.results.filter((r: number) => r > 0).length;
-        const winRate = (winningOps / totalOperations) * 100;
+        const winRate = totalOperations > 0 ? (winningOps / totalOperations) * 100 : 0;
         const totalResult = data.results.reduce((sum: number, r: number) => sum + r, 0);
 
-        // Calculate returns by period - considering initial capital as average operation value
+        // Retornos por período
         const now = new Date();
         const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
         const threeMonthsAgo = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
@@ -114,29 +127,28 @@ const Robos = () => {
         const ops3m = data.operations.filter((op: any) => new Date(op.operation_date) >= threeMonthsAgo);
         const ops12m = data.operations.filter((op: any) => new Date(op.operation_date) >= twelveMonthsAgo);
 
-        const return30d = ops30d.reduce((sum: number, op: any) => sum + op.result, 0);
-        const return3m = ops3m.reduce((sum: number, op: any) => sum + op.result, 0);
-        const return12m = ops12m.reduce((sum: number, op: any) => sum + op.result, 0);
+        const sum30d = ops30d.reduce((sum: number, op: any) => sum + op.result, 0);
+        const sum3m = ops3m.reduce((sum: number, op: any) => sum + op.result, 0);
+        const sum12m = ops12m.reduce((sum: number, op: any) => sum + op.result, 0);
 
-        // Calculate percentage returns based on average capital per operation
-        const avgOperationValue = 10000; // Assuming R$10k average capital per operation
-        const return30dPct = ops30d.length > 0 ? (return30d / (avgOperationValue * ops30d.length)) * 100 : 0;
-        const return3mPct = ops3m.length > 0 ? (return3m / (avgOperationValue * ops3m.length)) * 100 : 0;
-        const return12mPct = ops12m.length > 0 ? (return12m / (avgOperationValue * ops12m.length)) * 100 : 0;
+        // Percentuais com base em capital médio por operação (simplificação)
+        const avgOperationValue = 10000;
+        const return30dPct = ops30d.length > 0 ? (sum30d / (avgOperationValue * ops30d.length)) * 100 : 0;
+        const return3mPct = ops3m.length > 0 ? (sum3m / (avgOperationValue * ops3m.length)) * 100 : 0;
+        const return12mPct = ops12m.length > 0 ? (sum12m / (avgOperationValue * ops12m.length)) * 100 : 0;
 
-        // Generate chart data (cumulative starting from 100)
+        // Curva acumulada (base 100)
         let cumulative = 100;
         const initialCapital = 100;
         const chartData = data.operations.map((op: any) => {
-          const returnPct = (op.result / avgOperationValue) * 100;
-          cumulative += returnPct;
+          const retPct = (op.result / avgOperationValue) * 100;
+          cumulative += retPct;
           return {
             date: format(new Date(op.operation_date), "dd/MM"),
             value: cumulative,
           };
         });
 
-        // Add initial point
         if (chartData.length > 0) {
           chartData.unshift({
             date: format(new Date(data.operations[0].operation_date), "dd/MM"),
@@ -144,7 +156,7 @@ const Robos = () => {
           });
         }
 
-        // Determine risk level based on win rate and volatility
+        // Risco por taxa de acerto
         let riskLevel: "Baixo" | "Médio" | "Alto" = "Médio";
         if (winRate > 70) riskLevel = "Baixo";
         else if (winRate < 50) riskLevel = "Alto";
@@ -428,7 +440,7 @@ const Robos = () => {
                         className="mt-2"
                       />
                     </div>
-                    <Button onClick={handleSimulate} className="w-full">
+                    <Button type="button" onClick={handleSimulate} className="w-full">
                       Simular Retorno (30 dias)
                     </Button>
                     {simulatedReturn !== null && (
