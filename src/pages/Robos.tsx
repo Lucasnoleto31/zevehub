@@ -68,13 +68,11 @@ const Robos = () => {
   const fetchRobotsData = async () => {
     try {
       setLoading(true);
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
 
+      // Fetch ALL operations with strategies (no limit, no user filter to show all robots)
       const { data: operations, error } = await supabase
         .from("trading_operations")
         .select("*")
-        .eq("user_id", user.id)
         .not("strategy", "is", null)
         .order("operation_date", { ascending: true });
 
@@ -106,7 +104,7 @@ const Robos = () => {
         const winRate = (winningOps / totalOperations) * 100;
         const totalResult = data.results.reduce((sum: number, r: number) => sum + r, 0);
 
-        // Calculate returns by period
+        // Calculate returns by period - considering initial capital as average operation value
         const now = new Date();
         const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
         const threeMonthsAgo = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
@@ -120,15 +118,31 @@ const Robos = () => {
         const return3m = ops3m.reduce((sum: number, op: any) => sum + op.result, 0);
         const return12m = ops12m.reduce((sum: number, op: any) => sum + op.result, 0);
 
-        // Generate chart data (cumulative)
-        let cumulative = 0;
+        // Calculate percentage returns based on average capital per operation
+        const avgOperationValue = 10000; // Assuming R$10k average capital per operation
+        const return30dPct = ops30d.length > 0 ? (return30d / (avgOperationValue * ops30d.length)) * 100 : 0;
+        const return3mPct = ops3m.length > 0 ? (return3m / (avgOperationValue * ops3m.length)) * 100 : 0;
+        const return12mPct = ops12m.length > 0 ? (return12m / (avgOperationValue * ops12m.length)) * 100 : 0;
+
+        // Generate chart data (cumulative starting from 100)
+        let cumulative = 100;
+        const initialCapital = 100;
         const chartData = data.operations.map((op: any) => {
-          cumulative += op.result;
+          const returnPct = (op.result / avgOperationValue) * 100;
+          cumulative += returnPct;
           return {
             date: format(new Date(op.operation_date), "dd/MM"),
             value: cumulative,
           };
         });
+
+        // Add initial point
+        if (chartData.length > 0) {
+          chartData.unshift({
+            date: format(new Date(data.operations[0].operation_date), "dd/MM"),
+            value: initialCapital,
+          });
+        }
 
         // Determine risk level based on win rate and volatility
         let riskLevel: "Baixo" | "Médio" | "Alto" = "Médio";
@@ -143,9 +157,9 @@ const Robos = () => {
           totalOperations,
           winRate,
           totalResult,
-          return30d: ops30d.length > 0 ? (return30d / ops30d.length) * 100 : 0,
-          return3m: ops3m.length > 0 ? (return3m / ops3m.length) * 100 : 0,
-          return12m: ops12m.length > 0 ? (return12m / ops12m.length) * 100 : 0,
+          return30d: return30dPct,
+          return3m: return3mPct,
+          return12m: return12mPct,
           chartData,
           operations: data.operations.map((op: any) => ({
             date: format(new Date(op.operation_date), "dd/MM/yyyy"),
@@ -178,6 +192,7 @@ const Robos = () => {
 
   const handleSimulate = () => {
     if (!selectedRobot) return;
+    // Calculate return based on 30-day percentage
     const returnValue = (simulatorValue * selectedRobot.return30d) / 100;
     setSimulatedReturn(returnValue);
   };
@@ -338,15 +353,35 @@ const Robos = () => {
                     <div className="h-64">
                       <ResponsiveContainer width="100%" height="100%">
                         <LineChart data={selectedRobot.chartData}>
-                          <CartesianGrid strokeDasharray="3 3" />
-                          <XAxis dataKey="date" />
-                          <YAxis />
-                          <Tooltip />
+                          <defs>
+                            <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
+                              <stop offset="5%" stopColor="hsl(142, 76%, 36%)" stopOpacity={0.3}/>
+                              <stop offset="95%" stopColor="hsl(142, 76%, 36%)" stopOpacity={0}/>
+                            </linearGradient>
+                          </defs>
+                          <XAxis 
+                            dataKey="date" 
+                            stroke="hsl(var(--muted-foreground))"
+                            fontSize={12}
+                          />
+                          <YAxis 
+                            stroke="hsl(var(--muted-foreground))"
+                            fontSize={12}
+                          />
+                          <Tooltip 
+                            contentStyle={{
+                              backgroundColor: "hsl(var(--background))",
+                              border: "1px solid hsl(var(--border))",
+                              borderRadius: "8px"
+                            }}
+                          />
                           <Line
                             type="monotone"
                             dataKey="value"
-                            stroke="hsl(var(--primary))"
+                            stroke="hsl(142, 76%, 36%)"
                             strokeWidth={2}
+                            fill="url(#colorValue)"
+                            dot={false}
                           />
                         </LineChart>
                       </ResponsiveContainer>
@@ -355,20 +390,20 @@ const Robos = () => {
                     <div className="grid grid-cols-3 gap-4">
                       <div className="text-center p-4 border rounded-lg">
                         <p className="text-sm text-muted-foreground">30 dias</p>
-                        <p className="text-2xl font-bold text-green-600">
-                          +{selectedRobot.return30d.toFixed(1)}%
+                        <p className={`text-2xl font-bold ${selectedRobot.return30d >= 0 ? "text-green-600" : "text-red-600"}`}>
+                          {selectedRobot.return30d >= 0 ? "+" : ""}{selectedRobot.return30d.toFixed(2)}%
                         </p>
                       </div>
                       <div className="text-center p-4 border rounded-lg">
                         <p className="text-sm text-muted-foreground">3 meses</p>
-                        <p className="text-2xl font-bold text-green-600">
-                          +{selectedRobot.return3m.toFixed(1)}%
+                        <p className={`text-2xl font-bold ${selectedRobot.return3m >= 0 ? "text-green-600" : "text-red-600"}`}>
+                          {selectedRobot.return3m >= 0 ? "+" : ""}{selectedRobot.return3m.toFixed(2)}%
                         </p>
                       </div>
                       <div className="text-center p-4 border rounded-lg">
                         <p className="text-sm text-muted-foreground">12 meses</p>
-                        <p className="text-2xl font-bold text-green-600">
-                          +{selectedRobot.return12m.toFixed(1)}%
+                        <p className={`text-2xl font-bold ${selectedRobot.return12m >= 0 ? "text-green-600" : "text-red-600"}`}>
+                          {selectedRobot.return12m >= 0 ? "+" : ""}{selectedRobot.return12m.toFixed(2)}%
                         </p>
                       </div>
                     </div>
@@ -397,12 +432,16 @@ const Robos = () => {
                       Simular Retorno (30 dias)
                     </Button>
                     {simulatedReturn !== null && (
-                      <div className="p-4 bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800 rounded-lg">
+                      <div className={`p-4 border rounded-lg ${
+                        simulatedReturn >= 0 
+                          ? "bg-green-50 dark:bg-green-950 border-green-200 dark:border-green-800"
+                          : "bg-red-50 dark:bg-red-950 border-red-200 dark:border-red-800"
+                      }`}>
                         <p className="text-sm text-muted-foreground">
-                          Retorno estimado:
+                          Retorno estimado (baseado em {selectedRobot.return30d.toFixed(2)}% em 30 dias):
                         </p>
-                        <p className="text-2xl font-bold text-green-600">
-                          R$ {simulatedReturn.toFixed(2)}
+                        <p className={`text-2xl font-bold ${simulatedReturn >= 0 ? "text-green-600" : "text-red-600"}`}>
+                          {simulatedReturn >= 0 ? "+" : ""}R$ {simulatedReturn.toFixed(2)}
                         </p>
                         <p className="text-sm text-muted-foreground mt-1">
                           Total: R$ {(simulatorValue + simulatedReturn).toFixed(2)}
