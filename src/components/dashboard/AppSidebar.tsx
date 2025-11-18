@@ -60,7 +60,7 @@ const menuItems = [
   },
   {
     title: "Perfil",
-    url: "/perfil",
+    url: "/profile",
     icon: User,
   },
 ];
