@@ -31,7 +31,6 @@ const RecurringManager = lazy(() => import("@/components/finances/RecurringManag
 const CashflowPrediction = lazy(() => import("@/components/finances/CashflowPrediction").then(m => ({ default: m.CashflowPrediction })));
 const PDFExport = lazy(() => import("@/components/finances/PDFExport").then(m => ({ default: m.PDFExport })));
 const WealthSimulator = lazy(() => import("@/components/finances/WealthSimulator").then(m => ({ default: m.WealthSimulator })));
-const InvestmentTracker = lazy(() => import("@/components/finances/InvestmentTracker").then(m => ({ default: m.InvestmentTracker })));
 
 const PersonalFinances = () => {
   const navigate = useNavigate();
@@ -261,7 +260,7 @@ const PersonalFinances = () => {
         />
 
         <Tabs defaultValue="overview" className="space-y-4">
-          <TabsList className="grid w-full grid-cols-5 lg:grid-cols-10">
+          <TabsList className="grid w-full grid-cols-5 lg:grid-cols-9">
             <TabsTrigger value="overview">Geral</TabsTrigger>
             <TabsTrigger value="analytics">Análise</TabsTrigger>
             <TabsTrigger value="prediction">IA</TabsTrigger>
@@ -271,7 +270,6 @@ const PersonalFinances = () => {
             <TabsTrigger value="recurring">Recorrentes</TabsTrigger>
             <TabsTrigger value="goals">Metas</TabsTrigger>
             <TabsTrigger value="wealth">Patrimônio</TabsTrigger>
-            <TabsTrigger value="investments">Investimentos</TabsTrigger>
           </TabsList>
 
           <TabsContent value="overview" className="space-y-4">
@@ -356,12 +354,6 @@ const PersonalFinances = () => {
           <TabsContent value="wealth" className="space-y-4">
             <Suspense fallback={<Skeleton className="h-[400px] w-full" />}>
               <WealthSimulator />
-            </Suspense>
-          </TabsContent>
-
-          <TabsContent value="investments" className="space-y-4">
-            <Suspense fallback={<Skeleton className="h-[400px] w-full" />}>
-              <InvestmentTracker />
             </Suspense>
           </TabsContent>
         </Tabs>
