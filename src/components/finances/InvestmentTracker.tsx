@@ -7,9 +7,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Plus, TrendingUp, TrendingDown, DollarSign, PieChart } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Plus, TrendingUp, TrendingDown, DollarSign, PieChart, RefreshCw } from "lucide-react";
 import { PieChart as RechartsPie, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from "recharts";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
+import { PerformanceReports } from "./PerformanceReports";
 
 interface Investment {
   id: string;
@@ -30,6 +33,7 @@ const COLORS = {
 export const InvestmentTracker = () => {
   const [investments, setInvestments] = useState<Investment[]>([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isUpdating, setIsUpdating] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
     type: 'stocks' as 'stocks' | 'fixed_income',
@@ -91,6 +95,42 @@ export const InvestmentTracker = () => {
     toast.success('Investimento removido');
   };
 
+  const handleUpdateQuotes = async () => {
+    if (investments.length === 0) {
+      toast.error('Nenhum investimento para atualizar');
+      return;
+    }
+
+    setIsUpdating(true);
+    toast.info('Atualizando cotações...');
+
+    try {
+      const { data, error } = await supabase.functions.invoke('update-quotes', {
+        body: { investments },
+      });
+
+      if (error) throw error;
+
+      if (data.success) {
+        // Atualizar os investimentos com os novos valores
+        const updatedInvestments = investments.map(inv => {
+          const updated = data.investments.find((u: any) => u.id === inv.id);
+          return updated ? { ...inv, currentValue: updated.currentValue } : inv;
+        });
+
+        setInvestments(updatedInvestments);
+        toast.success(`${data.updatedCount} cotações atualizadas com sucesso!`);
+      } else {
+        throw new Error(data.error || 'Erro ao atualizar cotações');
+      }
+    } catch (error: any) {
+      console.error('Error updating quotes:', error);
+      toast.error('Erro ao atualizar cotações: ' + error.message);
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
   const totalInvested = investments.reduce((sum, inv) => sum + inv.amount, 0);
   const currentTotalValue = investments.reduce((sum, inv) => sum + inv.currentValue, 0);
   const totalProfit = currentTotalValue - totalInvested;
@@ -110,13 +150,28 @@ export const InvestmentTracker = () => {
   ].filter(item => item.value > 0);
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <div>
-          <h2 className="text-2xl font-bold">Acompanhamento de Investimentos</h2>
-          <p className="text-muted-foreground">Consolidado de Bolsa e Renda Fixa</p>
-        </div>
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+    <Tabs defaultValue="overview" className="space-y-6">
+      <TabsList>
+        <TabsTrigger value="overview">Visão Geral</TabsTrigger>
+        <TabsTrigger value="performance">Relatórios de Performance</TabsTrigger>
+      </TabsList>
+
+      <TabsContent value="overview" className="space-y-6">
+        <div className="flex justify-between items-center">
+          <div>
+            <h2 className="text-2xl font-bold">Acompanhamento de Investimentos</h2>
+            <p className="text-muted-foreground">Consolidado de Bolsa e Renda Fixa</p>
+          </div>
+          <div className="flex gap-2">
+            <Button 
+              variant="outline"
+              onClick={handleUpdateQuotes}
+              disabled={isUpdating || investments.length === 0}
+            >
+              <RefreshCw className={`h-4 w-4 mr-2 ${isUpdating ? 'animate-spin' : ''}`} />
+              Atualizar Cotações
+            </Button>
+            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
             <Button>
               <Plus className="h-4 w-4 mr-2" />
@@ -218,6 +273,7 @@ export const InvestmentTracker = () => {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -415,6 +471,11 @@ export const InvestmentTracker = () => {
           )}
         </CardContent>
       </Card>
-    </div>
+      </TabsContent>
+
+      <TabsContent value="performance" className="space-y-6">
+        <PerformanceReports investments={investments} />
+      </TabsContent>
+    </Tabs>
   );
 };
