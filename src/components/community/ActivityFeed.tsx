@@ -1,17 +1,26 @@
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Heart, MessageCircle } from "lucide-react";
-import { formatDistanceToNow } from "date-fns";
+import { Button } from "@/components/ui/button";
+import { Heart, MessageCircle, Filter } from "lucide-react";
+import { formatDistanceToNow, subDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useNavigate } from "react-router-dom";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 export function ActivityFeed() {
   const navigate = useNavigate();
+  const [filter, setFilter] = useState<'all' | '24h' | 'week' | 'posts' | 'reactions'>('all');
 
   const { data: activities } = useQuery({
-    queryKey: ["activity-feed"],
+    queryKey: ["activity-feed", filter],
     queryFn: async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return [];
@@ -60,19 +69,61 @@ export function ActivityFeed() {
         activities.push(...reactions.map((r: any) => ({ ...r, activity_type: "reaction" })));
       }
 
+      // Filtrar por período
+      let filtered = activities;
+      const now = new Date();
+      
+      if (filter === '24h') {
+        const yesterday = subDays(now, 1);
+        filtered = activities.filter((a: any) => new Date(a.created_at) >= yesterday);
+      } else if (filter === 'week') {
+        const lastWeek = subDays(now, 7);
+        filtered = activities.filter((a: any) => new Date(a.created_at) >= lastWeek);
+      } else if (filter === 'posts') {
+        filtered = activities.filter((a: any) => a.activity_type === 'post');
+      } else if (filter === 'reactions') {
+        filtered = activities.filter((a: any) => a.activity_type === 'reaction');
+      }
+
       // Ordenar por data
-      return activities.sort((a, b) => 
+      return filtered.sort((a: any, b: any) => 
         new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
       ).slice(0, 15);
     },
   });
 
   if (!activities || activities.length === 0) {
-    return (
-      <Card>
-        <CardHeader>
+  return (
+    <Card>
+      <CardHeader>
+        <div className="flex items-center justify-between">
           <CardTitle className="text-lg">Feed de Atividades</CardTitle>
-        </CardHeader>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="sm">
+                <Filter className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => setFilter('all')}>
+                Todas
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setFilter('24h')}>
+                Últimas 24h
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setFilter('week')}>
+                Última semana
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setFilter('posts')}>
+                Apenas posts
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setFilter('reactions')}>
+                Apenas reações
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      </CardHeader>
         <CardContent>
           <p className="text-sm text-muted-foreground text-center py-8">
             Siga outros usuários para ver suas atividades aqui

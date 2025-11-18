@@ -286,7 +286,29 @@ export function PostCard({ post }: PostCardProps) {
           <span>{commentsCount}</span>
         </Button>
         
-        <Button variant="ghost" size="sm" className="gap-2">
+        <Button 
+          variant="ghost" 
+          size="sm" 
+          className="gap-2"
+          onClick={() => {
+            const postUrl = `${window.location.origin}/comunidade`;
+            const shareText = `Confira este post na comunidade: ${post.content.substring(0, 100)}...`;
+            
+            if (navigator.share) {
+              navigator.share({
+                title: 'Compartilhar Post',
+                text: shareText,
+                url: postUrl,
+              }).catch(() => {
+                navigator.clipboard.writeText(postUrl);
+                toast.success("Link copiado para a área de transferência!");
+              });
+            } else {
+              navigator.clipboard.writeText(postUrl);
+              toast.success("Link copiado para a área de transferência!");
+            }
+          }}
+        >
           <Share2 className="h-4 w-4" />
           Compartilhar
         </Button>
