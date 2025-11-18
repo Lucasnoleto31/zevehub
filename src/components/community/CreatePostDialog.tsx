@@ -17,7 +17,10 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
+import { ImagePlus, X } from "lucide-react";
+import { BadgeUnlockModal } from "./BadgeUnlockModal";
 
 interface CreatePostDialogProps {
   open: boolean;
@@ -32,7 +35,31 @@ export function CreatePostDialog({
 }: CreatePostDialogProps) {
   const [content, setContent] = useState("");
   const [category, setCategory] = useState("");
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [unlockedBadge, setUnlockedBadge] = useState<any>(null);
   const queryClient = useQueryClient();
+
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 5 * 1024 * 1024) {
+        toast.error("Imagem muito grande. Máximo 5MB");
+        return;
+      }
+      setImageFile(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImagePreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const removeImage = () => {
+    setImageFile(null);
+    setImagePreview(null);
+  };
 
   const createPostMutation = useMutation({
     mutationFn: async () => {
@@ -41,10 +68,32 @@ export function CreatePostDialog({
       } = await supabase.auth.getUser();
       if (!user) throw new Error("Usuário não autenticado");
 
+      let imageUrl = null;
+
+      // Upload da imagem se existir
+      if (imageFile) {
+        const fileExt = imageFile.name.split(".").pop();
+        const fileName = `${user.id}/${Date.now()}.${fileExt}`;
+
+        const { error: uploadError } = await supabase.storage
+          .from("community-posts")
+          .upload(fileName, imageFile);
+
+        if (uploadError) throw uploadError;
+
+        const {
+          data: { publicUrl },
+        } = supabase.storage.from("community-posts").getPublicUrl(fileName);
+
+        imageUrl = publicUrl;
+      }
+
+      // Criar post
       const { error } = await supabase.from("community_posts").insert({
         user_id: user.id,
         content,
         category,
+        image_url: imageUrl,
       });
 
       if (error) throw error;
@@ -56,12 +105,25 @@ export function CreatePostDialog({
         column_name: "points",
         increment_value: 20,
       });
+
+      // Verificar badges
+      const { data: badges } = await supabase.rpc("check_and_award_badges", {
+        p_user_id: user.id,
+      });
+
+      if (badges && badges.length > 0) {
+        const newBadge = badges[0];
+        setUnlockedBadge(newBadge);
+      }
     },
     onSuccess: () => {
       toast.success("Post criado com sucesso! +20 pontos");
       queryClient.invalidateQueries({ queryKey: ["community-posts"] });
+      queryClient.invalidateQueries({ queryKey: ["user-badges"] });
       setContent("");
       setCategory("");
+      setImageFile(null);
+      setImagePreview(null);
       onOpenChange(false);
     },
     onError: () => {
@@ -111,6 +173,49 @@ export function CreatePostDialog({
             />
           </div>
 
+          <div className="space-y-2">
+            <Label>Imagem (opcional)</Label>
+            {imagePreview ? (
+              <div className="relative">
+                <img
+                  src={imagePreview}
+                  alt="Preview"
+                  className="w-full h-48 object-cover rounded-lg"
+                />
+                <Button
+                  variant="destructive"
+                  size="icon"
+                  className="absolute top-2 right-2"
+                  onClick={removeImage}
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+            ) : (
+              <div className="border-2 border-dashed rounded-lg p-8 text-center">
+                <Input
+                  id="image-upload"
+                  type="file"
+                  accept="image/*"
+                  onChange={handleImageChange}
+                  className="hidden"
+                />
+                <label
+                  htmlFor="image-upload"
+                  className="cursor-pointer flex flex-col items-center gap-2"
+                >
+                  <ImagePlus className="h-8 w-8 text-muted-foreground" />
+                  <span className="text-sm text-muted-foreground">
+                    Clique para adicionar uma imagem
+                  </span>
+                  <span className="text-xs text-muted-foreground">
+                    Máximo 5MB
+                  </span>
+                </label>
+              </div>
+            )}
+          </div>
+
           <div className="flex justify-end gap-2">
             <Button variant="outline" onClick={() => onOpenChange(false)}>
               Cancelar
@@ -124,6 +229,12 @@ export function CreatePostDialog({
           </div>
         </div>
       </DialogContent>
+
+      <BadgeUnlockModal
+        open={!!unlockedBadge}
+        onOpenChange={(open) => !open && setUnlockedBadge(null)}
+        badge={unlockedBadge}
+      />
     </Dialog>
   );
 }

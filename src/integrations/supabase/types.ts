@@ -122,6 +122,36 @@ export type Database = {
         }
         Relationships: []
       }
+      badge_progress: {
+        Row: {
+          badge_type: string
+          created_at: string
+          current_progress: number
+          id: string
+          target_progress: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          badge_type: string
+          created_at?: string
+          current_progress?: number
+          id?: string
+          target_progress: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          badge_type?: string
+          created_at?: string
+          current_progress?: number
+          id?: string
+          target_progress?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       bankroll_management: {
         Row: {
           created_at: string
@@ -907,6 +937,15 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      check_and_award_badges: {
+        Args: { p_user_id: string }
+        Returns: {
+          badge_description: string
+          badge_id: string
+          badge_name: string
+          newly_awarded: boolean
+        }[]
+      }
       check_budget_status: {
         Args: { p_category: string; p_month: string; p_user_id: string }
         Returns: {
