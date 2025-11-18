@@ -17,9 +17,9 @@ interface BCBIndicators {
 }
 
 interface MarketData {
-  ibovespa: { value: number; change: number; formatted: string; isPositive: boolean };
-  dolar: { value: number; change: number; formatted: string; isPositive: boolean };
-  sp500: { value: number; change: number; formatted: string; isPositive: boolean };
+  ibovespa: { value: number; change: number; formatted: string; isPositive: boolean; source: string };
+  dolar: { value: number; change: number; formatted: string; isPositive: boolean; source: string };
+  sp500: { value: number; change: number; formatted: string; isPositive: boolean; source: string };
   lastUpdate: string;
 }
 
@@ -134,6 +134,9 @@ const MarketIntelligence = () => {
                                 <TrendingDown className="h-4 w-4 text-red-600" />
                               )}
                               <span>Ibovespa:</span>
+                              <Badge variant="outline" className="text-xs">
+                                {marketData.ibovespa.source}
+                              </Badge>
                             </div>
                             <Badge 
                               variant={marketData.ibovespa.isPositive ? "default" : "destructive"}
@@ -151,6 +154,9 @@ const MarketIntelligence = () => {
                                 <TrendingDown className="h-4 w-4 text-red-600" />
                               )}
                               <span>Dólar:</span>
+                              <Badge variant="outline" className="text-xs">
+                                {marketData.dolar.source}
+                              </Badge>
                             </div>
                             <Badge 
                               variant={marketData.dolar.isPositive ? "default" : "destructive"}
@@ -168,6 +174,9 @@ const MarketIntelligence = () => {
                                 <TrendingDown className="h-4 w-4 text-red-600" />
                               )}
                               <span>S&P500:</span>
+                              <Badge variant="outline" className="text-xs">
+                                {marketData.sp500.source}
+                              </Badge>
                             </div>
                             <Badge 
                               variant={marketData.sp500.isPositive ? "default" : "destructive"}

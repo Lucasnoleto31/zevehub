@@ -173,24 +173,42 @@ serve(async (req) => {
       timeStyle: 'medium'
     }).format(now);
 
+    // Determine sources
+    let ibovSource = 'Yahoo Finance';
+    let sp500Source = 'Yahoo Finance';
+    let usdSource = 'AwesomeAPI';
+    
+    if (brapiToken && ibovData && ibovData.regularMarketPrice && ibovData.regularMarketChangePercent) {
+      ibovSource = 'Brapi';
+    }
+    if (brapiToken && sp500Data && sp500Data.regularMarketPrice && sp500Data.regularMarketChangePercent) {
+      sp500Source = 'Brapi';
+    }
+    if (usdData && usdData.bid) {
+      usdSource = 'AwesomeAPI';
+    }
+
     const marketData = {
       ibovespa: {
         value: ibovValue,
         change: ibovChange,
         formatted: fmt(ibovChange),
         isPositive: ibovChange > 0,
+        source: ibovSource,
       },
       dolar: {
         value: usdValue,
         change: usdChange,
         formatted: fmt(usdChange),
         isPositive: usdChange > 0,
+        source: usdSource,
       },
       sp500: {
         value: sp500Value,
         change: sp500Change,
         formatted: fmt(sp500Change),
         isPositive: sp500Change > 0,
+        source: sp500Source,
       },
       lastUpdate: brazilTime,
     };
