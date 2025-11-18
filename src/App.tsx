@@ -17,6 +17,7 @@ import PersonalFinances from "./pages/PersonalFinances";
 import MarketIntelligence from "./pages/MarketIntelligence";
 import Robos from "./pages/Robos";
 import Community from "./pages/Community";
+import PublicProfile from "./pages/PublicProfile";
 import NotFound from "./pages/NotFound";
 import { useEffect } from "react";
 import { registerServiceWorker } from "@/lib/register-sw";
@@ -46,6 +47,7 @@ const App = () => {
                 <Route path="/operations" element={<Operations />} />
                 <Route path="/operation/:id" element={<OperationDetail />} />
                 <Route path="/profile" element={<Profile />} />
+                <Route path="/perfil/:userId" element={<PublicProfile />} />
                 <Route path="/financas" element={<PersonalFinances />} />
                 <Route path="/inteligencia-mercado" element={<MarketIntelligence />} />
                 <Route path="/robos" element={<Robos />} />
