@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -10,18 +10,45 @@ import { AppSidebar } from "@/components/dashboard/AppSidebar";
 import { Filter, RefreshCw, TrendingUp, TrendingDown, Calendar, DollarSign, Activity } from "lucide-react";
 import { toast } from "sonner";
 
+interface BCBIndicators {
+  selic: { value: number; date: string; formatted: string };
+  ipca: { value: number; date: string; formatted: string };
+  cdi: { value: number; date: string; formatted: string };
+}
+
 const MarketIntelligence = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [roles, setRoles] = useState<string[]>([]);
+  const [bcbIndicators, setBcbIndicators] = useState<BCBIndicators | null>(null);
 
-  const handleRefresh = () => {
+  useEffect(() => {
+    fetchBCBIndicators();
+  }, []);
+
+  const fetchBCBIndicators = async () => {
+    try {
+      const { data, error } = await supabase.functions.invoke('fetch-bcb-indicators');
+      
+      if (error) throw error;
+      
+      setBcbIndicators(data);
+    } catch (error) {
+      console.error('Error fetching BCB indicators:', error);
+      toast.error("Erro ao buscar indicadores do Banco Central");
+    }
+  };
+
+  const handleRefresh = async () => {
     setLoading(true);
     toast.info("Atualizando dados do mercado...");
+    
+    await fetchBCBIndicators();
+    
     setTimeout(() => {
       setLoading(false);
       toast.success("Dados atualizados com sucesso!");
-    }, 2000);
+    }, 1000);
   };
 
   const handleFilter = () => {
@@ -140,13 +167,31 @@ const MarketIntelligence = () => {
                 <Card className="border-l-4 border-l-green-500">
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2 text-green-600">
-                      📉 Juros
+                      📉 Juros e Indicadores
                     </CardTitle>
                   </CardHeader>
-                  <CardContent className="space-y-1 text-sm">
-                    <p>• Reprecificação na curva longa</p>
-                    <p>• Aumento da demanda por NTNB</p>
-                    <p>• Volatilidade moderada</p>
+                  <CardContent className="space-y-2 text-sm">
+                    {bcbIndicators ? (
+                      <>
+                        <div className="flex justify-between items-center">
+                          <span>Selic:</span>
+                          <Badge variant="secondary">{bcbIndicators.selic.formatted}</Badge>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span>CDI:</span>
+                          <Badge variant="secondary">{bcbIndicators.cdi.formatted}</Badge>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span>IPCA:</span>
+                          <Badge variant="secondary">{bcbIndicators.ipca.formatted}</Badge>
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-2">
+                          Última atualização: {bcbIndicators.selic.date}
+                        </p>
+                      </>
+                    ) : (
+                      <p className="text-muted-foreground">Carregando indicadores...</p>
+                    )}
                     <Button variant="link" size="sm" className="p-0 h-auto mt-2">
                       Ver detalhes →
                     </Button>
