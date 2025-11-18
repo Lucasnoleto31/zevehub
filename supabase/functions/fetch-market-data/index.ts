@@ -14,34 +14,37 @@ serve(async (req) => {
     console.log('Fetching market data...');
 
     // Fetch Ibovespa data from Brasil API
-    const ibovespaResponse = await fetch('https://brapi.dev/api/quote/^BVSP?range=1d&interval=1d');
+    const ibovespaResponse = await fetch('https://brapi.dev/api/quote/%5EBVSP?range=1d&interval=1d&token=demo');
     const ibovespaData = await ibovespaResponse.json();
+    console.log('Ibovespa response:', JSON.stringify(ibovespaData));
     
     // Fetch USD/BRL (Dólar) from Brasil API
-    const dolarResponse = await fetch('https://brapi.dev/api/quote/USDBRL=X?range=1d&interval=1d');
+    const dolarResponse = await fetch('https://brapi.dev/api/quote/USDBRL%3DX?range=1d&interval=1d&token=demo');
     const dolarData = await dolarResponse.json();
+    console.log('Dolar response:', JSON.stringify(dolarData));
     
     // Fetch S&P500 from Brasil API
-    const sp500Response = await fetch('https://brapi.dev/api/quote/^GSPC?range=1d&interval=1d');
+    const sp500Response = await fetch('https://brapi.dev/api/quote/%5EGSPC?range=1d&interval=1d&token=demo');
     const sp500Data = await sp500Response.json();
+    console.log('SP500 response:', JSON.stringify(sp500Data));
 
     const marketData = {
       ibovespa: {
         value: ibovespaData.results?.[0]?.regularMarketPrice || 0,
         change: ibovespaData.results?.[0]?.regularMarketChangePercent || 0,
-        formatted: `${ibovespaData.results?.[0]?.regularMarketChangePercent > 0 ? '▲' : '▼'} ${Math.abs(ibovespaData.results?.[0]?.regularMarketChangePercent || 0).toFixed(2)}%`,
+        formatted: `${(ibovespaData.results?.[0]?.regularMarketChangePercent || 0) > 0 ? '▲' : '▼'} ${Math.abs(ibovespaData.results?.[0]?.regularMarketChangePercent || 0).toFixed(2)}%`,
         isPositive: (ibovespaData.results?.[0]?.regularMarketChangePercent || 0) > 0
       },
       dolar: {
         value: dolarData.results?.[0]?.regularMarketPrice || 0,
         change: dolarData.results?.[0]?.regularMarketChangePercent || 0,
-        formatted: `${dolarData.results?.[0]?.regularMarketChangePercent > 0 ? '▲' : '▼'} ${Math.abs(dolarData.results?.[0]?.regularMarketChangePercent || 0).toFixed(2)}%`,
+        formatted: `${(dolarData.results?.[0]?.regularMarketChangePercent || 0) > 0 ? '▲' : '▼'} ${Math.abs(dolarData.results?.[0]?.regularMarketChangePercent || 0).toFixed(2)}%`,
         isPositive: (dolarData.results?.[0]?.regularMarketChangePercent || 0) > 0
       },
       sp500: {
         value: sp500Data.results?.[0]?.regularMarketPrice || 0,
         change: sp500Data.results?.[0]?.regularMarketChangePercent || 0,
-        formatted: `${sp500Data.results?.[0]?.regularMarketChangePercent > 0 ? '▲' : '▼'} ${Math.abs(sp500Data.results?.[0]?.regularMarketChangePercent || 0).toFixed(2)}%`,
+        formatted: `${(sp500Data.results?.[0]?.regularMarketChangePercent || 0) > 0 ? '▲' : '▼'} ${Math.abs(sp500Data.results?.[0]?.regularMarketChangePercent || 0).toFixed(2)}%`,
         isPositive: (sp500Data.results?.[0]?.regularMarketChangePercent || 0) > 0
       },
       lastUpdate: new Date().toLocaleString('pt-BR')
