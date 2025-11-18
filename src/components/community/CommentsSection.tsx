@@ -88,24 +88,41 @@ export function CommentsSection({ postId }: CommentsSectionProps) {
   const { data: comments, isLoading } = useQuery({
     queryKey: ["post-comments", postId],
     queryFn: async () => {
-      const { data, error } = await supabase
+      // Buscar comentários
+      const { data: commentsData, error: commentsError } = await supabase
         .from("community_comments")
-        .select(`
-          *,
-          profiles (
-            full_name,
-            avatar_url,
-            level
-          )
-        `)
+        .select("*")
         .eq("post_id", postId)
         .order("created_at", { ascending: false });
 
-      if (error) {
-        console.error("Error loading comments:", error);
-        throw error;
+      if (commentsError) {
+        console.error("Error loading comments:", commentsError);
+        throw commentsError;
       }
-      return data;
+
+      if (!commentsData || commentsData.length === 0) {
+        return [];
+      }
+
+      // Buscar perfis dos usuários dos comentários
+      const userIds = commentsData.map(comment => comment.user_id);
+      const { data: profilesData, error: profilesError } = await supabase
+        .from("profiles")
+        .select("id, full_name, avatar_url, level")
+        .in("id", userIds);
+
+      if (profilesError) {
+        console.error("Error loading profiles:", profilesError);
+        throw profilesError;
+      }
+
+      // Combinar comentários com perfis
+      const commentsWithProfiles = commentsData.map(comment => ({
+        ...comment,
+        profiles: profilesData?.find(profile => profile.id === comment.user_id) || null
+      }));
+
+      return commentsWithProfiles;
     },
   });
 
