@@ -9,18 +9,12 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { ImagePlus, X } from "lucide-react";
 import { BadgeUnlockModal } from "./BadgeUnlockModal";
+import { HashtagAutocomplete } from "./HashtagAutocomplete";
 
 interface CreatePostDialogProps {
   open: boolean;
@@ -36,6 +30,10 @@ export function CreatePostDialog({
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [unlockedBadge, setUnlockedBadge] = useState<any>(null);
   const [detectedTags, setDetectedTags] = useState<string[]>([]);
+  const [showHashtagAutocomplete, setShowHashtagAutocomplete] = useState(false);
+  const [hashtagSearch, setHashtagSearch] = useState("");
+  const [hashtagPosition, setHashtagPosition] = useState({ top: 0, left: 0 });
+  const [cursorPosition, setCursorPosition] = useState(0);
   const queryClient = useQueryClient();
 
   // Detectar hashtags no conteúdo
@@ -50,9 +48,34 @@ export function CreatePostDialog({
     }
   };
 
-  const handleContentChange = (value: string) => {
+  const handleContentChange = (value: string, selectionStart: number) => {
     setContent(value);
+    setCursorPosition(selectionStart);
     detectHashtags(value);
+
+    // Detectar se está digitando hashtag
+    const textBeforeCursor = value.substring(0, selectionStart);
+    const words = textBeforeCursor.split(/\s/);
+    const lastWord = words[words.length - 1];
+
+    if (lastWord.startsWith("#") && lastWord.length > 1) {
+      setShowHashtagAutocomplete(true);
+      setHashtagSearch(lastWord.slice(1));
+      setHashtagPosition({ top: 200, left: 100 });
+    } else {
+      setShowHashtagAutocomplete(false);
+    }
+  };
+
+  const handleSelectHashtag = (hashtag: string) => {
+    const textBeforeCursor = content.substring(0, cursorPosition);
+    const textAfterCursor = content.substring(cursorPosition);
+    const words = textBeforeCursor.split(/\s/);
+    words[words.length - 1] = `#${hashtag} `;
+    const newContent = words.join(" ") + textAfterCursor;
+    setContent(newContent);
+    setShowHashtagAutocomplete(false);
+    detectHashtags(newContent);
   };
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -180,7 +203,7 @@ export function CreatePostDialog({
             <Textarea
               placeholder="Compartilhe sua análise, estratégia ou dúvida... Use # para adicionar tags (ex: #WINFUT #analise)"
               value={content}
-              onChange={(e) => handleContentChange(e.target.value)}
+              onChange={(e) => handleContentChange(e.target.value, e.target.selectionStart)}
               rows={8}
               className="resize-none"
             />
@@ -260,6 +283,14 @@ export function CreatePostDialog({
           </div>
         </div>
       </DialogContent>
+
+      {showHashtagAutocomplete && (
+        <HashtagAutocomplete
+          searchTerm={hashtagSearch}
+          onSelectHashtag={handleSelectHashtag}
+          position={hashtagPosition}
+        />
+      )}
 
       <BadgeUnlockModal
         open={!!unlockedBadge}
