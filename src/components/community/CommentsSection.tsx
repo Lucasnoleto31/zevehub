@@ -8,6 +8,7 @@ import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
 import { Send } from "lucide-react";
+import { BadgeUnlockModal } from "./BadgeUnlockModal";
 
 interface CommentsSectionProps {
   postId: string;
@@ -15,6 +16,7 @@ interface CommentsSectionProps {
 
 export function CommentsSection({ postId }: CommentsSectionProps) {
   const [newComment, setNewComment] = useState("");
+  const [unlockedBadge, setUnlockedBadge] = useState<any>(null);
   const queryClient = useQueryClient();
 
   const { data: comments } = useQuery({
@@ -53,11 +55,22 @@ export function CommentsSection({ postId }: CommentsSectionProps) {
         column_name: "points",
         increment_value: 5,
       });
+
+      // Verificar badges
+      const { data: badges } = await supabase.rpc("check_and_award_badges", {
+        p_user_id: user.id,
+      });
+
+      if (badges && badges.length > 0) {
+        const newBadge = badges[0];
+        setUnlockedBadge(newBadge);
+      }
     },
     onSuccess: () => {
       toast.success("Comentário adicionado! +5 pontos");
       queryClient.invalidateQueries({ queryKey: ["post-comments", postId] });
       queryClient.invalidateQueries({ queryKey: ["post-comments-count", postId] });
+      queryClient.invalidateQueries({ queryKey: ["user-badges"] });
       setNewComment("");
     },
     onError: () => {
@@ -121,6 +134,12 @@ export function CommentsSection({ postId }: CommentsSectionProps) {
           <Send className="h-4 w-4" />
         </Button>
       </div>
+
+      <BadgeUnlockModal
+        open={!!unlockedBadge}
+        onOpenChange={(open) => !open && setUnlockedBadge(null)}
+        badge={unlockedBadge}
+      />
     </div>
   );
 }
