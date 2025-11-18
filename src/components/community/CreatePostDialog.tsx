@@ -89,14 +89,27 @@ export function CreatePostDialog({
       }
 
       // Criar post
-      const { error } = await supabase.from("community_posts").insert({
-        user_id: user.id,
-        content,
-        category,
-        image_url: imageUrl,
-      });
+      const { data: newPost, error } = await supabase
+        .from("community_posts")
+        .insert({
+          user_id: user.id,
+          content,
+          category,
+          image_url: imageUrl,
+        })
+        .select()
+        .single();
 
       if (error) throw error;
+
+      // Processar menções
+      if (newPost) {
+        await supabase.rpc("process_mentions", {
+          p_content: content,
+          p_post_id: newPost.id,
+          p_mentioned_by: user.id,
+        });
+      }
 
       // Adicionar 20 pontos por criar post
       await supabase.rpc("increment_column", {
@@ -171,6 +184,9 @@ export function CreatePostDialog({
               rows={8}
               className="resize-none"
             />
+            <p className="text-xs text-muted-foreground">
+              Use @nome para mencionar outros usuários
+            </p>
           </div>
 
           <div className="space-y-2">

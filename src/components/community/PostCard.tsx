@@ -5,24 +5,64 @@ import { Card } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Heart, MessageCircle, Share2 } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Heart, MessageCircle, Share2, MoreVertical, Edit, Trash2, Flag } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
 import { CommentsSection } from "./CommentsSection";
+import { ReportPostDialog } from "./ReportPostDialog";
+import { EditPostDialog } from "./EditPostDialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface PostCardProps {
   post: any;
 }
 
+const CATEGORIES = [
+  "Análises Técnicas",
+  "Ações",
+  "FIIs",
+  "Criptomoedas",
+  "Estratégias de Trading",
+  "Macroeconomia",
+  "Resultados dos Robôs",
+  "Dúvidas",
+  "Avisos Importantes"
+];
+
 export function PostCard({ post }: PostCardProps) {
   const [showComments, setShowComments] = useState(false);
+  const [showReportDialog, setShowReportDialog] = useState(false);
+  const [showEditDialog, setShowEditDialog] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const queryClient = useQueryClient();
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
 
-  // Get current user
-  supabase.auth.getUser().then(({ data }) => {
+  // Get current user and check admin status
+  supabase.auth.getUser().then(async ({ data }) => {
     setCurrentUserId(data.user?.id || null);
+    if (data.user) {
+      const { data: adminCheck } = await supabase.rpc("is_admin", {
+        _user_id: data.user.id,
+      });
+      setIsAdmin(adminCheck || false);
+    }
   });
 
   // Check if user liked this post
@@ -50,6 +90,25 @@ export function PostCard({ post }: PostCardProps) {
         .select("*", { count: "exact", head: true })
         .eq("post_id", post.id);
       return count || 0;
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async () => {
+      const { error } = await supabase
+        .from("community_posts")
+        .delete()
+        .eq("id", post.id);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Post excluído com sucesso");
+      queryClient.invalidateQueries({ queryKey: ["community-posts"] });
+      queryClient.invalidateQueries({ queryKey: ["user-posts"] });
+    },
+    onError: () => {
+      toast.error("Erro ao excluir post");
     },
   });
 
@@ -93,7 +152,7 @@ export function PostCard({ post }: PostCardProps) {
     <Card className="p-6 space-y-4 hover:shadow-lg transition-shadow">
       {/* Header do post */}
       <div className="flex items-start justify-between">
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 flex-1">
           <Avatar>
             <AvatarImage src={post.profiles?.avatar_url} />
             <AvatarFallback>
@@ -115,7 +174,40 @@ export function PostCard({ post }: PostCardProps) {
             </p>
           </div>
         </div>
-        <Badge variant="outline">{post.category}</Badge>
+        <div className="flex items-center gap-2">
+          <Badge variant="outline">{post.category}</Badge>
+          
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon">
+                <MoreVertical className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              {currentUserId === post.user_id && (
+                <>
+                  <DropdownMenuItem onClick={() => setShowEditDialog(true)}>
+                    <Edit className="h-4 w-4 mr-2" />
+                    Editar
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => setShowDeleteDialog(true)}
+                    className="text-destructive"
+                  >
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Excluir
+                  </DropdownMenuItem>
+                </>
+              )}
+              {currentUserId !== post.user_id && (
+                <DropdownMenuItem onClick={() => setShowReportDialog(true)}>
+                  <Flag className="h-4 w-4 mr-2" />
+                  Denunciar
+                </DropdownMenuItem>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
       </div>
 
       {/* Conteúdo */}
@@ -160,6 +252,44 @@ export function PostCard({ post }: PostCardProps) {
 
       {/* Seção de comentários */}
       {showComments && <CommentsSection postId={post.id} />}
+
+      <ReportPostDialog
+        open={showReportDialog}
+        onOpenChange={setShowReportDialog}
+        postId={post.id}
+      />
+
+      <EditPostDialog
+        open={showEditDialog}
+        onOpenChange={setShowEditDialog}
+        post={{
+          id: post.id,
+          content: post.content,
+          category: post.category,
+        }}
+        categories={CATEGORIES}
+      />
+
+      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja excluir este post? Esta ação não pode ser
+              desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => deleteMutation.mutate()}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Card>
   );
 }
