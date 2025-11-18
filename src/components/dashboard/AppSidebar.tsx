@@ -7,6 +7,7 @@ import {
   Shield,
   Wallet,
   TrendingUp,
+  Bot,
 } from "lucide-react";
 
 import {
@@ -35,6 +36,11 @@ const menuItems = [
     title: "Operações",
     url: "/operations",
     icon: LineChart,
+  },
+  {
+    title: "Robôs",
+    url: "/robos",
+    icon: Bot,
   },
   {
     title: "Finanças Pessoais",
