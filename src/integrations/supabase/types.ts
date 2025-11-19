@@ -320,6 +320,7 @@ export type Database = {
       }
       community_posts: {
         Row: {
+          attachment_url: string | null
           category: string
           content: string
           created_at: string
@@ -331,6 +332,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          attachment_url?: string | null
           category: string
           content: string
           created_at?: string
@@ -342,6 +344,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          attachment_url?: string | null
           category?: string
           content?: string
           created_at?: string

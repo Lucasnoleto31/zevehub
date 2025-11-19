@@ -12,6 +12,7 @@ import { CommunityRanking } from "@/components/community/CommunityRanking";
 import { TitlesManagement } from "@/components/community/TitlesManagement";
 import { AssignTitles } from "@/components/community/AssignTitles";
 import { UserSearch } from "@/components/community/UserSearch";
+import { useRealtimeCommunityNotifications } from "@/hooks/useRealtimeCommunityNotifications";
 import { Button } from "@/components/ui/button";
 import { Trophy, User } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
@@ -26,6 +27,17 @@ import {
 } from "@/components/ui/sheet";
 
 export default function Community() {
+  const { data: currentUser } = useQuery({
+    queryKey: ["current-user"],
+    queryFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      return user;
+    },
+  });
+
+  // Ativar notificações em tempo real
+  useRealtimeCommunityNotifications(currentUser?.id);
+
   const { data: isAdmin } = useQuery({
     queryKey: ["is-admin"],
     queryFn: async () => {
