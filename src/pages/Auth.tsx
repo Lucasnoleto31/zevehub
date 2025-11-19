@@ -10,6 +10,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import { Loader2, Shield, TrendingUp } from "lucide-react";
 import { z } from "zod";
+import * as OTPAuth from "otpauth";
+import { TwoFactorVerification } from "@/components/auth/TwoFactorVerification";
 
 const signUpSchema = z.object({
   email: z.string().email({ message: "E-mail inválido" }),
@@ -42,6 +44,9 @@ const Auth = () => {
   const [resetEmail, setResetEmail] = useState("");
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [showEmailConfirmation, setShowEmailConfirmation] = useState(false);
+  const [show2FADialog, setShow2FADialog] = useState(false);
+  const [pendingUserId, setPendingUserId] = useState<string | null>(null);
+  const [totpSecret, setTotpSecret] = useState<string | null>(null);
 
   useEffect(() => {
     const checkUser = async () => {
@@ -167,6 +172,22 @@ const Auth = () => {
       if (error) throw error;
 
       if (data.session) {
+        // Check if user has 2FA enabled
+        const { data: profileData } = await supabase
+          .from("profiles")
+          .select("totp_enabled, totp_secret")
+          .eq("id", data.user.id)
+          .single();
+
+        if (profileData?.totp_enabled && profileData?.totp_secret) {
+          // Show 2FA dialog
+          setPendingUserId(data.user.id);
+          setTotpSecret(profileData.totp_secret);
+          setShow2FADialog(true);
+          setLoading(false);
+          return;
+        }
+
         // Log de acesso
         const accessLogData = {
           user_id: data.user.id,
@@ -199,6 +220,61 @@ const Auth = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handle2FAVerification = async (code: string): Promise<boolean> => {
+    if (!totpSecret || !pendingUserId) return false;
+
+    try {
+      const totp = new OTPAuth.TOTP({
+        secret: totpSecret,
+        digits: 6,
+        period: 30,
+      });
+
+      const isValid = totp.validate({ token: code, window: 1 }) !== null;
+
+      if (isValid) {
+        // Log de acesso
+        const accessLogData = {
+          user_id: pendingUserId,
+          ip_address: "client-side",
+          user_agent: navigator.userAgent,
+          device_info: navigator.platform,
+        };
+        
+        await supabase.from("access_logs").insert(accessLogData);
+
+        // Verificar se é um novo dispositivo
+        try {
+          await supabase.functions.invoke("check-new-device", {
+            body: accessLogData,
+          });
+        } catch (error) {
+          console.error("Error checking new device:", error);
+        }
+
+        toast.success("Autenticação 2FA bem-sucedida!");
+        setShow2FADialog(false);
+        navigate("/dashboard");
+        return true;
+      }
+
+      return false;
+    } catch (error) {
+      console.error("Erro ao verificar 2FA:", error);
+      return false;
+    }
+  };
+
+  const handle2FACancel = async () => {
+    setShow2FADialog(false);
+    setPendingUserId(null);
+    setTotpSecret(null);
+    
+    // Sign out the user since they didn't complete 2FA
+    await supabase.auth.signOut();
+    toast.info("Login cancelado");
   };
 
   if (showEmailConfirmation) {
@@ -543,6 +619,12 @@ const Auth = () => {
           Seus dados estão protegidos com criptografia de ponta
         </div>
       </div>
+
+      <TwoFactorVerification
+        open={show2FADialog}
+        onVerify={handle2FAVerification}
+        onCancel={handle2FACancel}
+      />
     </div>
   );
 };
