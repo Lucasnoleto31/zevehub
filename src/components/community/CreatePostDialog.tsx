@@ -12,7 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
-import { ImagePlus, X } from "lucide-react";
+import { X, Image, Smile, Paperclip } from "lucide-react";
 import { BadgeUnlockModal } from "./BadgeUnlockModal";
 import { HashtagAutocomplete } from "./HashtagAutocomplete";
 import { UserMentionSelector } from "./UserMentionSelector";
@@ -29,6 +29,7 @@ export function CreatePostDialog({
   const [content, setContent] = useState("");
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [attachmentFile, setAttachmentFile] = useState<File | null>(null);
   const [unlockedBadge, setUnlockedBadge] = useState<any>(null);
   const [detectedTags, setDetectedTags] = useState<string[]>([]);
   const [showHashtagAutocomplete, setShowHashtagAutocomplete] = useState(false);
@@ -164,6 +165,21 @@ export function CreatePostDialog({
     setImagePreview(null);
   };
 
+  const handleAttachmentChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 10 * 1024 * 1024) {
+        toast.error("Arquivo muito grande. Máximo 10MB");
+        return;
+      }
+      setAttachmentFile(file);
+    }
+  };
+
+  const removeAttachment = () => {
+    setAttachmentFile(null);
+  };
+
   const createPostMutation = useMutation({
     mutationFn: async () => {
       const {
@@ -191,6 +207,25 @@ export function CreatePostDialog({
         imageUrl = publicUrl;
       }
 
+      // Upload do anexo se existir
+      let attachmentUrl = null;
+      if (attachmentFile) {
+        const fileExt = attachmentFile.name.split(".").pop();
+        const fileName = `${user.id}/attachments/${Date.now()}.${fileExt}`;
+
+        const { error: uploadError } = await supabase.storage
+          .from("community-posts")
+          .upload(fileName, attachmentFile);
+
+        if (uploadError) throw uploadError;
+
+        const {
+          data: { publicUrl },
+        } = supabase.storage.from("community-posts").getPublicUrl(fileName);
+
+        attachmentUrl = publicUrl;
+      }
+
       // Criar post
       const { data: newPost, error } = await supabase
         .from("community_posts")
@@ -200,6 +235,7 @@ export function CreatePostDialog({
           category: detectedTags[0] || "geral",
           tags: detectedTags,
           image_url: imageUrl,
+          attachment_url: attachmentUrl,
         })
         .select()
         .single();
@@ -234,13 +270,14 @@ export function CreatePostDialog({
       }
     },
     onSuccess: () => {
-      toast.success("Post criado com sucesso! +20 pontos");
+      toast.success("Post criado com sucesso! +5 pontos");
       queryClient.invalidateQueries({ queryKey: ["community-posts"] });
       queryClient.invalidateQueries({ queryKey: ["user-badges"] });
       setContent("");
       setDetectedTags([]);
       setImageFile(null);
       setImagePreview(null);
+      setAttachmentFile(null);
       onOpenChange(false);
     },
     onError: () => {
@@ -324,12 +361,51 @@ export function CreatePostDialog({
                   htmlFor="image-upload"
                   className="cursor-pointer flex flex-col items-center gap-2"
                 >
-                  <ImagePlus className="h-8 w-8 text-muted-foreground" />
+                  <Image className="h-8 w-8 text-muted-foreground" />
                   <span className="text-sm text-muted-foreground">
                     Clique para adicionar uma imagem
                   </span>
                   <span className="text-xs text-muted-foreground">
                     Máximo 5MB
+                  </span>
+                </label>
+              </div>
+            )}
+          </div>
+
+          <div className="space-y-2">
+            <Label>Anexo (opcional)</Label>
+            {attachmentFile ? (
+              <div className="flex items-center gap-2 p-3 border rounded-lg">
+                <Paperclip className="w-4 h-4" />
+                <span className="text-sm flex-1">{attachmentFile.name}</span>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  onClick={removeAttachment}
+                >
+                  <X className="w-4 h-4" />
+                </Button>
+              </div>
+            ) : (
+              <div className="border-2 border-dashed rounded-lg p-6 text-center">
+                <Input
+                  id="attachment-upload"
+                  type="file"
+                  onChange={handleAttachmentChange}
+                  className="hidden"
+                />
+                <label
+                  htmlFor="attachment-upload"
+                  className="cursor-pointer flex flex-col items-center gap-2"
+                >
+                  <Paperclip className="h-8 w-8 text-muted-foreground" />
+                  <span className="text-sm text-muted-foreground">
+                    Clique para adicionar um arquivo
+                  </span>
+                  <span className="text-xs text-muted-foreground">
+                    Máximo 10MB - PDFs, documentos, planilhas, etc.
                   </span>
                 </label>
               </div>

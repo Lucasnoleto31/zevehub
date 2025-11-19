@@ -17,6 +17,7 @@ import PersonalFinances from "./pages/PersonalFinances";
 import MarketIntelligence from "./pages/MarketIntelligence";
 import Robos from "./pages/Robos";
 import Community from "./pages/Community";
+import Explore from "./pages/Explore";
 import PublicProfile from "./pages/PublicProfile";
 import HashtagPage from "./pages/HashtagPage";
 import NotFound from "./pages/NotFound";
@@ -53,6 +54,7 @@ const App = () => {
                 <Route path="/inteligencia-mercado" element={<MarketIntelligence />} />
                 <Route path="/robos" element={<Robos />} />
                 <Route path="/comunidade" element={<Community />} />
+                <Route path="/explorar" element={<Explore />} />
                 <Route path="/hashtag/:hashtag" element={<HashtagPage />} />
                 {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                 <Route path="*" element={<NotFound />} />
