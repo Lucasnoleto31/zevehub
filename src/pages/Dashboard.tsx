@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { User } from "@supabase/supabase-js";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import {
@@ -150,6 +150,21 @@ const Dashboard = () => {
                 
                 <div className="flex items-center gap-4">
                   <ThemeToggle />
+                  
+                  <div className="flex items-center gap-2">
+                    <Avatar className="h-8 w-8 border-2 border-primary">
+                      {profile?.avatar_url && (
+                        <AvatarImage src={profile.avatar_url} alt={profile.full_name || "Avatar"} />
+                      )}
+                      <AvatarFallback className="bg-primary text-primary-foreground text-sm">
+                        {profile?.full_name?.[0] || user?.email?.[0]?.toUpperCase() || "U"}
+                      </AvatarFallback>
+                    </Avatar>
+                    <span className="text-sm font-medium text-foreground hidden sm:inline">
+                      {profile?.full_name || user?.email}
+                    </span>
+                  </div>
+                  
                   <Button
                     variant="ghost"
                     size="sm"
