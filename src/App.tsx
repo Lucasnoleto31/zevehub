@@ -20,6 +20,7 @@ import Community from "./pages/Community";
 import Explore from "./pages/Explore";
 import PublicProfile from "./pages/PublicProfile";
 import HashtagPage from "./pages/HashtagPage";
+import Onboarding from "./pages/Onboarding";
 import NotFound from "./pages/NotFound";
 import { useEffect } from "react";
 import { registerServiceWorker } from "@/lib/register-sw";
@@ -44,6 +45,7 @@ const App = () => {
               <Routes>
                 <Route path="/" element={<Index />} />
                 <Route path="/auth" element={<Auth />} />
+                <Route path="/onboarding" element={<Onboarding />} />
                 <Route path="/dashboard" element={<Dashboard />} />
                 <Route path="/admin" element={<Admin />} />
                 <Route path="/operations" element={<Operations />} />
