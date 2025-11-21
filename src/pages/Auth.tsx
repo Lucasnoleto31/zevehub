@@ -279,112 +279,122 @@ const Auth = () => {
 
   if (showEmailConfirmation) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/5 via-background to-accent/5 p-4">
-        <div className="absolute inset-0 bg-grid-pattern opacity-5" />
-        
-        <div className="w-full max-w-md relative z-10 animate-fade-in">
-          <Card className="shadow-xl border-2">
-            <CardHeader className="text-center">
-              <div className="mx-auto w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-4">
-                <Shield className="w-8 h-8 text-primary" />
-              </div>
-              <CardTitle>Verifique seu e-mail</CardTitle>
-              <CardDescription>
-                Enviamos um link de confirmação para <strong>{signUpData.email}</strong>
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="bg-muted p-4 rounded-lg space-y-2">
-                <p className="text-sm text-muted-foreground">
-                  Por favor, verifique sua caixa de entrada e clique no link de confirmação para ativar sua conta.
-                </p>
-                <p className="text-sm text-muted-foreground">
-                  Não se esqueça de verificar a pasta de spam!
-                </p>
-              </div>
-              <Button 
-                variant="outline" 
-                className="w-full"
-                onClick={() => setShowEmailConfirmation(false)}
-              >
-                Voltar ao login
-              </Button>
-            </CardContent>
-          </Card>
+      <div className="min-h-screen flex items-center justify-center bg-background p-4">
+        <div className="w-full max-w-md animate-fade-in space-y-6">
+          <div className="flex flex-col items-center justify-center space-y-2">
+            <div className="w-20 h-20 rounded-2xl bg-primary/10 flex items-center justify-center mb-2">
+              <Shield className="w-10 h-10 text-primary" />
+            </div>
+            <h1 className="text-3xl font-bold text-foreground">Verifique seu e-mail</h1>
+            <p className="text-center text-muted-foreground">
+              Enviamos um link de confirmação para<br />
+              <strong className="text-foreground">{signUpData.email}</strong>
+            </p>
+          </div>
+
+          <div className="bg-muted/30 p-6 rounded-xl space-y-3 border border-border/50">
+            <p className="text-sm text-foreground/80">
+              Por favor, verifique sua caixa de entrada e clique no link de confirmação para ativar sua conta.
+            </p>
+            <p className="text-sm text-muted-foreground">
+              Não se esqueça de verificar a pasta de spam!
+            </p>
+          </div>
+
+          <Button 
+            variant="outline" 
+            className="w-full h-12"
+            onClick={() => setShowEmailConfirmation(false)}
+          >
+            Voltar ao login
+          </Button>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/5 via-background to-accent/5 p-4">
-      <div className="absolute inset-0 bg-grid-pattern opacity-5" />
+    <div className="min-h-screen flex items-center justify-center bg-background p-4 relative overflow-hidden">
+      {/* Subtle background elements */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-0 right-0 w-96 h-96 bg-primary/5 rounded-full blur-3xl" />
+        <div className="absolute bottom-0 left-0 w-96 h-96 bg-accent/5 rounded-full blur-3xl" />
+      </div>
       
       <div className="w-full max-w-md relative z-10 animate-fade-in">
-        <div className="text-center mb-8">
-          <div className="flex items-center justify-center gap-2 mb-4">
-            <div className="w-12 h-12 rounded-xl bg-gradient-primary flex items-center justify-center">
-              <TrendingUp className="w-6 h-6 text-primary-foreground" />
-            </div>
-            <h1 className="text-3xl font-bold text-foreground">Zeve Clientes</h1>
+        {/* Logo and branding */}
+        <div className="flex flex-col items-center mb-12">
+          <div className="w-16 h-16 rounded-2xl bg-primary flex items-center justify-center mb-4 shadow-lg">
+            <TrendingUp className="w-8 h-8 text-primary-foreground" />
           </div>
-          <p className="text-muted-foreground">Portal exclusivo de gestão e performance</p>
+          <h1 className="text-3xl font-bold text-foreground mb-2">Zeve Clientes</h1>
+          <p className="text-muted-foreground text-sm">Portal de gestão e performance</p>
         </div>
 
-        <Card className="shadow-xl border-2">
-          <CardHeader>
-            <CardTitle>Acesso ao Portal</CardTitle>
-            <CardDescription>Entre ou crie sua conta para continuar</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Tabs defaultValue="signin" className="w-full">
-              <TabsList className="grid w-full grid-cols-3">
-                <TabsTrigger value="signin">Entrar</TabsTrigger>
-                <TabsTrigger value="signup">Criar Conta</TabsTrigger>
-                <TabsTrigger value="reset">Recuperar</TabsTrigger>
-              </TabsList>
+        {/* Auth forms */}
+        <div className="space-y-6">
+          <Tabs defaultValue="signin" className="w-full">
+            <TabsList className="grid w-full grid-cols-3 h-12 bg-muted/30 p-1">
+              <TabsTrigger value="signin" className="data-[state=active]:bg-background data-[state=active]:shadow-sm">
+                Entrar
+              </TabsTrigger>
+              <TabsTrigger value="signup" className="data-[state=active]:bg-background data-[state=active]:shadow-sm">
+                Criar Conta
+              </TabsTrigger>
+              <TabsTrigger value="reset" className="data-[state=active]:bg-background data-[state=active]:shadow-sm">
+                Recuperar
+              </TabsTrigger>
+            </TabsList>
 
-              <TabsContent value="signin">
-                <form onSubmit={handleSignIn} className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="signin-email">E-mail</Label>
-                    <Input
-                      id="signin-email"
-                      type="email"
-                      placeholder="seu@email.com"
-                      value={signInData.email}
-                      onChange={(e) => {
-                        setSignInData({ ...signInData, email: e.target.value });
-                        validateField('email', e.target.value, signInSchema);
-                      }}
-                      disabled={loading}
-                      required
-                      className={fieldErrors.email ? "border-destructive" : ""}
-                    />
-                    {fieldErrors.email && (
-                      <p className="text-sm text-destructive">{fieldErrors.email}</p>
-                    )}
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="signin-password">Senha</Label>
-                    <Input
-                      id="signin-password"
-                      type="password"
-                      placeholder="••••••••"
-                      value={signInData.password}
-                      onChange={(e) => {
-                        setSignInData({ ...signInData, password: e.target.value });
-                        validateField('password', e.target.value, signInSchema);
-                      }}
-                      disabled={loading}
-                      required
-                      className={fieldErrors.password ? "border-destructive" : ""}
-                    />
-                    {fieldErrors.password && (
-                      <p className="text-sm text-destructive">{fieldErrors.password}</p>
-                    )}
-                  </div>
-                  <Button type="submit" className="w-full" disabled={loading}>
+            <TabsContent value="signin" className="mt-6">
+              <form onSubmit={handleSignIn} className="space-y-5">
+                <div className="space-y-2">
+                  <Label htmlFor="signin-email" className="text-sm font-medium text-foreground">
+                    E-mail
+                  </Label>
+                  <Input
+                    id="signin-email"
+                    type="email"
+                    placeholder="seu@email.com"
+                    value={signInData.email}
+                    onChange={(e) => {
+                      setSignInData({ ...signInData, email: e.target.value });
+                      validateField('email', e.target.value, signInSchema);
+                    }}
+                    disabled={loading}
+                    required
+                    className={`h-12 bg-background border-border/50 focus:border-primary ${
+                      fieldErrors.email ? "border-destructive" : ""
+                    }`}
+                  />
+                  {fieldErrors.email && (
+                    <p className="text-sm text-destructive">{fieldErrors.email}</p>
+                  )}
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="signin-password" className="text-sm font-medium text-foreground">
+                    Senha
+                  </Label>
+                  <Input
+                    id="signin-password"
+                    type="password"
+                    placeholder="••••••••"
+                    value={signInData.password}
+                    onChange={(e) => {
+                      setSignInData({ ...signInData, password: e.target.value });
+                      validateField('password', e.target.value, signInSchema);
+                    }}
+                    disabled={loading}
+                    required
+                    className={`h-12 bg-background border-border/50 focus:border-primary ${
+                      fieldErrors.password ? "border-destructive" : ""
+                    }`}
+                  />
+                  {fieldErrors.password && (
+                    <p className="text-sm text-destructive">{fieldErrors.password}</p>
+                  )}
+                </div>
+                <Button type="submit" className="w-full h-12 font-medium" disabled={loading}>
                     {loading ? (
                       <>
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -398,24 +408,25 @@ const Auth = () => {
                     )}
                   </Button>
 
-                  <div className="relative">
-                    <div className="absolute inset-0 flex items-center">
-                      <span className="w-full border-t" />
-                    </div>
-                    <div className="relative flex justify-center text-xs uppercase">
-                      <span className="bg-background px-2 text-muted-foreground">
-                        Ou continue com
-                      </span>
-                    </div>
+                <div className="relative my-6">
+                  <div className="absolute inset-0 flex items-center">
+                    <span className="w-full border-t border-border/50" />
                   </div>
+                  <div className="relative flex justify-center text-xs uppercase">
+                    <span className="bg-background px-3 text-muted-foreground font-medium">
+                      Ou continue com
+                    </span>
+                  </div>
+                </div>
 
-                  <div className="grid grid-cols-2 gap-3">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() => handleSocialLogin('google')}
-                      disabled={loading}
-                    >
+                <div className="grid grid-cols-2 gap-3">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => handleSocialLogin('google')}
+                    disabled={loading}
+                    className="h-12 border-border/50 hover:bg-muted/50"
+                  >
                       <svg className="mr-2 h-4 w-4" viewBox="0 0 24 24">
                         <path
                           fill="currentColor"
@@ -436,132 +447,145 @@ const Auth = () => {
                       </svg>
                       Google
                     </Button>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() => handleSocialLogin('facebook')}
-                      disabled={loading}
-                    >
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => handleSocialLogin('facebook')}
+                    disabled={loading}
+                    className="h-12 border-border/50 hover:bg-muted/50"
+                  >
                       <svg className="mr-2 h-4 w-4" fill="currentColor" viewBox="0 0 24 24">
                         <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
                       </svg>
                       Facebook
                     </Button>
-                  </div>
-                </form>
-              </TabsContent>
+                </div>
+              </form>
+            </TabsContent>
 
-              <TabsContent value="signup">
-                <form onSubmit={handleSignUp} className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="signup-name">Nome Completo</Label>
-                    <Input
-                      id="signup-name"
-                      type="text"
-                      placeholder="Seu nome completo"
-                      value={signUpData.fullName}
-                      onChange={(e) => {
-                        setSignUpData({ ...signUpData, fullName: e.target.value });
-                        validateField('fullName', e.target.value, signUpSchema);
+            <TabsContent value="signup" className="mt-6">
+              <form onSubmit={handleSignUp} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="signup-name" className="text-sm font-medium text-foreground">
+                    Nome Completo
+                  </Label>
+                  <Input
+                    id="signup-name"
+                    type="text"
+                    placeholder="Seu nome completo"
+                    value={signUpData.fullName}
+                    onChange={(e) => {
+                      setSignUpData({ ...signUpData, fullName: e.target.value });
+                      validateField('fullName', e.target.value, signUpSchema);
+                    }}
+                    disabled={loading}
+                    required
+                    className={`h-12 bg-background border-border/50 focus:border-primary ${
+                      fieldErrors.fullName ? "border-destructive" : ""
+                    }`}
+                  />
+                  {fieldErrors.fullName && (
+                    <p className="text-sm text-destructive">{fieldErrors.fullName}</p>
+                  )}
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="signup-email" className="text-sm font-medium text-foreground">
+                    E-mail
+                  </Label>
+                  <Input
+                    id="signup-email"
+                    type="email"
+                    placeholder="seu@email.com"
+                    value={signUpData.email}
+                    onChange={(e) => {
+                      setSignUpData({ ...signUpData, email: e.target.value });
+                      validateField('email', e.target.value, signUpSchema);
+                    }}
+                    disabled={loading}
+                    required
+                    className={`h-12 bg-background border-border/50 focus:border-primary ${
+                      fieldErrors.email ? "border-destructive" : ""
+                    }`}
+                  />
+                  {fieldErrors.email && (
+                    <p className="text-sm text-destructive">{fieldErrors.email}</p>
+                  )}
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="signup-password" className="text-sm font-medium text-foreground">
+                    Senha
+                  </Label>
+                  <Input
+                    id="signup-password"
+                    type="password"
+                    placeholder="Mínimo 6 caracteres"
+                    value={signUpData.password}
+                    onChange={(e) => {
+                      setSignUpData({ ...signUpData, password: e.target.value });
+                      validateField('password', e.target.value, signUpSchema);
+                    }}
+                    disabled={loading}
+                    required
+                    className={`h-12 bg-background border-border/50 focus:border-primary ${
+                      fieldErrors.password ? "border-destructive" : ""
+                    }`}
+                  />
+                  {fieldErrors.password && (
+                    <p className="text-sm text-destructive">{fieldErrors.password}</p>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="signup-phone" className="text-sm font-medium text-foreground">
+                    Telefone
+                  </Label>
+                  <Input
+                    id="signup-phone"
+                    type="tel"
+                    placeholder="11999999999"
+                    value={signUpData.phone}
+                    onChange={(e) => {
+                      const value = e.target.value.replace(/\D/g, '');
+                      setSignUpData({ ...signUpData, phone: value });
+                      validateField('phone', value, signUpSchema);
+                    }}
+                    disabled={loading}
+                    required
+                    className={`h-12 bg-background border-border/50 focus:border-primary ${
+                      fieldErrors.phone ? "border-destructive" : ""
+                    }`}
+                  />
+                  {fieldErrors.phone && (
+                    <p className="text-sm text-destructive">{fieldErrors.phone}</p>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="terms"
+                      checked={signUpData.acceptTerms}
+                      onCheckedChange={(checked) => {
+                        setSignUpData({ ...signUpData, acceptTerms: checked as boolean });
+                        validateField('acceptTerms', checked, signUpSchema);
                       }}
                       disabled={loading}
-                      required
-                      className={fieldErrors.fullName ? "border-destructive" : ""}
                     />
-                    {fieldErrors.fullName && (
-                      <p className="text-sm text-destructive">{fieldErrors.fullName}</p>
-                    )}
+                    <Label 
+                      htmlFor="terms" 
+                      className={`text-sm cursor-pointer ${
+                        fieldErrors.acceptTerms ? "text-destructive" : "text-muted-foreground"
+                      }`}
+                    >
+                      Aceito os termos de uso e política de privacidade
+                    </Label>
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="signup-email">E-mail</Label>
-                    <Input
-                      id="signup-email"
-                      type="email"
-                      placeholder="seu@email.com"
-                      value={signUpData.email}
-                      onChange={(e) => {
-                        setSignUpData({ ...signUpData, email: e.target.value });
-                        validateField('email', e.target.value, signUpSchema);
-                      }}
-                      disabled={loading}
-                      required
-                      className={fieldErrors.email ? "border-destructive" : ""}
-                    />
-                    {fieldErrors.email && (
-                      <p className="text-sm text-destructive">{fieldErrors.email}</p>
-                    )}
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="signup-password">Senha</Label>
-                    <Input
-                      id="signup-password"
-                      type="password"
-                      placeholder="Mínimo 6 caracteres"
-                      value={signUpData.password}
-                      onChange={(e) => {
-                        setSignUpData({ ...signUpData, password: e.target.value });
-                        validateField('password', e.target.value, signUpSchema);
-                      }}
-                      disabled={loading}
-                      required
-                      className={fieldErrors.password ? "border-destructive" : ""}
-                    />
-                    {fieldErrors.password && (
-                      <p className="text-sm text-destructive">{fieldErrors.password}</p>
-                    )}
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="signup-phone">Telefone WhatsApp</Label>
-                    <Input
-                      id="signup-phone"
-                      type="tel"
-                      placeholder="11999999999"
-                      value={signUpData.phone}
-                      onChange={(e) => {
-                        const phone = e.target.value.replace(/\D/g, '');
-                        setSignUpData({ ...signUpData, phone });
-                        validateField('phone', phone, signUpSchema);
-                      }}
-                      disabled={loading}
-                      required
-                      className={fieldErrors.phone ? "border-destructive" : ""}
-                    />
-                    {fieldErrors.phone && (
-                      <p className="text-sm text-destructive">{fieldErrors.phone}</p>
-                    )}
-                  </div>
-                  <div className="space-y-2">
-                    <div className="flex items-start space-x-2 pt-2">
-                      <Checkbox
-                        id="terms"
-                        checked={signUpData.acceptTerms}
-                        onCheckedChange={(checked) => {
-                          setSignUpData({ ...signUpData, acceptTerms: checked as boolean });
-                          validateField('acceptTerms', checked, signUpSchema);
-                        }}
-                        disabled={loading}
-                        required
-                        className={fieldErrors.acceptTerms ? "border-destructive" : ""}
-                      />
-                      <label
-                        htmlFor="terms"
-                        className="text-sm text-muted-foreground leading-normal cursor-pointer"
-                      >
-                        Eu aceito os{" "}
-                        <a href="#" className="text-primary hover:underline">
-                          termos de uso
-                        </a>{" "}
-                        e{" "}
-                        <a href="#" className="text-primary hover:underline">
-                          política de privacidade
-                        </a>
-                      </label>
-                    </div>
-                    {fieldErrors.acceptTerms && (
-                      <p className="text-sm text-destructive">{fieldErrors.acceptTerms}</p>
-                    )}
-                  </div>
-                  <Button type="submit" className="w-full" disabled={loading}>
+                  {fieldErrors.acceptTerms && (
+                    <p className="text-sm text-destructive">{fieldErrors.acceptTerms}</p>
+                  )}
+                </div>
+
+                <Button type="submit" className="w-full h-12 font-medium" disabled={loading}>
                     {loading ? (
                       <>
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -574,10 +598,12 @@ const Auth = () => {
                 </form>
               </TabsContent>
 
-              <TabsContent value="reset">
-                <form onSubmit={handleResetPassword} className="space-y-4">
+              <TabsContent value="reset" className="mt-6">
+                <form onSubmit={handleResetPassword} className="space-y-5">
                   <div className="space-y-2">
-                    <Label htmlFor="reset-email">E-mail</Label>
+                    <Label htmlFor="reset-email" className="text-sm font-medium text-foreground">
+                      E-mail
+                    </Label>
                     <Input
                       id="reset-email"
                       type="email"
@@ -589,16 +615,16 @@ const Auth = () => {
                       }}
                       disabled={loading}
                       required
-                      className={fieldErrors.email ? "border-destructive" : ""}
+                      className={`h-12 bg-background border-border/50 focus:border-primary ${
+                        fieldErrors.email ? "border-destructive" : ""
+                      }`}
                     />
                     {fieldErrors.email && (
                       <p className="text-sm text-destructive">{fieldErrors.email}</p>
                     )}
                   </div>
-                  <p className="text-sm text-muted-foreground">
-                    Enviaremos um link de recuperação para o seu e-mail.
-                  </p>
-                  <Button type="submit" className="w-full" disabled={loading}>
+                  
+                  <Button type="submit" className="w-full h-12 font-medium" disabled={loading}>
                     {loading ? (
                       <>
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -608,23 +634,21 @@ const Auth = () => {
                       "Enviar Link de Recuperação"
                     )}
                   </Button>
+
+                  <p className="text-sm text-muted-foreground text-center mt-4">
+                    Lembre-se de verificar sua pasta de spam
+                  </p>
                 </form>
               </TabsContent>
             </Tabs>
-          </CardContent>
-        </Card>
-
-        <div className="mt-6 text-center text-sm text-muted-foreground">
-          <Shield className="w-4 h-4 inline mr-1" />
-          Seus dados estão protegidos com criptografia de ponta
+          </div>
         </div>
-      </div>
 
-      <TwoFactorVerification
-        open={show2FADialog}
-        onVerify={handle2FAVerification}
-        onCancel={handle2FACancel}
-      />
+        <TwoFactorVerification
+          open={show2FADialog}
+          onVerify={handle2FAVerification}
+          onCancel={handle2FACancel}
+        />
     </div>
   );
 };
