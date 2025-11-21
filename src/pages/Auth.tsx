@@ -13,6 +13,14 @@ import { z } from "zod";
 import * as OTPAuth from "otpauth";
 import { TwoFactorVerification } from "@/components/auth/TwoFactorVerification";
 
+const tradingQuotes = [
+  "O sucesso no trading começa com disciplina e análise",
+  "Gerenciamento de risco é a chave para longevidade no mercado",
+  "Traders vencedores controlam suas emoções, não o mercado",
+  "Consistência supera operações isoladas de sucesso",
+  "O mercado recompensa paciência e preparação"
+];
+
 const signUpSchema = z.object({
   email: z.string().email({ message: "E-mail inválido" }),
   password: z.string().min(6, { message: "Senha deve ter no mínimo 6 caracteres" }),
@@ -33,6 +41,7 @@ const resetPasswordSchema = z.object({
 const Auth = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
+  const [currentQuote, setCurrentQuote] = useState(0);
   const [signUpData, setSignUpData] = useState({ 
     email: "", 
     password: "", 
@@ -47,6 +56,14 @@ const Auth = () => {
   const [show2FADialog, setShow2FADialog] = useState(false);
   const [pendingUserId, setPendingUserId] = useState<string | null>(null);
   const [totpSecret, setTotpSecret] = useState<string | null>(null);
+
+  // Rotate trading quotes
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentQuote((prev) => (prev + 1) % tradingQuotes.length);
+    }, 4000);
+    return () => clearInterval(interval);
+  }, []);
 
   useEffect(() => {
     const checkUser = async () => {
@@ -209,7 +226,14 @@ const Auth = () => {
         }
 
         toast.success("Login realizado com sucesso!");
-        navigate("/dashboard");
+        
+        // Check if user has completed onboarding
+        const hasCompletedOnboarding = localStorage.getItem("onboarding_completed");
+        if (!hasCompletedOnboarding) {
+          navigate("/onboarding");
+        } else {
+          navigate("/dashboard");
+        }
       }
     } catch (error: any) {
       if (error instanceof z.ZodError) {
@@ -256,7 +280,14 @@ const Auth = () => {
 
         toast.success("Autenticação 2FA bem-sucedida!");
         setShow2FADialog(false);
-        navigate("/dashboard");
+        
+        // Check if user has completed onboarding
+        const hasCompletedOnboarding = localStorage.getItem("onboarding_completed");
+        if (!hasCompletedOnboarding) {
+          navigate("/onboarding");
+        } else {
+          navigate("/dashboard");
+        }
         return true;
       }
 
@@ -315,20 +346,33 @@ const Auth = () => {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4 relative overflow-hidden">
-      {/* Subtle background elements */}
+      {/* Animated background elements */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-0 right-0 w-96 h-96 bg-primary/5 rounded-full blur-3xl" />
-        <div className="absolute bottom-0 left-0 w-96 h-96 bg-accent/5 rounded-full blur-3xl" />
+        <div className="absolute top-0 right-0 w-96 h-96 bg-primary/5 rounded-full blur-3xl animate-pulse" />
+        <div className="absolute bottom-0 left-0 w-96 h-96 bg-accent/5 rounded-full blur-3xl animate-pulse" style={{ animationDelay: "1s" }} />
+        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-full h-full opacity-5">
+          <div className="absolute top-10 left-10 text-6xl font-bold text-primary/20 animate-pulse">📈</div>
+          <div className="absolute top-20 right-20 text-4xl font-bold text-success/20 animate-pulse" style={{ animationDelay: "0.5s" }}>🎯</div>
+          <div className="absolute bottom-20 left-20 text-5xl font-bold text-warning/20 animate-pulse" style={{ animationDelay: "1.5s" }}>💹</div>
+          <div className="absolute bottom-10 right-10 text-4xl font-bold text-primary/20 animate-pulse" style={{ animationDelay: "2s" }}>⚡</div>
+        </div>
       </div>
       
       <div className="w-full max-w-md relative z-10 animate-fade-in">
         {/* Logo and branding */}
         <div className="flex flex-col items-center mb-12">
-          <div className="w-16 h-16 rounded-2xl bg-primary flex items-center justify-center mb-4 shadow-lg">
+          <div className="w-16 h-16 rounded-2xl bg-primary flex items-center justify-center mb-4 shadow-lg animate-pulse">
             <TrendingUp className="w-8 h-8 text-primary-foreground" />
           </div>
-          <h1 className="text-3xl font-bold text-foreground mb-2">Zeve Clientes</h1>
-          <p className="text-muted-foreground text-sm">Portal de gestão e performance</p>
+          <h1 className="text-3xl font-bold text-foreground mb-2 animate-slide-up">Zeve Clientes</h1>
+          <p className="text-muted-foreground text-sm animate-fade-in" style={{ animationDelay: "0.2s" }}>
+            Portal de gestão e performance
+          </p>
+          <div className="mt-4 h-6 text-center animate-fade-in" style={{ animationDelay: "0.4s" }}>
+            <p className="text-xs text-muted-foreground italic transition-opacity duration-500">
+              "{tradingQuotes[currentQuote]}"
+            </p>
+          </div>
         </div>
 
         {/* Auth forms */}
