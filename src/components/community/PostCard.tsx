@@ -12,7 +12,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Heart, ThumbsUp, ThumbsDown, MessageCircle, Share2, MoreVertical, Edit, Trash2, Flag } from "lucide-react";
+import { Heart, ThumbsUp, ThumbsDown, MessageCircle, Share2, MoreVertical, Edit, Trash2, Flag, FileText, Download, Maximize2 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
@@ -52,6 +52,7 @@ export function PostCard({ post }: PostCardProps) {
   const [showReportDialog, setShowReportDialog] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [showAttachmentPreview, setShowAttachmentPreview] = useState(false);
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
@@ -264,6 +265,64 @@ export function PostCard({ post }: PostCardProps) {
             className="rounded-lg w-full max-h-96 object-cover"
           />
         )}
+        
+        {post.attachment_url && (
+          <div className="border rounded-lg overflow-hidden">
+            {post.attachment_url.toLowerCase().endsWith('.pdf') ? (
+              <div className="space-y-2">
+                <div className="bg-muted/50 p-3 flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <FileText className="h-5 w-5 text-primary" />
+                    <span className="text-sm font-medium">Documento PDF</span>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setShowAttachmentPreview(true)}
+                    >
+                      <Maximize2 className="h-4 w-4 mr-1" />
+                      Ver completo
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => window.open(post.attachment_url, '_blank')}
+                    >
+                      <Download className="h-4 w-4 mr-1" />
+                      Download
+                    </Button>
+                  </div>
+                </div>
+                <iframe
+                  src={post.attachment_url}
+                  className="w-full h-96 border-0"
+                  title="PDF Preview"
+                />
+              </div>
+            ) : (
+              <div className="bg-muted/50 p-6 flex flex-col items-center gap-3">
+                <FileText className="h-12 w-12 text-primary" />
+                <div className="text-center">
+                  <p className="font-medium">Documento anexado</p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {post.attachment_url.split('/').pop()?.split('?')[0] || 'arquivo'}
+                  </p>
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => window.open(post.attachment_url, '_blank')}
+                  >
+                    <Download className="h-4 w-4 mr-1" />
+                    Download
+                  </Button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Reações */}
@@ -385,6 +444,37 @@ export function PostCard({ post }: PostCardProps) {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Dialog de preview em tela cheia para PDFs */}
+      {post.attachment_url?.toLowerCase().endsWith('.pdf') && (
+        <AlertDialog open={showAttachmentPreview} onOpenChange={setShowAttachmentPreview}>
+          <AlertDialogContent className="max-w-6xl h-[90vh]">
+            <AlertDialogHeader>
+              <AlertDialogTitle className="flex items-center justify-between">
+                <span>Visualização do Documento</span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => window.open(post.attachment_url, '_blank')}
+                >
+                  <Download className="h-4 w-4 mr-1" />
+                  Download
+                </Button>
+              </AlertDialogTitle>
+            </AlertDialogHeader>
+            <div className="flex-1 overflow-hidden">
+              <iframe
+                src={post.attachment_url}
+                className="w-full h-full border-0 rounded"
+                title="PDF Full Preview"
+              />
+            </div>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Fechar</AlertDialogCancel>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      )}
     </Card>
   );
 }
