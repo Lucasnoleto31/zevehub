@@ -326,6 +326,7 @@ export type Database = {
           created_at: string
           id: string
           image_url: string | null
+          image_urls: string[] | null
           status: string
           tags: string[] | null
           updated_at: string
@@ -338,6 +339,7 @@ export type Database = {
           created_at?: string
           id?: string
           image_url?: string | null
+          image_urls?: string[] | null
           status?: string
           tags?: string[] | null
           updated_at?: string
@@ -350,6 +352,7 @@ export type Database = {
           created_at?: string
           id?: string
           image_url?: string | null
+          image_urls?: string[] | null
           status?: string
           tags?: string[] | null
           updated_at?: string
