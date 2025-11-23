@@ -147,10 +147,6 @@ export function CreatePostDialog({
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      if (file.size > 5 * 1024 * 1024) {
-        toast.error("Imagem muito grande. Máximo 5MB");
-        return;
-      }
       setImageFile(file);
       const reader = new FileReader();
       reader.onloadend = () => {
@@ -168,10 +164,6 @@ export function CreatePostDialog({
   const handleAttachmentChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      if (file.size > 10 * 1024 * 1024) {
-        toast.error("Arquivo muito grande. Máximo 10MB");
-        return;
-      }
       setAttachmentFile(file);
     }
   };
@@ -365,9 +357,6 @@ export function CreatePostDialog({
                   <span className="text-sm text-muted-foreground">
                     Clique para adicionar uma imagem
                   </span>
-                  <span className="text-xs text-muted-foreground">
-                    Máximo 5MB
-                  </span>
                 </label>
               </div>
             )}
@@ -405,7 +394,7 @@ export function CreatePostDialog({
                     Clique para adicionar um arquivo
                   </span>
                   <span className="text-xs text-muted-foreground">
-                    Máximo 10MB - PDFs, documentos, planilhas, etc.
+                    PDFs, documentos, planilhas, etc.
                   </span>
                 </label>
               </div>
