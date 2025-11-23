@@ -27,8 +27,8 @@ export function CreatePostDialog({
   onOpenChange,
 }: CreatePostDialogProps) {
   const [content, setContent] = useState("");
-  const [imageFile, setImageFile] = useState<File | null>(null);
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [imageFiles, setImageFiles] = useState<File[]>([]);
+  const [imagePreviews, setImagePreviews] = useState<string[]>([]);
   const [attachmentFile, setAttachmentFile] = useState<File | null>(null);
   const [unlockedBadge, setUnlockedBadge] = useState<any>(null);
   const [detectedTags, setDetectedTags] = useState<string[]>([]);
@@ -145,20 +145,24 @@ export function CreatePostDialog({
   };
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setImageFile(file);
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
+
+    const newFiles = [...imageFiles, ...files];
+    setImageFiles(newFiles);
+
+    files.forEach(file => {
       const reader = new FileReader();
       reader.onloadend = () => {
-        setImagePreview(reader.result as string);
+        setImagePreviews(prev => [...prev, reader.result as string]);
       };
       reader.readAsDataURL(file);
-    }
+    });
   };
 
-  const removeImage = () => {
-    setImageFile(null);
-    setImagePreview(null);
+  const removeImage = (index: number) => {
+    setImageFiles(prev => prev.filter((_, i) => i !== index));
+    setImagePreviews(prev => prev.filter((_, i) => i !== index));
   };
 
   const handleAttachmentChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -179,25 +183,29 @@ export function CreatePostDialog({
       } = await supabase.auth.getUser();
       if (!user) throw new Error("Usuário não autenticado");
 
-      let imageUrl = null;
+      const imageUrls: string[] = [];
 
-      // Upload da imagem se existir
-      if (imageFile) {
-        const fileExt = imageFile.name.split(".").pop();
-        const fileName = `${user.id}/${Date.now()}.${fileExt}`;
+      // Upload de múltiplas imagens se existirem
+      if (imageFiles.length > 0) {
+        for (const imageFile of imageFiles) {
+          const fileExt = imageFile.name.split(".").pop();
+          const fileName = `${user.id}/${Date.now()}-${Math.random()}.${fileExt}`;
 
-        const { error: uploadError } = await supabase.storage
-          .from("community-posts")
-          .upload(fileName, imageFile);
+          const { error: uploadError } = await supabase.storage
+            .from("community-posts")
+            .upload(fileName, imageFile);
 
-        if (uploadError) throw uploadError;
+          if (uploadError) throw uploadError;
 
-        const {
-          data: { publicUrl },
-        } = supabase.storage.from("community-posts").getPublicUrl(fileName);
+          const {
+            data: { publicUrl },
+          } = supabase.storage.from("community-posts").getPublicUrl(fileName);
 
-        imageUrl = publicUrl;
+          imageUrls.push(publicUrl);
+        }
       }
+
+      const imageUrl = imageUrls.length > 0 ? imageUrls[0] : null;
 
       // Upload do anexo se existir
       let attachmentUrl = null;
@@ -218,7 +226,7 @@ export function CreatePostDialog({
         attachmentUrl = publicUrl;
       }
 
-      // Criar post
+      // Criar post com array de imagens
       const { data: newPost, error } = await supabase
         .from("community_posts")
         .insert({
@@ -228,6 +236,7 @@ export function CreatePostDialog({
           tags: detectedTags,
           image_url: imageUrl,
           attachment_url: attachmentUrl,
+          image_urls: imageUrls.length > 0 ? imageUrls : null,
         })
         .select()
         .single();
@@ -267,8 +276,8 @@ export function CreatePostDialog({
       queryClient.invalidateQueries({ queryKey: ["user-badges"] });
       setContent("");
       setDetectedTags([]);
-      setImageFile(null);
-      setImagePreview(null);
+      setImageFiles([]);
+      setImagePreviews([]);
       setAttachmentFile(null);
       onOpenChange(false);
     },
@@ -323,43 +332,53 @@ export function CreatePostDialog({
           </div>
 
           <div className="space-y-2">
-            <Label>Imagem (opcional)</Label>
-            {imagePreview ? (
-              <div className="relative">
-                <img
-                  src={imagePreview}
-                  alt="Preview"
-                  className="w-full h-48 object-cover rounded-lg"
-                />
-                <Button
-                  variant="destructive"
-                  size="icon"
-                  className="absolute top-2 right-2"
-                  onClick={removeImage}
-                >
-                  <X className="h-4 w-4" />
-                </Button>
+            <Label>Imagens (opcional - múltiplas)</Label>
+            {imagePreviews.length > 0 ? (
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                {imagePreviews.map((preview, index) => (
+                  <div key={index} className="relative group">
+                    <img
+                      src={preview}
+                      alt={`Preview ${index + 1}`}
+                      className="w-full h-32 object-cover rounded-lg"
+                    />
+                    <Button
+                      variant="destructive"
+                      size="icon"
+                      className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity"
+                      onClick={() => removeImage(index)}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                    <div className="absolute bottom-2 left-2 bg-black/60 text-white text-xs px-2 py-1 rounded">
+                      {index + 1}/{imagePreviews.length}
+                    </div>
+                  </div>
+                ))}
               </div>
-            ) : (
-              <div className="border-2 border-dashed rounded-lg p-8 text-center">
-                <Input
-                  id="image-upload"
-                  type="file"
-                  accept="image/*"
-                  onChange={handleImageChange}
-                  className="hidden"
-                />
-                <label
-                  htmlFor="image-upload"
-                  className="cursor-pointer flex flex-col items-center gap-2"
-                >
-                  <Image className="h-8 w-8 text-muted-foreground" />
-                  <span className="text-sm text-muted-foreground">
-                    Clique para adicionar uma imagem
-                  </span>
-                </label>
-              </div>
-            )}
+            ) : null}
+            <div className="border-2 border-dashed rounded-lg p-6 text-center">
+              <Input
+                id="image-upload"
+                type="file"
+                accept="image/*"
+                multiple
+                onChange={handleImageChange}
+                className="hidden"
+              />
+              <label
+                htmlFor="image-upload"
+                className="cursor-pointer flex flex-col items-center gap-2"
+              >
+                <Image className="h-8 w-8 text-muted-foreground" />
+                <span className="text-sm text-muted-foreground">
+                  Clique para adicionar imagens
+                </span>
+                <span className="text-xs text-muted-foreground">
+                  Você pode selecionar múltiplas imagens
+                </span>
+              </label>
+            </div>
           </div>
 
           <div className="space-y-2">

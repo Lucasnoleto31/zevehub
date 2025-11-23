@@ -12,7 +12,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Heart, ThumbsUp, ThumbsDown, MessageCircle, Share2, MoreVertical, Edit, Trash2, Flag, FileText, Download, Maximize2 } from "lucide-react";
+import { Heart, ThumbsUp, ThumbsDown, MessageCircle, Share2, MoreVertical, Edit, Trash2, Flag, FileText, Download, Maximize2, ChevronLeft, ChevronRight } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
@@ -30,6 +30,13 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  Carousel,
+  CarouselContent,
+  CarouselItem,
+  CarouselNext,
+  CarouselPrevious,
+} from "@/components/ui/carousel";
 
 interface PostCardProps {
   post: any;
@@ -258,13 +265,42 @@ export function PostCard({ post }: PostCardProps) {
         <p className="text-foreground whitespace-pre-wrap">
           <PostContent content={post.content} />
         </p>
-        {post.image_url && (
+        
+        {/* Galeria de imagens com carrossel */}
+        {post.image_urls && post.image_urls.length > 0 ? (
+          <div className="relative">
+            <Carousel className="w-full">
+              <CarouselContent>
+                {post.image_urls.map((imageUrl: string, index: number) => (
+                  <CarouselItem key={index}>
+                    <div className="relative">
+                      <img
+                        src={imageUrl}
+                        alt={`Post image ${index + 1}`}
+                        className="rounded-lg w-full max-h-[500px] object-cover"
+                      />
+                      <div className="absolute bottom-3 right-3 bg-black/70 text-white text-xs px-3 py-1.5 rounded-full backdrop-blur-sm">
+                        {index + 1} / {post.image_urls.length}
+                      </div>
+                    </div>
+                  </CarouselItem>
+                ))}
+              </CarouselContent>
+              {post.image_urls.length > 1 && (
+                <>
+                  <CarouselPrevious className="left-2" />
+                  <CarouselNext className="right-2" />
+                </>
+              )}
+            </Carousel>
+          </div>
+        ) : post.image_url ? (
           <img
             src={post.image_url}
             alt="Post image"
             className="rounded-lg w-full max-h-96 object-cover"
           />
-        )}
+        ) : null}
         
         {post.attachment_url && (
           <div className="border rounded-lg overflow-hidden">
