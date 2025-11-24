@@ -15,7 +15,6 @@ import DeleteOperationsByStrategy from "@/components/operations/DeleteOperations
 import StrategyManager from "@/components/operations/StrategyManager";
 import { OperationsFilters, type FilterValues } from "@/components/operations/OperationsFilters";
 import { ThemeToggle } from "@/components/ThemeToggle";
-import { TradersComparison } from "@/components/operations/TradersComparison";
 
 const Operations = () => {
   const navigate = useNavigate();
@@ -106,11 +105,10 @@ const Operations = () => {
 
       <main className="container mx-auto px-4 py-8">
         <Tabs defaultValue="register" className="space-y-6">
-          <TabsList className="grid w-full max-w-3xl grid-cols-4">
+          <TabsList className="grid w-full max-w-2xl grid-cols-3">
             <TabsTrigger value="register">Registrar</TabsTrigger>
             <TabsTrigger value="strategies">Estratégias</TabsTrigger>
             <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
-            <TabsTrigger value="comparison">Comparação</TabsTrigger>
           </TabsList>
 
           <TabsContent value="register" className="space-y-6">
@@ -188,10 +186,6 @@ const Operations = () => {
 
           <TabsContent value="dashboard">
             <OperationsDashboard userId={user?.id} />
-          </TabsContent>
-
-          <TabsContent value="comparison">
-            <TradersComparison />
           </TabsContent>
         </Tabs>
       </main>
