@@ -18,6 +18,8 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import { ExportOperations } from "@/components/operations/ExportOperations";
 import { AdvancedFilters, type AdvancedFilterValues } from "@/components/operations/AdvancedFilters";
 import { StatsCards } from "@/components/operations/StatsCards";
+import { RiskAlerts } from "@/components/operations/RiskAlerts";
+import { EnhancedStatsCards } from "@/components/operations/EnhancedStatsCards";
 
 const Operations = () => {
   const navigate = useNavigate();
@@ -42,6 +44,9 @@ const Operations = () => {
     winRate: 0,
     profitTotal: 0,
     averagePerTrade: 0,
+    bestTrade: 0,
+    worstTrade: 0,
+    currentStreak: 0,
   });
 
   useEffect(() => {
@@ -93,12 +98,37 @@ const Operations = () => {
       const positiveOps = filteredData.filter((op) => (op.result || 0) > 0).length;
       const winRate = totalTrades > 0 ? (positiveOps / totalTrades) * 100 : 0;
       const averagePerTrade = totalTrades > 0 ? profitTotal / totalTrades : 0;
+      
+      const bestTrade = filteredData.length > 0 
+        ? Math.max(...filteredData.map(op => op.result || 0))
+        : 0;
+      
+      const worstTrade = filteredData.length > 0
+        ? Math.min(...filteredData.map(op => op.result || 0))
+        : 0;
+
+      // Calcular sequência atual
+      let currentStreak = 0;
+      const sortedOps = [...filteredData].sort((a, b) => 
+        b.operation_date.localeCompare(a.operation_date)
+      );
+      
+      for (const op of sortedOps) {
+        if (op.result > 0) {
+          currentStreak++;
+        } else {
+          break;
+        }
+      }
 
       setStats({
         totalTrades,
         winRate,
         profitTotal,
         averagePerTrade,
+        bestTrade,
+        worstTrade,
+        currentStreak,
       });
     } catch (error) {
       console.error("Erro ao carregar operações:", error);
@@ -236,44 +266,55 @@ const Operations = () => {
           </TabsContent>
 
           <TabsContent value="analytics" className="space-y-6">
-            <AdvancedFilters onFiltersChange={setAdvancedFilters} />
-            
-            <StatsCards
-              totalTrades={stats.totalTrades}
-              winRate={stats.winRate}
-              profitTotal={stats.profitTotal}
-              averagePerTrade={stats.averagePerTrade}
-            />
-
-            <Card>
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <CardTitle>Minhas Operações Detalhadas</CardTitle>
-                    <CardDescription>
-                      {operations.length} operações suas encontradas
-                    </CardDescription>
-                  </div>
-                  <ExportOperations
-                    operations={operations}
-                    stats={{
-                      totalOperations: stats.totalTrades,
-                      winRate: stats.winRate,
-                      totalResult: stats.profitTotal,
-                      averageWin: operations.filter(op => op.result > 0).reduce((sum, op) => sum + op.result, 0) / Math.max(operations.filter(op => op.result > 0).length, 1),
-                      averageLoss: Math.abs(operations.filter(op => op.result < 0).reduce((sum, op) => sum + op.result, 0) / Math.max(operations.filter(op => op.result < 0).length, 1)),
-                    }}
-                  />
-                </div>
-              </CardHeader>
-              <CardContent>
-                <OperationsTable
-                  userId={user?.id}
-                  isAdmin={isAdmin}
-                  filters={filters}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              <div className="lg:col-span-2 space-y-6">
+                <AdvancedFilters onFiltersChange={setAdvancedFilters} />
+                
+                <EnhancedStatsCards
+                  totalTrades={stats.totalTrades}
+                  winRate={stats.winRate}
+                  profitTotal={stats.profitTotal}
+                  averagePerTrade={stats.averagePerTrade}
+                  bestTrade={stats.bestTrade}
+                  worstTrade={stats.worstTrade}
+                  currentStreak={stats.currentStreak}
                 />
-              </CardContent>
-            </Card>
+
+                <Card>
+                  <CardHeader>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <CardTitle>Minhas Operações Detalhadas</CardTitle>
+                        <CardDescription>
+                          {operations.length} operações suas encontradas
+                        </CardDescription>
+                      </div>
+                      <ExportOperations
+                        operations={operations}
+                        stats={{
+                          totalOperations: stats.totalTrades,
+                          winRate: stats.winRate,
+                          totalResult: stats.profitTotal,
+                          averageWin: operations.filter(op => op.result > 0).reduce((sum, op) => sum + op.result, 0) / Math.max(operations.filter(op => op.result > 0).length, 1),
+                          averageLoss: Math.abs(operations.filter(op => op.result < 0).reduce((sum, op) => sum + op.result, 0) / Math.max(operations.filter(op => op.result < 0).length, 1)),
+                        }}
+                      />
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <OperationsTable
+                      userId={user?.id}
+                      isAdmin={isAdmin}
+                      filters={filters}
+                    />
+                  </CardContent>
+                </Card>
+              </div>
+
+              <div className="lg:col-span-1">
+                <RiskAlerts operations={operations} />
+              </div>
+            </div>
           </TabsContent>
         </Tabs>
       </main>
