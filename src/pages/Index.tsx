@@ -11,12 +11,15 @@ import {
   Activity,
   BarChart3,
   Users,
-  Clock,
-  CheckCircle2,
-  X,
+  Zap,
+  Shield,
+  Target,
   Star,
   Quote,
-  ChevronDown,
+  Sparkles,
+  ArrowRight,
+  CheckCircle2,
+  X,
 } from "lucide-react";
 import { Navbar } from "@/components/Navbar";
 import { useScrollAnimation } from "@/hooks/useScrollAnimation";
@@ -77,115 +80,102 @@ const Index = () => {
     <div className="min-h-screen bg-background relative overflow-hidden">
       <Navbar theme={theme} onThemeToggle={toggleTheme} />
 
-      {/* Parallax Background Elements */}
-      <div
-        className="absolute top-40 right-20 w-80 h-80 opacity-[0.08] pointer-events-none"
-        style={{ transform: `translateY(${parallaxOffset}px)` }}
-      >
-        <svg viewBox="0 0 200 100" className="w-full h-full">
-          <polyline
-            fill="none"
-            stroke="hsl(217 91% 60%)"
-            strokeWidth="2"
-            points="0,80 40,60 80,40 120,50 160,20 200,30"
-          />
-        </svg>
-      </div>
-
-      <div
-        className="absolute top-[600px] left-20 w-64 h-64 opacity-[0.06] pointer-events-none"
-        style={{ transform: `translateY(${parallaxOffset * 1.5}px)` }}
-      >
-        <svg viewBox="0 0 200 200" className="w-full h-full">
-          <circle
-            cx="100"
-            cy="100"
-            r="80"
-            fill="none"
-            stroke="hsl(217 91% 60%)"
-            strokeWidth="2"
-            strokeDasharray="10,5"
-          />
-          <circle cx="100" cy="100" r="50" fill="none" stroke="hsl(217 91% 60%)" strokeWidth="1.5" />
-        </svg>
-      </div>
+      {/* Modern Gradient Background */}
+      <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-background to-accent/5 pointer-events-none" />
+      
+      {/* Floating Orbs */}
+      <div className="absolute top-20 right-[10%] w-[600px] h-[600px] bg-primary/10 rounded-full blur-[120px] pointer-events-none animate-pulse" 
+           style={{ animationDuration: '8s' }} />
+      <div className="absolute bottom-20 left-[10%] w-[500px] h-[500px] bg-accent/10 rounded-full blur-[100px] pointer-events-none animate-pulse" 
+           style={{ animationDuration: '10s', animationDelay: '2s' }} />
+      
+      {/* Grid Pattern Overlay */}
+      <div className="absolute inset-0 bg-[linear-gradient(to_right,hsl(var(--border))_1px,transparent_1px),linear-gradient(to_bottom,hsl(var(--border))_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_80%_50%_at_50%_0%,#000_70%,transparent_110%)] opacity-20 pointer-events-none" />
 
       {/* Hero Section */}
       <div
         id="inicio"
         ref={heroAnimation.ref}
-        className={`container relative z-10 mx-auto px-6 pt-32 pb-20 scroll-animate ${heroAnimation.isVisible ? "visible" : ""}`}
+        className={`container relative z-10 mx-auto px-6 pt-40 pb-32 scroll-animate ${heroAnimation.isVisible ? "visible" : ""}`}
       >
-        <div className="text-center max-w-6xl mx-auto">
+        <div className="text-center max-w-7xl mx-auto">
           <Badge
-            className="mb-10 px-6 py-3 text-base bg-accent/80 text-accent-foreground border-accent/30 hover:bg-accent transition-all rounded-full"
+            className="mb-8 px-8 py-3 text-sm bg-primary/10 text-primary border-primary/20 hover:bg-primary/20 transition-all rounded-full backdrop-blur-sm"
             variant="outline"
           >
-            <Rocket className="w-4 h-4 mr-2" />
+            <Sparkles className="w-4 h-4 mr-2" />
             Plataforma Oficial Zeve Investimentos
           </Badge>
 
-          <h1 className="text-5xl md:text-7xl lg:text-[6rem] font-bold text-foreground mb-8 leading-[1.05] tracking-tight">
-            Bem-vindo ao <span className="text-primary">Zeve Hub</span>
-            <span className="ml-3">🚀</span>
+          <h1 className="text-6xl md:text-8xl lg:text-[7rem] font-black text-foreground mb-6 leading-[0.95] tracking-tighter">
+            Bem-vindo ao{" "}
+            <span className="bg-gradient-to-r from-primary via-primary to-accent bg-clip-text text-transparent">
+              Zeve Hub
+            </span>
+            <span className="block mt-2 text-5xl md:text-7xl lg:text-[5rem] text-muted-foreground/60 font-bold">
+              🚀
+            </span>
           </h1>
 
-          <p className="text-xl md:text-2xl text-muted-foreground mb-14 max-w-4xl mx-auto leading-relaxed">
-            A central inteligente da Zeve Investimentos — acesse resultados de robôs, ferramentas e cursos para elevar
-            sua performance no mercado financeiro.
+          <p className="text-xl md:text-3xl text-muted-foreground mb-16 max-w-5xl mx-auto leading-relaxed font-light">
+            A central inteligente da Zeve Investimentos — acesse resultados de robôs, ferramentas e cursos para{" "}
+            <span className="text-foreground font-semibold">elevar sua performance</span> no mercado financeiro.
           </p>
 
-          <div className="flex flex-col sm:flex-row gap-5 justify-center mb-24">
+          <div className="flex flex-col sm:flex-row gap-6 justify-center mb-32">
             <Button
               size="lg"
               onClick={() => scrollToSection("pricing")}
-              className="gap-3 text-base px-10 py-7 rounded-xl font-semibold text-lg shadow-lg hover:opacity-90 transition-all"
+              className="group gap-3 text-base px-12 py-8 rounded-2xl font-bold text-lg shadow-2xl hover:shadow-primary/20 hover:scale-105 transition-all bg-gradient-to-r from-primary to-primary/90"
             >
               Começar Agora
-              <TrendingUp className="w-5 h-5" />
+              <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
             </Button>
             <Button
               size="lg"
               variant="outline"
               onClick={() => navigate("/dashboard")}
-              className="text-base px-10 py-7 rounded-xl border-2 hover:bg-accent/30 transition-all font-semibold text-lg"
+              className="text-base px-12 py-8 rounded-2xl border-2 hover:bg-accent/20 hover:scale-105 transition-all font-bold text-lg backdrop-blur-sm"
             >
               Ver Resultados
             </Button>
           </div>
 
           {/* Stats Cards */}
-          <div ref={statsAnimation.ref} className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl mx-auto">
+          <div ref={statsAnimation.ref} className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl mx-auto">
             <Card
-              className={`border border-border hover:shadow-lg transition-all duration-300 rounded-xl bg-card p-8 scroll-scale ${statsAnimation.isVisible ? "visible" : ""} delay-100`}
+              className={`group border-2 border-border/50 hover:border-primary/30 hover:shadow-2xl hover:shadow-primary/5 transition-all duration-500 rounded-2xl bg-card/50 backdrop-blur-sm p-10 scroll-scale ${statsAnimation.isVisible ? "visible" : ""} delay-100 relative overflow-hidden`}
             >
-              <div className="flex flex-col items-center">
-                <div ref={successRate.ref} className="text-6xl md:text-7xl font-bold text-primary mb-3">
+              <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+              <div className="flex flex-col items-center relative z-10">
+                <div ref={successRate.ref} className="text-7xl md:text-8xl font-black text-primary mb-4 tracking-tighter">
                   {successRate.value}
                 </div>
-                <div className="text-base text-muted-foreground font-medium">Taxa de Sucesso</div>
+                <div className="text-sm text-muted-foreground font-semibold uppercase tracking-wider">Taxa de Sucesso</div>
               </div>
             </Card>
 
             <Card
-              className={`border border-border hover:shadow-lg transition-all duration-300 rounded-xl bg-card p-8 scroll-scale ${statsAnimation.isVisible ? "visible" : ""} delay-200`}
+              className={`group border-2 border-border/50 hover:border-primary/30 hover:shadow-2xl hover:shadow-primary/5 transition-all duration-500 rounded-2xl bg-card/50 backdrop-blur-sm p-10 scroll-scale ${statsAnimation.isVisible ? "visible" : ""} delay-200 relative overflow-hidden`}
             >
-              <div className="flex flex-col items-center">
-                <div ref={activeUsers.ref} className="text-6xl md:text-7xl font-bold text-primary mb-3">
+              <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+              <div className="flex flex-col items-center relative z-10">
+                <div ref={activeUsers.ref} className="text-7xl md:text-8xl font-black text-primary mb-4 tracking-tighter">
                   {activeUsers.value}
                 </div>
-                <div className="text-base text-muted-foreground font-medium">Usuários Ativos</div>
+                <div className="text-sm text-muted-foreground font-semibold uppercase tracking-wider">Usuários Ativos</div>
               </div>
             </Card>
 
             <Card
-              className={`border border-border hover:shadow-lg transition-all duration-300 rounded-xl bg-card p-8 scroll-scale ${statsAnimation.isVisible ? "visible" : ""} delay-300`}
+              className={`group border-2 border-border/50 hover:border-primary/30 hover:shadow-2xl hover:shadow-primary/5 transition-all duration-500 rounded-2xl bg-card/50 backdrop-blur-sm p-10 scroll-scale ${statsAnimation.isVisible ? "visible" : ""} delay-300 relative overflow-hidden`}
             >
-              <div className="flex flex-col items-center">
-                <div ref={monitoring.ref} className="text-6xl md:text-7xl font-bold text-primary mb-3">
+              <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+              <div className="flex flex-col items-center relative z-10">
+                <div ref={monitoring.ref} className="text-7xl md:text-8xl font-black text-primary mb-4 tracking-tighter">
                   {monitoring.value}
                 </div>
-                <div className="text-base text-muted-foreground font-medium">Monitoramento</div>
+                <div className="text-sm text-muted-foreground font-semibold uppercase tracking-wider">Monitoramento</div>
               </div>
             </Card>
           </div>
@@ -193,43 +183,55 @@ const Index = () => {
       </div>
 
       {/* Features Section */}
-      <div ref={featuresAnimation.ref} className="container relative z-10 mx-auto px-6 py-20">
-        <div className="max-w-5xl mx-auto">
-          <div className={`text-center mb-16 scroll-animate ${featuresAnimation.isVisible ? "visible" : ""}`}>
-            <h2 className="text-4xl md:text-5xl font-bold text-foreground mb-4 tracking-tight">
+      <div ref={featuresAnimation.ref} className="container relative z-10 mx-auto px-6 py-32">
+        <div className="max-w-7xl mx-auto">
+          <div className={`text-center mb-20 scroll-animate ${featuresAnimation.isVisible ? "visible" : ""}`}>
+            <Badge className="mb-6 px-6 py-2 text-xs bg-accent/10 text-accent-foreground border-accent/20 rounded-full backdrop-blur-sm">
+              RECURSOS PREMIUM
+            </Badge>
+            <h2 className="text-5xl md:text-7xl font-black text-foreground mb-6 tracking-tighter">
               Tudo que você precisa
             </h2>
-            <p className="text-lg text-muted-foreground">Ferramentas profissionais para elevar seus resultados</p>
+            <p className="text-xl md:text-2xl text-muted-foreground font-light max-w-3xl mx-auto">
+              Ferramentas profissionais para elevar seus resultados
+            </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {[
               {
-                icon: Activity,
+                icon: Zap,
                 title: "Monitoramento em Tempo Real",
-                desc: "Acompanhe todas as operações dos seus robôs instantaneamente",
+                desc: "Acompanhe todas as operações dos seus robôs instantaneamente com atualizações em tempo real",
+                color: "from-yellow-500/10 to-orange-500/10",
+                iconColor: "text-yellow-500",
               },
               {
-                icon: BarChart3,
+                icon: Target,
                 title: "Análise Avançada",
-                desc: "Gráficos detalhados e insights estratégicos para melhor performance",
+                desc: "Gráficos detalhados e insights estratégicos com IA para maximizar sua performance",
+                color: "from-blue-500/10 to-cyan-500/10",
+                iconColor: "text-blue-500",
               },
               {
-                icon: Users,
+                icon: Shield,
                 title: "Suporte Especializado",
-                desc: "Acesso direto à assessoria Zeve para orientações personalizadas",
+                desc: "Acesso direto à assessoria Zeve com suporte premium e orientações personalizadas",
+                color: "from-green-500/10 to-emerald-500/10",
+                iconColor: "text-green-500",
               },
             ].map((feature, index) => (
               <Card
                 key={index}
-                className={`border border-border hover:shadow-lg transition-all duration-300 rounded-xl bg-card scroll-animate ${featuresAnimation.isVisible ? "visible" : ""} delay-${(index + 1) * 100}`}
+                className={`group border-2 border-border/50 hover:border-primary/30 hover:shadow-2xl hover:shadow-primary/5 transition-all duration-500 rounded-3xl bg-card/50 backdrop-blur-sm scroll-animate ${featuresAnimation.isVisible ? "visible" : ""} delay-${(index + 1) * 100} relative overflow-hidden`}
               >
-                <CardHeader className="pb-6 pt-8">
-                  <div className="w-14 h-14 rounded-xl bg-primary/10 flex items-center justify-center mx-auto mb-6">
-                    <feature.icon className="w-7 h-7 text-primary" />
+                <div className={`absolute inset-0 bg-gradient-to-br ${feature.color} opacity-0 group-hover:opacity-100 transition-opacity duration-500`} />
+                <CardHeader className="pb-8 pt-12 relative z-10">
+                  <div className={`w-20 h-20 rounded-2xl bg-gradient-to-br ${feature.color} flex items-center justify-center mx-auto mb-8 group-hover:scale-110 transition-transform duration-500`}>
+                    <feature.icon className={`w-10 h-10 ${feature.iconColor}`} />
                   </div>
-                  <CardTitle className="text-xl font-semibold mb-3 text-center">{feature.title}</CardTitle>
-                  <CardDescription className="text-sm leading-relaxed text-muted-foreground text-center">
+                  <CardTitle className="text-2xl font-bold mb-4 text-center tracking-tight">{feature.title}</CardTitle>
+                  <CardDescription className="text-base leading-relaxed text-muted-foreground text-center">
                     {feature.desc}
                   </CardDescription>
                 </CardHeader>
@@ -240,34 +242,37 @@ const Index = () => {
       </div>
 
       {/* CTA Section 1 */}
-      <div ref={ctaAnimation.ref} className="container relative z-10 mx-auto px-6 py-20">
+      <div ref={ctaAnimation.ref} className="container relative z-10 mx-auto px-6 py-32">
         <Card
-          className={`max-w-4xl mx-auto bg-gradient-to-br from-primary/10 via-primary/5 to-background border-2 border-primary/20 overflow-hidden scroll-animate ${ctaAnimation.isVisible ? "visible" : ""}`}
+          className={`max-w-5xl mx-auto bg-gradient-to-br from-primary/10 via-primary/5 to-background border-2 border-primary/30 overflow-hidden scroll-animate ${ctaAnimation.isVisible ? "visible" : ""} rounded-3xl backdrop-blur-sm`}
         >
-          <CardContent className="p-12 md:p-16 text-center relative">
-            <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2"></div>
-            <div className="absolute bottom-0 left-0 w-64 h-64 bg-primary/5 rounded-full blur-3xl translate-y-1/2 -translate-x-1/2"></div>
+          <CardContent className="p-16 md:p-24 text-center relative">
+            <div className="absolute top-0 right-0 w-96 h-96 bg-primary/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 animate-pulse" style={{ animationDuration: '6s' }}></div>
+            <div className="absolute bottom-0 left-0 w-96 h-96 bg-accent/10 rounded-full blur-3xl translate-y-1/2 -translate-x-1/2 animate-pulse" style={{ animationDuration: '8s' }}></div>
 
             <div className="relative z-10">
-              <Badge className="mb-6 px-6 py-2 text-sm bg-primary/20 text-primary border-primary/30 rounded-full">
-                Comece Hoje Mesmo
+              <Badge className="mb-8 px-8 py-3 text-sm bg-primary/20 text-primary border-primary/40 rounded-full backdrop-blur-sm font-semibold">
+                COMECE HOJE MESMO
               </Badge>
 
-              <h2 className="text-3xl md:text-5xl font-bold text-foreground mb-6 leading-tight">
-                Pronto para elevar seus resultados?
+              <h2 className="text-4xl md:text-6xl font-black text-foreground mb-8 leading-tight tracking-tighter">
+                Pronto para elevar seus{" "}
+                <span className="bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+                  resultados?
+                </span>
               </h2>
 
-              <p className="text-lg md:text-xl text-muted-foreground mb-10 max-w-2xl mx-auto leading-relaxed">
+              <p className="text-xl md:text-2xl text-muted-foreground mb-12 max-w-3xl mx-auto leading-relaxed font-light">
                 Junte-se a milhares de traders que já transformaram sua performance com o Zeve Hub
               </p>
 
               <Button
                 size="lg"
                 onClick={() => navigate("/auth")}
-                className="gap-3 text-base px-12 py-7 rounded-xl font-bold text-lg shadow-xl hover:shadow-2xl hover:scale-105 transition-all"
+                className="group gap-3 text-base px-14 py-8 rounded-2xl font-bold text-lg shadow-2xl hover:shadow-primary/20 hover:scale-105 transition-all bg-gradient-to-r from-primary to-primary/90"
               >
                 Criar Conta Gratuita
-                <Rocket className="w-5 h-5" />
+                <Rocket className="w-5 h-5 group-hover:rotate-12 transition-transform" />
               </Button>
             </div>
           </CardContent>
