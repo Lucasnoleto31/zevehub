@@ -77,6 +77,7 @@ const Dashboard = () => {
       }
 
       if (operations) {
+        console.log(`Total de operações carregadas: ${operations.length}`);
         const totalOps = operations.length;
         const totalProfit = operations.reduce((sum, op) => sum + Number(op.result), 0);
         const winningOps = operations.filter(op => Number(op.result) > 0).length;
