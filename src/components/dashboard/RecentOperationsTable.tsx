@@ -1,7 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { format } from "date-fns";
-import { ptBR } from "date-fns/locale";
 
 interface Operation {
   id: string;
@@ -18,16 +16,30 @@ interface RecentOperationsTableProps {
 }
 
 export const RecentOperationsTable = ({ operations, loading }: RecentOperationsTableProps) => {
+  const formatCurrency = (value: number) => {
+    return value.toLocaleString("pt-BR", {
+      style: "currency",
+      currency: "BRL",
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    });
+  };
+
+  const formatDate = (dateStr: string) => {
+    const [y, m, d] = dateStr.split('-');
+    return `${d}/${m}/${y}`;
+  };
+
   if (loading) {
     return (
-      <Card className="animate-pulse">
+      <Card className="animate-pulse mt-6">
         <CardHeader>
           <div className="h-6 bg-muted rounded w-48" />
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
             {[...Array(5)].map((_, i) => (
-              <div key={i} className="h-16 bg-muted rounded" />
+              <div key={i} className="h-20 bg-muted rounded" />
             ))}
           </div>
         </CardContent>
@@ -37,56 +49,85 @@ export const RecentOperationsTable = ({ operations, loading }: RecentOperationsT
 
   if (operations.length === 0) {
     return (
-      <Card>
+      <Card className="mt-6 border-2 border-dashed">
         <CardHeader>
-          <CardTitle>Operações Recentes</CardTitle>
+          <CardTitle className="text-xl">Operações Recentes</CardTitle>
         </CardHeader>
         <CardContent>
-          <p className="text-center text-muted-foreground py-8">
-            Nenhuma operação registrada ainda.
-          </p>
+          <div className="flex flex-col items-center justify-center py-12">
+            <div className="w-20 h-20 rounded-full bg-muted flex items-center justify-center mb-4">
+              <span className="text-4xl">📊</span>
+            </div>
+            <p className="text-center text-muted-foreground font-medium">
+              Nenhuma operação registrada ainda.
+            </p>
+            <p className="text-center text-sm text-muted-foreground mt-1">
+              Comece a registrar suas operações para ver o histórico aqui
+            </p>
+          </div>
         </CardContent>
       </Card>
     );
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Operações Recentes</CardTitle>
+    <Card className="mt-6 border-2">
+      <CardHeader className="pb-4">
+        <div className="flex items-center justify-between">
+          <CardTitle className="text-xl">Operações Recentes</CardTitle>
+          <Badge variant="secondary" className="text-sm">
+            {operations.length} operações
+          </Badge>
+        </div>
       </CardHeader>
       <CardContent>
-        <div className="space-y-4">
-          {operations.map((operation) => (
-            <div
-              key={operation.id}
-              className="flex items-center justify-between p-4 border rounded-lg hover:bg-accent/50 transition-colors"
-            >
-              <div className="flex-1">
-                <div className="flex items-center gap-3">
-                  <p className="font-semibold text-foreground">{operation.asset}</p>
-                  {operation.strategy && (
-                    <Badge variant="outline" className="text-xs">
-                      {operation.strategy}
-                    </Badge>
-                  )}
+        <div className="space-y-3">
+          {operations.map((operation, index) => {
+            const isProfit = operation.result >= 0;
+            return (
+              <div
+                key={operation.id}
+                className="group flex items-center justify-between p-4 border-2 rounded-xl hover:border-primary/50 hover:shadow-md transition-all duration-300 animate-fade-in cursor-pointer bg-card"
+                style={{ animationDelay: `${index * 0.05}s` }}
+              >
+                <div className="flex items-center gap-4 flex-1">
+                  <div className={`w-12 h-12 rounded-xl flex items-center justify-center font-bold text-lg ${
+                    isProfit 
+                      ? "bg-green-500/10 text-green-600 dark:text-green-400 border-2 border-green-500/20" 
+                      : "bg-red-500/10 text-red-600 dark:text-red-400 border-2 border-red-500/20"
+                  }`}>
+                    {isProfit ? "W" : "L"}
+                  </div>
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-1">
+                      <p className="font-bold text-foreground text-lg group-hover:text-primary transition-colors">
+                        {operation.asset}
+                      </p>
+                      {operation.strategy && (
+                        <Badge variant="outline" className="text-xs font-medium">
+                          {operation.strategy}
+                        </Badge>
+                      )}
+                    </div>
+                    <p className="text-sm text-muted-foreground font-medium">
+                      {formatDate(operation.operation_date)} às {operation.operation_time}
+                    </p>
+                  </div>
                 </div>
-                <p className="text-sm text-muted-foreground mt-1">
-                  {format(new Date(operation.operation_date), "dd/MM/yyyy", { locale: ptBR })} às{" "}
-                  {operation.operation_time}
-                </p>
+                <div className="text-right">
+                  <p
+                    className={`text-2xl font-bold tracking-tight ${
+                      isProfit 
+                        ? "text-green-600 dark:text-green-400" 
+                        : "text-red-600 dark:text-red-400"
+                    }`}
+                  >
+                    {isProfit ? "+" : ""}{formatCurrency(operation.result)}
+                  </p>
+                </div>
               </div>
-              <div className="text-right">
-                <p
-                  className={`text-lg font-bold ${
-                    operation.result >= 0 ? "text-success" : "text-error"
-                  }`}
-                >
-                  {operation.result >= 0 ? "+" : ""}R$ {operation.result.toFixed(2)}
-                </p>
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </CardContent>
     </Card>

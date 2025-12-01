@@ -67,8 +67,10 @@ const Dashboard = () => {
       const { data: operations, error: opsError } = await supabase
         .from("trading_operations")
         .select("*")
+        .eq("user_id", session.user.id)
         .order("operation_date", { ascending: false })
-        .order("operation_time", { ascending: false });
+        .order("operation_time", { ascending: false })
+        .limit(100);
 
       if (opsError) {
         console.error("Erro ao carregar operações:", opsError);
@@ -181,25 +183,29 @@ const Dashboard = () => {
 
           <main className="flex-1 px-4 py-8 overflow-auto">
             <div className="mb-8 animate-fade-in">
-              <Card className="gradient-card border-2">
-                <CardContent className="pt-6">
-                  <div className="flex items-center gap-4">
-                    <Avatar className="w-16 h-16 border-2 border-primary/20">
-                      <AvatarFallback className="bg-gradient-primary text-primary-foreground text-xl">
-                        {profile?.full_name?.charAt(0) || "U"}
+              <Card className="border-2 relative overflow-hidden group">
+                <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-accent/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                <CardContent className="pt-6 relative z-10">
+                  <div className="flex items-center gap-6">
+                    <Avatar className="w-20 h-20 border-4 border-primary/20 shadow-xl ring-4 ring-background">
+                      {profile?.avatar_url && (
+                        <AvatarImage src={profile.avatar_url} alt={profile.full_name || "Avatar"} />
+                      )}
+                      <AvatarFallback className="bg-gradient-to-br from-primary to-primary/80 text-primary-foreground text-2xl font-bold">
+                        {profile?.full_name?.charAt(0) || user?.email?.charAt(0)?.toUpperCase() || "U"}
                       </AvatarFallback>
                     </Avatar>
                     <div className="flex-1">
-                      <h2 className="text-2xl font-bold text-foreground mb-1">
-                        Bem-vindo, {profile?.full_name || "Cliente"}!
+                      <h2 className="text-3xl font-bold text-foreground mb-2 tracking-tight">
+                        Bem-vindo, {profile?.full_name || "Trader"}!
                       </h2>
                       <div className="flex items-center gap-2 flex-wrap">
-                        <Badge variant="outline" className="gap-1">
+                        <Badge variant="outline" className="gap-1 font-medium">
                           <UserIcon className="w-3 h-3" />
                           {profile?.email}
                         </Badge>
                         {roles.map((role) => (
-                          <Badge key={role} variant="secondary" className="capitalize">
+                          <Badge key={role} className="capitalize font-medium bg-primary/10 text-primary hover:bg-primary/20">
                             {role}
                           </Badge>
                         ))}
