@@ -15,7 +15,6 @@ import OperationDetail from "./pages/OperationDetail";
 import Profile from "./pages/Profile";
 import PersonalFinances from "./pages/PersonalFinances";
 import MarketIntelligence from "./pages/MarketIntelligence";
-import Robos from "./pages/Robos";
 import Community from "./pages/Community";
 import Explore from "./pages/Explore";
 import PublicProfile from "./pages/PublicProfile";
@@ -54,7 +53,6 @@ const App = () => {
                 <Route path="/perfil/:userId" element={<PublicProfile />} />
                 <Route path="/financas" element={<PersonalFinances />} />
                 <Route path="/inteligencia-mercado" element={<MarketIntelligence />} />
-                <Route path="/robos" element={<Robos />} />
                 <Route path="/comunidade" element={<Community />} />
                 <Route path="/explorar" element={<Explore />} />
                 <Route path="/hashtag/:hashtag" element={<HashtagPage />} />
