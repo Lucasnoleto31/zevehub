@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Trash2, Pencil } from "lucide-react";
 import { toast } from "sonner";
 import { OperationEditDialog } from "./OperationEditDialog";
+import { AIClassifier } from "./AIClassifier";
 import type { FilterValues } from "./OperationsFilters";
 
 interface Operation {
@@ -18,6 +19,7 @@ interface Operation {
   costs: number;
   result: number;
   notes: string;
+  risk_level: string | null;
 }
 
 interface OperationsTableProps {
@@ -187,6 +189,7 @@ const OperationsTable = ({ userId, isAdmin = false, filters }: OperationsTablePr
             <TableHead>Horário</TableHead>
             <TableHead>Ativo</TableHead>
             <TableHead>Estratégia</TableHead>
+            <TableHead>Risco</TableHead>
             <TableHead className="text-right">Contratos</TableHead>
             <TableHead className="text-right">Resultado</TableHead>
             {isAdmin && <TableHead className="text-right">Ações</TableHead>}
@@ -203,8 +206,35 @@ const OperationsTable = ({ userId, isAdmin = false, filters }: OperationsTablePr
                 <Badge variant="outline">{operation.asset}</Badge>
               </TableCell>
               <TableCell>
-                {operation.strategy ? (
-                  <Badge variant="secondary">{operation.strategy}</Badge>
+                <div className="flex items-center gap-1">
+                  {operation.strategy ? (
+                    <Badge variant="secondary">{operation.strategy}</Badge>
+                  ) : (
+                    <span className="text-muted-foreground text-sm">-</span>
+                  )}
+                  <AIClassifier
+                    operationId={operation.id}
+                    asset={operation.asset}
+                    result={operation.result}
+                    contracts={operation.contracts}
+                    costs={operation.costs}
+                    notes={operation.notes}
+                    onSuccess={loadOperations}
+                  />
+                </div>
+              </TableCell>
+              <TableCell>
+                {operation.risk_level ? (
+                  <Badge 
+                    variant={
+                      operation.risk_level === 'ALTO' ? 'destructive' : 
+                      operation.risk_level === 'BAIXO' ? 'default' : 
+                      'secondary'
+                    }
+                    className="text-xs"
+                  >
+                    {operation.risk_level}
+                  </Badge>
                 ) : (
                   <span className="text-muted-foreground text-sm">-</span>
                 )}

@@ -122,6 +122,44 @@ export type Database = {
         }
         Relationships: []
       }
+      ai_classification_logs: {
+        Row: {
+          classified_strategy: string
+          confidence: number
+          created_at: string
+          id: string
+          model_used: string | null
+          operation_id: string
+          user_id: string
+        }
+        Insert: {
+          classified_strategy: string
+          confidence: number
+          created_at?: string
+          id?: string
+          model_used?: string | null
+          operation_id: string
+          user_id: string
+        }
+        Update: {
+          classified_strategy?: string
+          confidence?: number
+          created_at?: string
+          id?: string
+          model_used?: string | null
+          operation_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_classification_logs_operation_id_fkey"
+            columns: ["operation_id"]
+            isOneToOne: false
+            referencedRelation: "trading_operations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       badge_progress: {
         Row: {
           badge_type: string
@@ -950,7 +988,9 @@ export type Database = {
           notes: string | null
           operation_date: string
           operation_time: string
+          raw_note: string | null
           result: number
+          risk_level: string | null
           strategy: string | null
           updated_at: string
           user_id: string
@@ -964,7 +1004,9 @@ export type Database = {
           notes?: string | null
           operation_date: string
           operation_time: string
+          raw_note?: string | null
           result: number
+          risk_level?: string | null
           strategy?: string | null
           updated_at?: string
           user_id: string
@@ -978,7 +1020,9 @@ export type Database = {
           notes?: string | null
           operation_date?: string
           operation_time?: string
+          raw_note?: string | null
           result?: number
+          risk_level?: string | null
           strategy?: string | null
           updated_at?: string
           user_id?: string

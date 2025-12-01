@@ -48,24 +48,72 @@ export const ExportOperations = ({ operations, stats }: ExportOperationsProps) =
     try {
       const doc = new jsPDF();
       
-      // Título
-      doc.setFontSize(18);
-      doc.text("Relatório de Operações", 14, 22);
+      // Cabeçalho profissional
+      doc.setFillColor(59, 130, 246);
+      doc.rect(0, 0, 210, 35, "F");
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(24);
+      doc.setFont("helvetica", "bold");
+      doc.text("Relatório de Operações", 14, 20);
+      doc.setFontSize(10);
+      doc.setFont("helvetica", "normal");
+      doc.text(`Gerado em ${new Date().toLocaleDateString("pt-BR")} às ${new Date().toLocaleTimeString("pt-BR")}`, 14, 28);
       
-      // Estatísticas
+      // Resetar cor do texto
+      doc.setTextColor(0, 0, 0);
+      
+      // Estatísticas em cards
       if (stats) {
-        doc.setFontSize(12);
-        let yPos = 35;
-        doc.text(`Total de Operações: ${stats.totalOperations}`, 14, yPos);
-        yPos += 7;
-        doc.text(`Win Rate: ${stats.winRate.toFixed(2)}%`, 14, yPos);
-        yPos += 7;
-        doc.text(`Resultado Total: ${formatCurrency(stats.totalResult)}`, 14, yPos);
-        yPos += 7;
-        doc.text(`Média de Ganhos: ${formatCurrency(stats.averageWin)}`, 14, yPos);
-        yPos += 7;
-        doc.text(`Média de Perdas: ${formatCurrency(stats.averageLoss)}`, 14, yPos);
+        let yPos = 45;
+        doc.setFontSize(14);
+        doc.setFont("helvetica", "bold");
+        doc.text("Resumo do Período", 14, yPos);
         yPos += 10;
+        
+        // Cards de métricas
+        doc.setFontSize(10);
+        doc.setFont("helvetica", "normal");
+        
+        // Primeira linha de cards
+        doc.setFillColor(240, 240, 240);
+        doc.roundedRect(14, yPos, 90, 20, 3, 3, "F");
+        doc.roundedRect(110, yPos, 90, 20, 3, 3, "F");
+        
+        doc.setFont("helvetica", "bold");
+        doc.text("Total de Operações", 18, yPos + 7);
+        doc.text("Win Rate", 114, yPos + 7);
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(16);
+        doc.text(stats.totalOperations.toString(), 18, yPos + 16);
+        doc.text(`${stats.winRate.toFixed(2)}%`, 114, yPos + 16);
+        
+        yPos += 25;
+        
+        // Segunda linha de cards
+        doc.setFillColor(240, 240, 240);
+        doc.roundedRect(14, yPos, 90, 20, 3, 3, "F");
+        doc.roundedRect(110, yPos, 90, 20, 3, 3, "F");
+        
+        doc.setFontSize(10);
+        doc.setFont("helvetica", "bold");
+        doc.text("Resultado Total", 18, yPos + 7);
+        doc.text("Média por Trade", 114, yPos + 7);
+        doc.setFont("helvetica", "normal");
+        
+        // Cor baseada em lucro/prejuízo
+        if (stats.totalResult >= 0) {
+          doc.setTextColor(22, 163, 74); // verde
+        } else {
+          doc.setTextColor(220, 38, 38); // vermelho
+        }
+        doc.setFontSize(14);
+        doc.text(formatCurrency(stats.totalResult), 18, yPos + 16);
+        doc.setTextColor(0, 0, 0);
+        
+        const avgPerTrade = stats.totalOperations > 0 ? stats.totalResult / stats.totalOperations : 0;
+        doc.text(formatCurrency(avgPerTrade), 114, yPos + 16);
+        
+        yPos += 30;
       }
 
       // Tabela de operações
@@ -80,20 +128,54 @@ export const ExportOperations = ({ operations, stats }: ExportOperationsProps) =
       ]);
 
       autoTable(doc, {
-        startY: stats ? 75 : 35,
+        startY: stats ? 130 : 45,
         head: [["Data", "Hora", "Ativo", "Estratégia", "Contratos", "Custos", "Resultado"]],
         body: tableData,
-        styles: { fontSize: 8 },
-        headStyles: { fillColor: [59, 130, 246] },
+        styles: { 
+          fontSize: 8,
+          cellPadding: 3,
+        },
+        headStyles: { 
+          fillColor: [59, 130, 246],
+          textColor: [255, 255, 255],
+          fontStyle: "bold",
+        },
+        alternateRowStyles: {
+          fillColor: [245, 245, 245],
+        },
+        columnStyles: {
+          6: { 
+            fontStyle: "bold",
+            // Cor será aplicada via didParseCell
+          }
+        },
+        didParseCell: (data: any) => {
+          if (data.column.index === 6 && data.section === "body") {
+            const value = operations[data.row.index].result;
+            if (value >= 0) {
+              data.cell.styles.textColor = [22, 163, 74]; // verde
+            } else {
+              data.cell.styles.textColor = [220, 38, 38]; // vermelho
+            }
+          }
+        }
       });
 
-      // Data de geração
-      const today = new Date().toLocaleDateString("pt-BR");
-      const finalY = (doc as any).lastAutoTable.finalY || 35;
-      doc.setFontSize(10);
-      doc.text(`Gerado em: ${today}`, 14, finalY + 10);
+      // Rodapé
+      const pageCount = (doc as any).internal.getNumberOfPages();
+      doc.setFontSize(8);
+      doc.setTextColor(128, 128, 128);
+      for (let i = 1; i <= pageCount; i++) {
+        doc.setPage(i);
+        doc.text(
+          `Página ${i} de ${pageCount} | Zeve Operations Pro`,
+          doc.internal.pageSize.getWidth() / 2,
+          doc.internal.pageSize.getHeight() - 10,
+          { align: "center" }
+        );
+      }
 
-      doc.save(`operacoes_${Date.now()}.pdf`);
+      doc.save(`operacoes_${new Date().toISOString().split('T')[0]}.pdf`);
       toast.success("PDF exportado com sucesso!");
     } catch (error) {
       console.error("Erro ao exportar PDF:", error);
