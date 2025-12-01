@@ -13,7 +13,6 @@ import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 
 export interface AdvancedFilterValues {
-  traderId?: string;
   startDate?: Date;
   endDate?: Date;
   strategies: string[];
@@ -27,36 +26,15 @@ export const AdvancedFilters = ({ onFiltersChange }: AdvancedFiltersProps) => {
   const [filters, setFilters] = useState<AdvancedFilterValues>({
     strategies: [],
   });
-  const [traders, setTraders] = useState<{ id: string; name: string }[]>([]);
   const [strategies, setStrategies] = useState<string[]>([]);
 
   useEffect(() => {
-    loadTraders();
     loadStrategies();
   }, []);
 
   useEffect(() => {
     onFiltersChange(filters);
   }, [filters, onFiltersChange]);
-
-  const loadTraders = async () => {
-    try {
-      const { data, error } = await supabase
-        .from("profiles")
-        .select("id, full_name, email");
-
-      if (error) throw error;
-      
-      const tradersList = (data || []).map(profile => ({
-        id: profile.id,
-        name: profile.full_name || profile.email,
-      }));
-      
-      setTraders(tradersList);
-    } catch (error) {
-      console.error("Erro ao carregar traders:", error);
-    }
-  };
 
   const loadStrategies = async () => {
     try {
@@ -92,7 +70,6 @@ export const AdvancedFilters = ({ onFiltersChange }: AdvancedFiltersProps) => {
   };
 
   const hasActiveFilters = 
-    filters.traderId ||
     filters.startDate ||
     filters.endDate ||
     filters.strategies.length > 0;
@@ -101,7 +78,7 @@ export const AdvancedFilters = ({ onFiltersChange }: AdvancedFiltersProps) => {
     <Card>
       <CardHeader>
         <div className="flex items-center justify-between">
-          <CardTitle>Filtros Avançados</CardTitle>
+          <CardTitle>Filtros</CardTitle>
           {hasActiveFilters && (
             <Button variant="ghost" size="sm" onClick={clearFilters}>
               <X className="w-4 h-4 mr-1" />
@@ -111,29 +88,6 @@ export const AdvancedFilters = ({ onFiltersChange }: AdvancedFiltersProps) => {
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
-        {/* Filtro de Trader */}
-        <div>
-          <Label>Trader</Label>
-          <Select
-            value={filters.traderId || "all"}
-            onValueChange={(value) =>
-              setFilters({ ...filters, traderId: value === "all" ? undefined : value })
-            }
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Todos os traders" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todos os traders</SelectItem>
-              {traders.map((trader) => (
-                <SelectItem key={trader.id} value={trader.id}>
-                  {trader.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
         {/* Filtros de Data */}
         <div className="grid grid-cols-2 gap-4">
           <div>

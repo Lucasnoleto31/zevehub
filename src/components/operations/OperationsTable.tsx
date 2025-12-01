@@ -61,6 +61,7 @@ const OperationsTable = ({ userId, isAdmin = false, filters }: OperationsTablePr
       let query = supabase
         .from("trading_operations")
         .select("*")
+        .eq("user_id", userId)
         .order("operation_date", { ascending: false })
         .order("operation_time", { ascending: false });
 

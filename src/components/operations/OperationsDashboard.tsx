@@ -104,7 +104,7 @@ const OperationsDashboard = ({ userId }: OperationsDashboardProps) => {
 
   const loadOperations = async () => {
     try {
-      // Buscar todas as operações sem limite
+      // Buscar apenas as operações do usuário logado
       let allOperations: Operation[] = [];
       let from = 0;
       const batchSize = 1000;
@@ -114,6 +114,7 @@ const OperationsDashboard = ({ userId }: OperationsDashboardProps) => {
         const { data, error } = await supabase
           .from("trading_operations")
           .select("operation_date, operation_time, result, strategy")
+          .eq("user_id", userId)
           .order("operation_date", { ascending: true })
           .range(from, from + batchSize - 1);
 
@@ -128,7 +129,7 @@ const OperationsDashboard = ({ userId }: OperationsDashboardProps) => {
         }
       }
 
-      console.log(`Carregadas ${allOperations.length} operações`);
+      console.log(`Carregadas ${allOperations.length} operações do usuário`);
       setOperations(allOperations);
       
       // Extract unique strategies
