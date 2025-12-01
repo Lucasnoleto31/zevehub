@@ -183,51 +183,27 @@ const Operations = () => {
           </TabsList>
 
           <TabsContent value="register" className="space-y-6">
-            {isAdmin ? (
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <div className="lg:col-span-1 space-y-6">
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="flex items-center gap-2">
-                        <Plus className="w-5 h-5" />
-                        Nova Operação
-                      </CardTitle>
-                      <CardDescription>
-                        Registre os detalhes da sua operação
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <OperationForm userId={user?.id} />
-                    </CardContent>
-                  </Card>
-
-                  <OperationImport userId={user?.id} />
-                </div>
-
-                <div className="lg:col-span-2 space-y-4">
-                  <OperationsFilters 
-                    userId={user?.id} 
-                    onFiltersChange={setFilters}
-                  />
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>Histórico de Operações</CardTitle>
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              <div className="lg:col-span-1 space-y-6">
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Plus className="w-5 h-5" />
+                      Nova Operação
+                    </CardTitle>
                     <CardDescription>
-                      Últimas operações suas registradas
+                      Registre os detalhes da sua operação
                     </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <OperationsTable 
-                        userId={user?.id} 
-                        isAdmin={isAdmin}
-                        filters={filters}
-                      />
-                    </CardContent>
-                  </Card>
-                </div>
+                  </CardHeader>
+                  <CardContent>
+                    <OperationForm userId={user?.id} />
+                  </CardContent>
+                </Card>
+
+                <OperationImport userId={user?.id} />
               </div>
-            ) : (
-              <div className="space-y-4">
+
+              <div className="lg:col-span-2 space-y-4">
                 <OperationsFilters 
                   userId={user?.id} 
                   onFiltersChange={setFilters}
@@ -235,9 +211,9 @@ const Operations = () => {
                 <Card>
                   <CardHeader>
                     <CardTitle>Histórico de Operações</CardTitle>
-                  <CardDescription>
-                    Todas as suas operações registradas (visualização apenas)
-                  </CardDescription>
+                    <CardDescription>
+                      Últimas operações suas registradas
+                    </CardDescription>
                   </CardHeader>
                   <CardContent>
                     <OperationsTable 
@@ -248,7 +224,7 @@ const Operations = () => {
                   </CardContent>
                 </Card>
               </div>
-            )}
+            </div>
           </TabsContent>
 
           <TabsContent value="strategies">
