@@ -59,12 +59,8 @@ const Operations = () => {
       let query = supabase
         .from("trading_operations")
         .select("*")
+        .eq("user_id", user.id)
         .order("operation_date", { ascending: false });
-
-      // Aplicar filtros avançados
-      if (advancedFilters.traderId) {
-        query = query.eq("user_id", advancedFilters.traderId);
-      }
 
       if (advancedFilters.startDate) {
         const fromStr = advancedFilters.startDate.toISOString().split('T')[0];
@@ -161,7 +157,7 @@ const Operations = () => {
               </Button>
               <div className="flex items-center gap-2">
                 <TrendingUp className="w-5 h-5 text-primary" />
-                <h1 className="text-xl font-bold text-foreground">Registro de Operações</h1>
+                <h1 className="text-xl font-bold text-foreground">Minhas Operações</h1>
               </div>
             </div>
             <div className="flex items-center gap-2">
@@ -182,8 +178,8 @@ const Operations = () => {
           <TabsList className="grid w-full max-w-3xl grid-cols-4">
             <TabsTrigger value="register">Registrar</TabsTrigger>
             <TabsTrigger value="strategies">Estratégias</TabsTrigger>
-            <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
-            <TabsTrigger value="analytics">Análise</TabsTrigger>
+            <TabsTrigger value="dashboard">Meu Dashboard</TabsTrigger>
+            <TabsTrigger value="analytics">Análise Detalhada</TabsTrigger>
           </TabsList>
 
           <TabsContent value="register" className="space-y-6">
@@ -216,9 +212,9 @@ const Operations = () => {
                   <Card>
                     <CardHeader>
                       <CardTitle>Histórico de Operações</CardTitle>
-                      <CardDescription>
-                        Últimas operações registradas
-                      </CardDescription>
+                    <CardDescription>
+                      Últimas operações suas registradas
+                    </CardDescription>
                     </CardHeader>
                     <CardContent>
                       <OperationsTable 
@@ -239,9 +235,9 @@ const Operations = () => {
                 <Card>
                   <CardHeader>
                     <CardTitle>Histórico de Operações</CardTitle>
-                    <CardDescription>
-                      Todas as operações registradas (visualização apenas)
-                    </CardDescription>
+                  <CardDescription>
+                    Todas as suas operações registradas (visualização apenas)
+                  </CardDescription>
                   </CardHeader>
                   <CardContent>
                     <OperationsTable 
@@ -277,9 +273,9 @@ const Operations = () => {
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <div>
-                    <CardTitle>Operações Detalhadas</CardTitle>
+                    <CardTitle>Minhas Operações Detalhadas</CardTitle>
                     <CardDescription>
-                      {operations.length} operações encontradas
+                      {operations.length} operações suas encontradas
                     </CardDescription>
                   </div>
                   <ExportOperations
