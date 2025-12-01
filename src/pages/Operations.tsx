@@ -15,6 +15,9 @@ import DeleteOperationsByStrategy from "@/components/operations/DeleteOperations
 import StrategyManager from "@/components/operations/StrategyManager";
 import { OperationsFilters, type FilterValues } from "@/components/operations/OperationsFilters";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { ExportOperations } from "@/components/operations/ExportOperations";
+import { AdvancedFilters, type AdvancedFilterValues } from "@/components/operations/AdvancedFilters";
+import { StatsCards } from "@/components/operations/StatsCards";
 
 const Operations = () => {
   const navigate = useNavigate();
@@ -30,10 +33,81 @@ const Operations = () => {
     timeTo: "",
     resultType: "all",
   });
+  const [advancedFilters, setAdvancedFilters] = useState<AdvancedFilterValues>({
+    strategies: [],
+  });
+  const [operations, setOperations] = useState<any[]>([]);
+  const [stats, setStats] = useState({
+    totalTrades: 0,
+    winRate: 0,
+    profitTotal: 0,
+    averagePerTrade: 0,
+  });
 
   useEffect(() => {
     checkUser();
   }, []);
+
+  useEffect(() => {
+    if (user) {
+      loadOperations();
+    }
+  }, [user, advancedFilters]);
+
+  const loadOperations = async () => {
+    try {
+      let query = supabase
+        .from("trading_operations")
+        .select("*")
+        .order("operation_date", { ascending: false });
+
+      // Aplicar filtros avançados
+      if (advancedFilters.traderId) {
+        query = query.eq("user_id", advancedFilters.traderId);
+      }
+
+      if (advancedFilters.startDate) {
+        const fromStr = advancedFilters.startDate.toISOString().split('T')[0];
+        query = query.gte("operation_date", fromStr);
+      }
+
+      if (advancedFilters.endDate) {
+        const toStr = advancedFilters.endDate.toISOString().split('T')[0];
+        query = query.lte("operation_date", toStr);
+      }
+
+      const { data, error } = await query.limit(1000);
+
+      if (error) throw error;
+
+      let filteredData = data || [];
+
+      // Filtro de estratégias client-side
+      if (advancedFilters.strategies.length > 0) {
+        filteredData = filteredData.filter((op) =>
+          op.strategy && advancedFilters.strategies.includes(op.strategy)
+        );
+      }
+
+      setOperations(filteredData);
+
+      // Calcular estatísticas
+      const totalTrades = filteredData.length;
+      const profitTotal = filteredData.reduce((sum, op) => sum + (op.result || 0), 0);
+      const positiveOps = filteredData.filter((op) => (op.result || 0) > 0).length;
+      const winRate = totalTrades > 0 ? (positiveOps / totalTrades) * 100 : 0;
+      const averagePerTrade = totalTrades > 0 ? profitTotal / totalTrades : 0;
+
+      setStats({
+        totalTrades,
+        winRate,
+        profitTotal,
+        averagePerTrade,
+      });
+    } catch (error) {
+      console.error("Erro ao carregar operações:", error);
+    }
+  };
 
   const checkUser = async () => {
     try {
@@ -105,10 +179,11 @@ const Operations = () => {
 
       <main className="container mx-auto px-4 py-8">
         <Tabs defaultValue="register" className="space-y-6">
-          <TabsList className="grid w-full max-w-2xl grid-cols-3">
+          <TabsList className="grid w-full max-w-3xl grid-cols-4">
             <TabsTrigger value="register">Registrar</TabsTrigger>
             <TabsTrigger value="strategies">Estratégias</TabsTrigger>
             <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
+            <TabsTrigger value="analytics">Análise</TabsTrigger>
           </TabsList>
 
           <TabsContent value="register" className="space-y-6">
@@ -186,6 +261,47 @@ const Operations = () => {
 
           <TabsContent value="dashboard">
             <OperationsDashboard userId={user?.id} />
+          </TabsContent>
+
+          <TabsContent value="analytics" className="space-y-6">
+            <AdvancedFilters onFiltersChange={setAdvancedFilters} />
+            
+            <StatsCards
+              totalTrades={stats.totalTrades}
+              winRate={stats.winRate}
+              profitTotal={stats.profitTotal}
+              averagePerTrade={stats.averagePerTrade}
+            />
+
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle>Operações Detalhadas</CardTitle>
+                    <CardDescription>
+                      {operations.length} operações encontradas
+                    </CardDescription>
+                  </div>
+                  <ExportOperations
+                    operations={operations}
+                    stats={{
+                      totalOperations: stats.totalTrades,
+                      winRate: stats.winRate,
+                      totalResult: stats.profitTotal,
+                      averageWin: operations.filter(op => op.result > 0).reduce((sum, op) => sum + op.result, 0) / Math.max(operations.filter(op => op.result > 0).length, 1),
+                      averageLoss: Math.abs(operations.filter(op => op.result < 0).reduce((sum, op) => sum + op.result, 0) / Math.max(operations.filter(op => op.result < 0).length, 1)),
+                    }}
+                  />
+                </div>
+              </CardHeader>
+              <CardContent>
+                <OperationsTable
+                  userId={user?.id}
+                  isAdmin={isAdmin}
+                  filters={filters}
+                />
+              </CardContent>
+            </Card>
           </TabsContent>
         </Tabs>
       </main>
