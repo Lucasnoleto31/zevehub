@@ -83,29 +83,29 @@ All colors MUST be HSL.
   }
 
   .dark {
-    /* Zeve Design System v1.0 - Dark Mode */
-    --background: 210 75% 11%;
+    /* Zeve Design System v1.0 - Dark Mode (Pure Black) */
+    --background: 0 0% 0%;
     --foreground: 0 0% 100%;
 
-    --card: 210 56% 17%;
+    --card: 0 0% 5%;
     --card-foreground: 0 0% 100%;
 
-    --popover: 210 56% 17%;
+    --popover: 0 0% 5%;
     --popover-foreground: 0 0% 100%;
 
-    /* Primary: Neutral Blue (Dark Mode Accent) */
-    --primary: 218 21% 81%;
-    --primary-foreground: 210 75% 11%;
-    --primary-hover: 218 21% 75%;
-    --primary-glow: 218 21% 90%;
+    /* Primary: Vibrant Blue accent */
+    --primary: 217 91% 60%;
+    --primary-foreground: 0 0% 100%;
+    --primary-hover: 217 91% 55%;
+    --primary-glow: 217 91% 75%;
 
-    /* Secondary: Zeve Blue Medium */
-    --secondary: 210 56% 17%;
+    /* Secondary: Dark Gray */
+    --secondary: 0 0% 10%;
     --secondary-foreground: 0 0% 100%;
 
-    /* Accent: Neutral Blue */
-    --accent: 218 21% 81%;
-    --accent-foreground: 210 75% 11%;
+    /* Accent: Blue */
+    --accent: 217 91% 60%;
+    --accent-foreground: 0 0% 100%;
 
     /* Success */
     --success: 145 63% 49%;
@@ -113,46 +113,46 @@ All colors MUST be HSL.
 
     /* Warning */
     --warning: 45 100% 70%;
-    --warning-foreground: 210 75% 11%;
+    --warning-foreground: 0 0% 0%;
 
     /* Error */
     --error: 0 100% 69%;
-    --error-foreground: 210 75% 11%;
+    --error-foreground: 0 0% 100%;
 
-    --muted: 210 56% 17%;
-    --muted-foreground: 218 21% 81%;
+    --muted: 0 0% 15%;
+    --muted-foreground: 0 0% 70%;
 
     --destructive: 0 100% 69%;
-    --destructive-foreground: 210 75% 11%;
+    --destructive-foreground: 0 0% 100%;
 
-    --border: 0 0% 100% / 0.08;
+    --border: 0 0% 100% / 0.1;
     --input: 0 0% 100% / 0.15;
-    --ring: 218 21% 81%;
+    --ring: 217 91% 60%;
 
     /* Dark Mode Gradient */
-    --gradient-primary: linear-gradient(135deg, hsl(210 56% 25%) 0%, hsl(210 75% 11%) 100%);
-    --gradient-card: linear-gradient(145deg, hsl(210 75% 11%), hsl(210 56% 17%));
-    --gradient-subtle: linear-gradient(180deg, hsl(210 75% 11%), hsl(210 56% 17%));
+    --gradient-primary: linear-gradient(135deg, hsl(217 91% 60%) 0%, hsl(217 91% 50%) 100%);
+    --gradient-card: linear-gradient(145deg, hsl(0 0% 0%), hsl(0 0% 5%));
+    --gradient-subtle: linear-gradient(180deg, hsl(0 0% 0%), hsl(0 0% 5%));
 
     /* Subtle Shadows (Dark Mode) */
-    --shadow-soft: 0px 4px 14px rgba(0, 0, 0, 0.25);
-    --glass-bg: hsla(210, 56%, 17%, 0.8);
-    --glass-border: hsla(255, 255%, 255%, 0.08);
+    --shadow-soft: 0px 4px 14px rgba(0, 0, 0, 0.5);
+    --glass-bg: hsla(0, 0%, 5%, 0.8);
+    --glass-border: hsla(0, 0%, 100%, 0.08);
 
     /* Shadows - Enhanced for depth */
-    --shadow-sm: 0 2px 4px 0 rgb(0 0 0 / 0.3);
-    --shadow-md: 0 4px 8px -1px rgb(0 0 0 / 0.4);
-    --shadow-lg: 0 10px 20px -3px rgb(0 0 0 / 0.5);
-    --shadow-xl: 0 20px 30px -5px rgb(0 0 0 / 0.6);
+    --shadow-sm: 0 2px 4px 0 rgb(0 0 0 / 0.5);
+    --shadow-md: 0 4px 8px -1px rgb(0 0 0 / 0.6);
+    --shadow-lg: 0 10px 20px -3px rgb(0 0 0 / 0.7);
+    --shadow-xl: 0 20px 30px -5px rgb(0 0 0 / 0.8);
 
-    /* Sidebar - Pure Black for OLED */
-    --sidebar-background: 222 47% 3%;
-    --sidebar-foreground: 210 40% 98%;
+    /* Sidebar - Pure Black */
+    --sidebar-background: 0 0% 0%;
+    --sidebar-foreground: 0 0% 100%;
     --sidebar-primary: 217 91% 60%;
-    --sidebar-primary-foreground: 222 47% 4%;
-    --sidebar-accent: 222 47% 8%;
-    --sidebar-accent-foreground: 210 40% 98%;
-    --sidebar-border: 222 47% 12%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 0 0% 10%;
+    --sidebar-accent-foreground: 0 0% 100%;
+    --sidebar-border: 0 0% 100% / 0.1;
     --sidebar-ring: 217 91% 60%;
   }
 }
