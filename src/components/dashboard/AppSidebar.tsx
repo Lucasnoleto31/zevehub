@@ -32,36 +32,43 @@ const menuItems = [
     title: "Dashboard",
     url: "/dashboard",
     icon: Home,
+    color: "text-blue-500",
   },
   {
     title: "Operações",
     url: "/operations",
     icon: LineChart,
+    color: "text-green-500",
   },
   {
     title: "Robôs",
     url: "/robos",
     icon: Bot,
+    color: "text-purple-500",
   },
   {
     title: "Comunidade",
     url: "/comunidade",
     icon: Users,
+    color: "text-pink-500",
   },
   {
     title: "Finanças Pessoais",
     url: "/financas",
     icon: Wallet,
+    color: "text-yellow-500",
   },
   {
     title: "Inteligência de Mercado",
     url: "/inteligencia-mercado",
     icon: TrendingUp,
+    color: "text-cyan-500",
   },
   {
     title: "Perfil",
     url: "/profile",
     icon: User,
+    color: "text-orange-500",
   },
 ];
 
@@ -75,12 +82,12 @@ export function AppSidebar({ isAdmin }: AppSidebarProps) {
 
   return (
     <Sidebar
-      className={collapsed ? "w-14" : "w-60"}
+      className={`${collapsed ? "w-14" : "w-60"} bg-black border-r border-white/10`}
       collapsible="icon"
     >
-      <SidebarContent>
+      <SidebarContent className="bg-black">
         <SidebarGroup>
-          <SidebarGroupLabel>Menu Principal</SidebarGroupLabel>
+          <SidebarGroupLabel className="text-white/70">Menu Principal</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               {menuItems.map((item) => (
@@ -89,10 +96,10 @@ export function AppSidebar({ isAdmin }: AppSidebarProps) {
                     <NavLink
                       to={item.url}
                       end
-                      className="hover:bg-muted/50"
-                      activeClassName="bg-muted text-primary font-medium"
+                      className="hover:bg-white/10 text-white/80"
+                      activeClassName="bg-white/20 text-white font-medium"
                     >
-                      <item.icon className="mr-2 h-4 w-4" />
+                      <item.icon className={`mr-2 h-4 w-4 ${item.color}`} />
                       {!collapsed && <span>{item.title}</span>}
                     </NavLink>
                   </SidebarMenuButton>
@@ -104,10 +111,10 @@ export function AppSidebar({ isAdmin }: AppSidebarProps) {
                     <NavLink
                       to="/admin"
                       end
-                      className="hover:bg-muted/50"
-                      activeClassName="bg-muted text-primary font-medium"
+                      className="hover:bg-white/10 text-white/80"
+                      activeClassName="bg-white/20 text-white font-medium"
                     >
-                      <Shield className="mr-2 h-4 w-4" />
+                      <Shield className="mr-2 h-4 w-4 text-red-500" />
                       {!collapsed && <span>Admin</span>}
                     </NavLink>
                   </SidebarMenuButton>
