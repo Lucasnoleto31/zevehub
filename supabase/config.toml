@@ -11,3 +11,9 @@ verify_jwt = true
 
 [functions.fetch-market-data]
 verify_jwt = false
+
+[functions.classify-strategy]
+verify_jwt = true
+
+[functions.parse-nota-corretagem]
+verify_jwt = true
