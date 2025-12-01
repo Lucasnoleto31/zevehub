@@ -20,7 +20,6 @@ import { AdvancedFilters, type AdvancedFilterValues } from "@/components/operati
 import { StatsCards } from "@/components/operations/StatsCards";
 import { RiskAlerts } from "@/components/operations/RiskAlerts";
 import { EnhancedStatsCards } from "@/components/operations/EnhancedStatsCards";
-import { NotaImport } from "@/components/operations/NotaImport";
 import { BulkAIClassifier } from "@/components/operations/BulkAIClassifier";
 
 const Operations = () => {
@@ -232,8 +231,6 @@ const Operations = () => {
                   </CardContent>
                 </Card>
 
-                <NotaImport userId={user?.id} onSuccess={loadOperations} />
-                
                 <OperationImport userId={user?.id} />
               </div>
 
