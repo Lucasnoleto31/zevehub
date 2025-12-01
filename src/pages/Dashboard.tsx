@@ -69,8 +69,7 @@ const Dashboard = () => {
         .select("*")
         .eq("user_id", session.user.id)
         .order("operation_date", { ascending: false })
-        .order("operation_time", { ascending: false })
-        .limit(100);
+        .order("operation_time", { ascending: false });
 
       if (opsError) {
         console.error("Erro ao carregar operações:", opsError);
