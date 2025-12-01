@@ -64,12 +64,22 @@ const Dashboard = () => {
         setRoles(rolesData.map((r) => r.role));
       }
 
+      // Buscar o total de operações primeiro
+      const { count } = await supabase
+        .from("trading_operations")
+        .select("*", { count: "exact", head: true })
+        .eq("user_id", session.user.id);
+
+      console.log(`Total de operações no banco: ${count}`);
+
+      // Buscar todas as operações sem limite
       const { data: operations, error: opsError } = await supabase
         .from("trading_operations")
         .select("*")
         .eq("user_id", session.user.id)
         .order("operation_date", { ascending: false })
-        .order("operation_time", { ascending: false });
+        .order("operation_time", { ascending: false })
+        .range(0, 999999); // Remove any default limit
 
       if (opsError) {
         console.error("Erro ao carregar operações:", opsError);
