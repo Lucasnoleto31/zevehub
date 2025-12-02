@@ -41,7 +41,7 @@ const StrategyManager = ({ userId }: StrategyManagerProps) => {
   useEffect(() => {
     loadStrategies();
     
-    // Real-time subscription
+    // Real-time subscription para todas as estratégias
     const channel = supabase
       .channel('strategies_changes')
       .on(
@@ -49,8 +49,7 @@ const StrategyManager = ({ userId }: StrategyManagerProps) => {
         {
           event: '*',
           schema: 'public',
-          table: 'strategies',
-          filter: `user_id=eq.${userId}`
+          table: 'strategies'
         },
         () => {
           loadStrategies();
@@ -61,14 +60,14 @@ const StrategyManager = ({ userId }: StrategyManagerProps) => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [userId]);
+  }, []);
 
   const loadStrategies = async () => {
     try {
+      // Carregar todas as estratégias do sistema
       const { data, error } = await supabase
         .from('strategies')
         .select('*')
-        .eq('user_id', userId)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -244,10 +243,10 @@ const StrategyManager = ({ userId }: StrategyManagerProps) => {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Bot className="w-5 h-5" />
-            Minhas Estratégias
+            Estratégias do Sistema
           </CardTitle>
           <CardDescription>
-            Lista de estratégias cadastradas
+            Todas as estratégias cadastradas
           </CardDescription>
         </CardHeader>
         <CardContent>
