@@ -47,10 +47,10 @@ const OperationForm = ({ userId }: OperationFormProps) => {
 
   const loadStrategies = async () => {
     try {
+      // Carregar todas as estratégias do sistema
       const { data, error } = await supabase
         .from('strategies')
         .select('id, name')
-        .eq('user_id', userId)
         .eq('is_active', true)
         .order('name');
 
