@@ -53,10 +53,10 @@ export const OperationsFilters = ({ userId, onFiltersChange }: OperationsFilters
 
   const loadStrategies = async () => {
     try {
+      // Carregar todas as estratégias do sistema
       const { data, error } = await supabase
         .from("strategies")
         .select("id, name")
-        .eq("user_id", userId)
         .eq("is_active", true);
 
       if (error) throw error;
