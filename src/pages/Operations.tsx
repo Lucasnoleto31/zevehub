@@ -62,10 +62,10 @@ const Operations = () => {
 
   const loadOperations = async () => {
     try {
+      // Carregar todas as operações do sistema
       let query = supabase
         .from("trading_operations")
         .select("*")
-        .eq("user_id", user.id)
         .order("operation_date", { ascending: false });
 
       if (advancedFilters.startDate) {
@@ -188,7 +188,7 @@ const Operations = () => {
               </Button>
               <div className="flex items-center gap-2">
                 <TrendingUp className="w-5 h-5 text-primary" />
-                <h1 className="text-xl font-bold text-foreground">Minhas Operações</h1>
+                <h1 className="text-xl font-bold text-foreground">Operações do Sistema</h1>
               </div>
             </div>
             <div className="flex items-center gap-2">
@@ -209,7 +209,7 @@ const Operations = () => {
           <TabsList className="grid w-full max-w-3xl grid-cols-4">
             <TabsTrigger value="register">Registrar</TabsTrigger>
             <TabsTrigger value="strategies">Estratégias</TabsTrigger>
-            <TabsTrigger value="dashboard">Meu Dashboard</TabsTrigger>
+            <TabsTrigger value="dashboard">Dashboard Geral</TabsTrigger>
             <TabsTrigger value="analytics">Análise Detalhada</TabsTrigger>
           </TabsList>
 
@@ -243,7 +243,7 @@ const Operations = () => {
                   <CardHeader>
                     <CardTitle>Histórico de Operações</CardTitle>
                     <CardDescription>
-                      Últimas operações suas registradas
+                      Todas as operações registradas no sistema
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
@@ -285,9 +285,9 @@ const Operations = () => {
                   <CardHeader>
                     <div className="flex items-center justify-between">
                       <div>
-                        <CardTitle>Minhas Operações Detalhadas</CardTitle>
+                        <CardTitle>Operações Detalhadas</CardTitle>
                         <CardDescription>
-                          {operations.length} operações suas encontradas
+                          {operations.length} operações encontradas no sistema
                         </CardDescription>
                       </div>
                       <ExportOperations

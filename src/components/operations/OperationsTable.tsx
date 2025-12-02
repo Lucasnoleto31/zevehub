@@ -60,10 +60,10 @@ const OperationsTable = ({ userId, isAdmin = false, filters }: OperationsTablePr
 
   const loadOperations = async () => {
     try {
+      // Carregar todas as operações do sistema
       let query = supabase
         .from("trading_operations")
         .select("*")
-        .eq("user_id", userId)
         .order("operation_date", { ascending: false })
         .order("operation_time", { ascending: false });
 
