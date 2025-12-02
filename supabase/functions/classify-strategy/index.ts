@@ -85,7 +85,32 @@ Qual estratégia foi utilizada?`;
     }
 
     const aiData = await aiResponse.json();
-    const classifiedStrategy = aiData.choices?.[0]?.message?.content?.trim() || "Não classificado";
+    let classifiedStrategy = aiData.choices?.[0]?.message?.content?.trim() || "";
+    
+    // Validar se a resposta é uma estratégia válida (não uma mensagem de erro)
+    const invalidResponses = [
+      "não é possível",
+      "não foi possível", 
+      "informações fornecidas",
+      "não são suficientes",
+      "não classificado",
+      "impossível determinar"
+    ];
+    
+    const isInvalidResponse = invalidResponses.some(invalid => 
+      classifiedStrategy.toLowerCase().includes(invalid)
+    ) || classifiedStrategy.length > 50;
+    
+    if (isInvalidResponse || !classifiedStrategy) {
+      return new Response(
+        JSON.stringify({ 
+          success: false,
+          error: "Não foi possível classificar esta operação"
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+    
     const confidence = 0.85; // Confiança padrão
 
     // Salvar log de classificação
