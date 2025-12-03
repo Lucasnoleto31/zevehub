@@ -5,8 +5,6 @@ import {
   LineChart,
   User,
   Shield,
-  Wallet,
-  TrendingUp,
   Users,
 } from "lucide-react";
 
@@ -44,18 +42,6 @@ const menuItems = [
     url: "/comunidade",
     icon: Users,
     color: "text-pink-500",
-  },
-  {
-    title: "Finanças Pessoais",
-    url: "/financas",
-    icon: Wallet,
-    color: "text-yellow-500",
-  },
-  {
-    title: "Inteligência de Mercado",
-    url: "/inteligencia-mercado",
-    icon: TrendingUp,
-    color: "text-cyan-500",
   },
   {
     title: "Perfil",
