@@ -32,7 +32,8 @@ import {
   TrendingDown,
   BarChart3,
   AlertTriangle,
-  CheckCircle2
+  CheckCircle2,
+  Download
 } from "lucide-react";
 import { format, startOfMonth, endOfMonth, startOfDay, endOfDay, subMonths, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -443,6 +444,115 @@ const Financas = () => {
     toast.success("Categoria removida!");
     loadData();
   };
+
+  // Apply budget model automatically
+  const handleApplyBudgetModel = async (model: string) => {
+    if (!userId) return;
+    
+    setBudgetModel(model);
+    
+    if (model === "personalizado") {
+      toast.info("Modelo personalizado selecionado. Configure suas categorias manualmente.");
+      return;
+    }
+    
+    // Define model configurations
+    const modelConfigs: Record<string, { nome: string; percentual: number; cor: string }[]> = {
+      "50/30/20": [
+        { nome: "Essenciais", percentual: 50, cor: "#10B981" },
+        { nome: "Desejos", percentual: 30, cor: "#F59E0B" },
+        { nome: "Investimentos/Poupança", percentual: 20, cor: "#6366F1" }
+      ],
+      "60/20/20": [
+        { nome: "Essenciais", percentual: 60, cor: "#10B981" },
+        { nome: "Desejos", percentual: 20, cor: "#F59E0B" },
+        { nome: "Investimentos/Poupança", percentual: 20, cor: "#6366F1" }
+      ],
+      "70/20/10": [
+        { nome: "Essenciais", percentual: 70, cor: "#10B981" },
+        { nome: "Desejos", percentual: 20, cor: "#F59E0B" },
+        { nome: "Reserva", percentual: 10, cor: "#6366F1" }
+      ]
+    };
+    
+    const config = modelConfigs[model];
+    if (!config) return;
+    
+    // Update existing categories or create new ones
+    for (const cat of config) {
+      const existingCat = categorias.find(c => c.nome === cat.nome && c.tipo === "despesa");
+      
+      if (existingCat) {
+        await supabase
+          .from("categorias_financas")
+          .update({ percentual_meta: cat.percentual, cor: cat.cor })
+          .eq("id", existingCat.id);
+      } else {
+        await supabase.from("categorias_financas").insert({
+          user_id: userId,
+          nome: cat.nome,
+          tipo: "despesa",
+          cor: cat.cor,
+          percentual_meta: cat.percentual
+        });
+      }
+    }
+    
+    toast.success(`Modelo ${model} aplicado com sucesso!`);
+    loadData();
+  };
+
+  // Calculate average expenses for last 7 days
+  const calcularMedia7Dias = () => {
+    const hoje = new Date();
+    const seteDiasAtras = new Date(hoje);
+    seteDiasAtras.setDate(hoje.getDate() - 7);
+    
+    const lancamentos7Dias = lancamentos.filter(l => {
+      const dataLancamento = new Date(l.data + "T12:00:00");
+      const cat = categorias.find(c => c.id === l.categoria_id);
+      const isDespesa = !cat || cat.tipo === "despesa";
+      return dataLancamento >= seteDiasAtras && dataLancamento <= hoje && isDespesa;
+    });
+    
+    if (lancamentos7Dias.length === 0) return 0;
+    
+    const total = lancamentos7Dias.reduce((acc, l) => acc + Number(l.valor), 0);
+    return total / 7;
+  };
+
+  // Export lancamentos to CSV
+  const handleExportCSV = () => {
+    const headers = ["Data", "Descrição", "Valor", "Categoria", "Recorrente"];
+    const rows = lancamentosFiltrados.map(l => {
+      const cat = categorias.find(c => c.id === l.categoria_id);
+      return [
+        format(new Date(l.data + "T12:00:00"), "dd/MM/yyyy"),
+        l.descricao || "",
+        Number(l.valor).toFixed(2).replace(".", ","),
+        cat?.nome || "Sem categoria",
+        l.recorrente ? "Sim" : "Não"
+      ];
+    });
+    
+    const csvContent = [
+      headers.join(";"),
+      ...rows.map(row => row.join(";"))
+    ].join("\n");
+    
+    const blob = new Blob(["\ufeff" + csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `lancamentos_${format(new Date(), "yyyy-MM-dd")}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    toast.success("Lançamentos exportados com sucesso!");
+  };
+
+  const media7Dias = calcularMedia7Dias();
 
   // Reports data
   const getMonthlyData = () => {
@@ -1041,17 +1151,62 @@ const Financas = () => {
 
               {/* Daily Control Tab */}
               <TabsContent value="diario" className="space-y-6">
+                {/* Status Alert */}
                 <Card className={`border-2 ${saldoHoje >= 0 ? 'border-emerald-200 bg-emerald-50 dark:bg-emerald-950/20' : 'border-red-200 bg-red-50 dark:bg-red-950/20'}`}>
-                  <CardContent className="pt-6 text-center">
-                    <p className="text-sm text-muted-foreground">Saldo de Hoje</p>
-                    <p className={`text-4xl font-bold mt-1 ${saldoHoje >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
-                      {formatCurrency(saldoHoje)}
-                    </p>
-                    <p className="text-sm text-muted-foreground mt-2">
-                      Meta: {formatCurrency(metaDiaria > 0 ? metaDiaria : 0)}
-                    </p>
+                  <CardContent className="pt-6">
+                    <div className="flex items-center justify-center gap-3 mb-4">
+                      {saldoHoje >= 0 ? (
+                        <CheckCircle2 className="h-8 w-8 text-emerald-600" />
+                      ) : (
+                        <AlertTriangle className="h-8 w-8 text-red-600" />
+                      )}
+                      <p className={`text-lg font-semibold ${saldoHoje >= 0 ? 'text-emerald-700 dark:text-emerald-300' : 'text-red-700 dark:text-red-300'}`}>
+                        {saldoHoje >= 0 ? "Você está dentro da meta de hoje!" : "Você ultrapassou a meta diária!"}
+                      </p>
+                    </div>
+                    <div className="text-center">
+                      <p className="text-sm text-muted-foreground">Saldo Disponível Hoje</p>
+                      <p className={`text-4xl font-bold mt-1 ${saldoHoje >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+                        {formatCurrency(saldoHoje)}
+                      </p>
+                    </div>
                   </CardContent>
                 </Card>
+
+                {/* Daily Metrics */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <Card>
+                    <CardContent className="pt-6 text-center">
+                      <Target className="h-6 w-6 mx-auto mb-2 text-indigo-600" />
+                      <p className="text-sm text-muted-foreground">Meta Diária</p>
+                      <p className="text-2xl font-bold text-indigo-600">{formatCurrency(metaDiaria > 0 ? metaDiaria : 0)}</p>
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardContent className="pt-6 text-center">
+                      <ArrowDownCircle className="h-6 w-6 mx-auto mb-2 text-red-600" />
+                      <p className="text-sm text-muted-foreground">Gasto Hoje</p>
+                      <p className="text-2xl font-bold text-red-600">{formatCurrency(gastoHoje)}</p>
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardContent className="pt-6 text-center">
+                      <BarChart3 className="h-6 w-6 mx-auto mb-2 text-amber-600" />
+                      <p className="text-sm text-muted-foreground">Média 7 Dias</p>
+                      <p className="text-2xl font-bold text-amber-600">{formatCurrency(media7Dias)}</p>
+                    </CardContent>
+                  </Card>
+                </div>
+
+                {/* Smart Daily Alert */}
+                {media7Dias > metaDiaria && metaDiaria > 0 && (
+                  <div className="flex items-center gap-3 p-4 bg-amber-50 dark:bg-amber-950/20 rounded-lg border border-amber-200 dark:border-amber-800">
+                    <AlertTriangle className="h-5 w-5 text-amber-600" />
+                    <p className="text-sm text-amber-700 dark:text-amber-300">
+                      Sua média de gastos dos últimos 7 dias ({formatCurrency(media7Dias)}) está acima da meta diária. Considere reduzir gastos.
+                    </p>
+                  </div>
+                )}
 
                 <Card>
                   <CardHeader>
@@ -1231,10 +1386,18 @@ const Financas = () => {
                 {/* Transactions List */}
                 <Card>
                   <CardHeader>
-                    <CardTitle>Lista de Lançamentos</CardTitle>
-                    <CardDescription>
-                      {lancamentosFiltrados.length} lançamento(s) encontrado(s)
-                    </CardDescription>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <CardTitle>Lista de Lançamentos</CardTitle>
+                        <CardDescription>
+                          {lancamentosFiltrados.length} lançamento(s) encontrado(s)
+                        </CardDescription>
+                      </div>
+                      <Button variant="outline" size="sm" onClick={handleExportCSV}>
+                        <Download className="h-4 w-4 mr-2" />
+                        Exportar CSV
+                      </Button>
+                    </div>
                   </CardHeader>
                   <CardContent>
                     {lancamentosFiltrados.length === 0 ? (
@@ -1528,7 +1691,7 @@ const Financas = () => {
                         {BUDGET_MODELS.map((model) => (
                           <div
                             key={model.id}
-                            onClick={() => setBudgetModel(model.id)}
+                            onClick={() => handleApplyBudgetModel(model.id)}
                             className={`p-4 rounded-lg border-2 cursor-pointer transition-all ${
                               budgetModel === model.id
                                 ? "border-indigo-600 bg-indigo-50 dark:bg-indigo-950/20"
