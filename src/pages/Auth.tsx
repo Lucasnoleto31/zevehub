@@ -359,7 +359,7 @@ const Auth = () => {
             <Button 
               variant="outline" 
               className="w-full h-12 gap-2"
-              onClick={() => window.open("https://wa.me/5511999999999?text=Olá! Acabei de me cadastrar no Zeve Hub e gostaria de informações sobre a aprovação do meu acesso.", "_blank")}
+              onClick={() => window.open("https://wa.me/5562981114546?text=Olá! Acabei de me cadastrar no Zeve Hub e gostaria de informações sobre a aprovação do meu acesso.", "_blank")}
             >
               <MessageSquare className="w-4 h-4" />
               Falar com meu assessor
