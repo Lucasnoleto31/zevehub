@@ -32,7 +32,7 @@ const menuItems = [
     color: "text-blue-500",
   },
   {
-    title: "Operações",
+    title: "Robôs",
     url: "/operations",
     icon: LineChart,
     color: "text-green-500",
