@@ -8,6 +8,7 @@ import { ArrowLeft, Users, Shield, Activity, Settings, Clock, CheckCircle, XCirc
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import ClientsTable from "@/components/admin/ClientsTable";
 import PendingUsersTable from "@/components/admin/PendingUsersTable";
+import PermissionsManager from "@/components/admin/PermissionsManager";
 import CreateMessageDialog from "@/components/admin/CreateMessageDialog";
 import { ThemeToggle } from "@/components/ThemeToggle";
 
@@ -263,13 +264,11 @@ const Admin = () => {
               <CardHeader>
                 <CardTitle>Gerenciar Permissões</CardTitle>
                 <CardDescription>
-                  Configure permissões individuais por módulo
+                  Configure permissões individuais por módulo para cada usuário aprovado
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <p className="text-muted-foreground text-center py-8">
-                  Funcionalidade em desenvolvimento
-                </p>
+                <PermissionsManager onUpdate={loadStats} />
               </CardContent>
             </Card>
           </TabsContent>
