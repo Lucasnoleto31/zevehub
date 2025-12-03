@@ -547,8 +547,10 @@ export type Database = {
           created_at: string
           data: string
           descricao: string | null
+          frequencia_recorrencia: string | null
           id: string
           recorrente: boolean
+          tipo_transacao: string
           user_id: string
           valor: number
         }
@@ -557,8 +559,10 @@ export type Database = {
           created_at?: string
           data?: string
           descricao?: string | null
+          frequencia_recorrencia?: string | null
           id?: string
           recorrente?: boolean
+          tipo_transacao?: string
           user_id: string
           valor: number
         }
@@ -567,8 +571,10 @@ export type Database = {
           created_at?: string
           data?: string
           descricao?: string | null
+          frequencia_recorrencia?: string | null
           id?: string
           recorrente?: boolean
+          tipo_transacao?: string
           user_id?: string
           valor?: number
         }
