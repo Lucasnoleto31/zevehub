@@ -78,6 +78,14 @@ interface Metricas {
   valor_diario_meta: number;
 }
 
+// Budget model options
+const BUDGET_MODELS = [
+  { id: "50/30/20", label: "50/30/20", description: "50% Necessidades, 30% Desejos, 20% Poupança" },
+  { id: "60/20/20", label: "60/20/20", description: "60% Necessidades, 20% Desejos, 20% Poupança" },
+  { id: "70/20/10", label: "70/20/10", description: "70% Necessidades, 20% Desejos, 10% Poupança" },
+  { id: "personalizado", label: "Personalizado", description: "Defina seus próprios percentuais" },
+];
+
 const Financas = () => {
   const navigate = useNavigate();
   const [userId, setUserId] = useState<string | null>(null);
@@ -120,8 +128,10 @@ const Financas = () => {
   const [newCategoryName, setNewCategoryName] = useState("");
   const [newCategoryType, setNewCategoryType] = useState<"despesa" | "receita">("despesa");
   const [newCategoryColor, setNewCategoryColor] = useState("#4F46E5");
+  const [newCategoryPercentual, setNewCategoryPercentual] = useState("");
   const [editingCategory, setEditingCategory] = useState<Categoria | null>(null);
   const [categoryDialogOpen, setCategoryDialogOpen] = useState(false);
+  const [budgetModel, setBudgetModel] = useState("personalizado");
 
   useEffect(() => {
     checkAuth();
@@ -350,6 +360,13 @@ const Financas = () => {
     loadData();
   };
 
+  // Calculate total percentual for validation
+  const calcularTotalPercentual = (excludeCategoryId?: string) => {
+    return categorias
+      .filter(c => c.tipo === "despesa" && c.id !== excludeCategoryId)
+      .reduce((acc, c) => acc + (c.percentual_meta || 0), 0);
+  };
+
   // Category management functions
   const handleAddCategory = async () => {
     if (!userId || !newCategoryName.trim()) {
@@ -357,18 +374,30 @@ const Financas = () => {
       return;
     }
 
+    const novoPercentual = parseFloat(newCategoryPercentual) || 0;
+    
+    // Validate percentage total only for expense categories
+    if (newCategoryType === "despesa" && novoPercentual > 0) {
+      const totalAtual = calcularTotalPercentual();
+      if (totalAtual + novoPercentual > 100) {
+        toast.error(`A soma dos percentuais das categorias ultrapassaria 100%. Disponível: ${(100 - totalAtual).toFixed(1)}%`);
+        return;
+      }
+    }
+
     await supabase.from("categorias_financas").insert({
       user_id: userId,
       nome: newCategoryName.trim(),
       tipo: newCategoryType,
       cor: newCategoryColor,
-      percentual_meta: 0
+      percentual_meta: novoPercentual
     });
 
     toast.success("Categoria criada!");
     setNewCategoryName("");
     setNewCategoryType("despesa");
     setNewCategoryColor("#4F46E5");
+    setNewCategoryPercentual("");
     setCategoryDialogOpen(false);
     loadData();
   };
@@ -376,12 +405,24 @@ const Financas = () => {
   const handleEditCategory = async () => {
     if (!editingCategory) return;
 
+    const novoPercentual = editingCategory.percentual_meta || 0;
+    
+    // Validate percentage total only for expense categories
+    if (editingCategory.tipo === "despesa" && novoPercentual > 0) {
+      const totalAtual = calcularTotalPercentual(editingCategory.id);
+      if (totalAtual + novoPercentual > 100) {
+        toast.error(`A soma dos percentuais das categorias ultrapassaria 100%. Disponível: ${(100 - totalAtual).toFixed(1)}%`);
+        return;
+      }
+    }
+
     await supabase
       .from("categorias_financas")
       .update({
         nome: editingCategory.nome,
         tipo: editingCategory.tipo,
-        cor: editingCategory.cor
+        cor: editingCategory.cor,
+        percentual_meta: novoPercentual
       })
       .eq("id", editingCategory.id);
 
@@ -603,12 +644,13 @@ const Financas = () => {
 
             {/* Tabs */}
             <Tabs value={activeTab} onValueChange={setActiveTab}>
-              <TabsList className="grid w-full grid-cols-6 lg:w-auto lg:inline-flex">
+              <TabsList className="grid w-full grid-cols-7 lg:w-auto lg:inline-flex">
                 <TabsTrigger value="dashboard">Resumo</TabsTrigger>
                 <TabsTrigger value="diario">Diário</TabsTrigger>
                 <TabsTrigger value="lancamentos">Lançamentos</TabsTrigger>
                 <TabsTrigger value="categorias">Categorias</TabsTrigger>
                 <TabsTrigger value="setup">Setup</TabsTrigger>
+                <TabsTrigger value="config">Configurações</TabsTrigger>
                 <TabsTrigger value="relatorios">Relatórios</TabsTrigger>
               </TabsList>
 
@@ -1357,6 +1399,22 @@ const Financas = () => {
                                 />
                               </div>
                             </div>
+                            {newCategoryType === "despesa" && (
+                              <div className="space-y-2">
+                                <Label>Percentual Meta (%)</Label>
+                                <Input
+                                  type="number"
+                                  min="0"
+                                  max="100"
+                                  placeholder="Ex.: 15"
+                                  value={newCategoryPercentual}
+                                  onChange={(e) => setNewCategoryPercentual(e.target.value)}
+                                />
+                                <p className="text-xs text-muted-foreground">
+                                  Disponível: {(100 - calcularTotalPercentual()).toFixed(1)}%
+                                </p>
+                              </div>
+                            )}
                             <Button onClick={handleAddCategory} className="w-full bg-indigo-600 hover:bg-indigo-700">
                               Criar Categoria
                             </Button>
@@ -1366,39 +1424,173 @@ const Financas = () => {
                     </div>
                   </CardHeader>
                   <CardContent>
+                    {/* Total percentual summary */}
+                    <div className="mb-4 p-3 bg-indigo-50 dark:bg-indigo-950/20 rounded-lg">
+                      <div className="flex justify-between items-center mb-2">
+                        <span className="text-sm font-medium">Total de Percentuais Alocados</span>
+                        <span className={`text-sm font-bold ${calcularTotalPercentual() > 100 ? 'text-red-600' : 'text-indigo-600'}`}>
+                          {calcularTotalPercentual().toFixed(1)}%
+                        </span>
+                      </div>
+                      <Progress value={calcularTotalPercentual()} className="h-2" />
+                      {calcularTotalPercentual() > 100 && (
+                        <p className="text-xs text-red-600 mt-1">⚠️ Total excede 100%. Ajuste os percentuais.</p>
+                      )}
+                    </div>
+                    
                     {categorias.length === 0 ? (
                       <p className="text-center text-muted-foreground py-8">Nenhuma categoria cadastrada</p>
                     ) : (
                       <div className="space-y-3">
-                        {categorias.map(cat => (
-                          <div key={cat.id} className="flex items-center justify-between p-3 rounded-lg border hover:bg-slate-50 dark:hover:bg-muted transition-colors">
-                            <div className="flex items-center gap-3">
-                              <div className="w-4 h-4 rounded-full" style={{ backgroundColor: cat.cor }} />
-                              <div>
-                                <p className="font-medium">{cat.nome}</p>
-                                <p className="text-xs text-muted-foreground capitalize">{cat.tipo}</p>
+                        {categorias.map(cat => {
+                          // Calculate category spending for progress
+                          const gastoCategoria = lancamentosMes
+                            .filter(l => l.categoria_id === cat.id)
+                            .reduce((acc, l) => acc + Number(l.valor), 0);
+                          const metaCategoria = cat.percentual_meta ? (sobraMensal * cat.percentual_meta / 100) : 0;
+                          const progressoCategoria = metaCategoria > 0 ? (gastoCategoria / metaCategoria) * 100 : 0;
+                          
+                          return (
+                            <div key={cat.id} className="p-3 rounded-lg border hover:bg-slate-50 dark:hover:bg-muted transition-colors">
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-3">
+                                  <div className="w-4 h-4 rounded-full" style={{ backgroundColor: cat.cor }} />
+                                  <div>
+                                    <p className="font-medium">{cat.nome}</p>
+                                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                      <span className="capitalize">{cat.tipo}</span>
+                                      {cat.tipo === "despesa" && cat.percentual_meta && cat.percentual_meta > 0 && (
+                                        <>
+                                          <span>•</span>
+                                          <span>{cat.percentual_meta}% do orçamento</span>
+                                        </>
+                                      )}
+                                    </div>
+                                  </div>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  {cat.tipo === "despesa" && cat.percentual_meta && cat.percentual_meta > 0 && (
+                                    <span className={`text-xs font-medium ${progressoCategoria >= 100 ? 'text-red-600' : progressoCategoria >= 80 ? 'text-amber-600' : 'text-emerald-600'}`}>
+                                      {formatCurrency(gastoCategoria)} / {formatCurrency(metaCategoria)}
+                                    </span>
+                                  )}
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={() => setEditingCategory(cat)}
+                                  >
+                                    <Edit className="h-4 w-4 text-muted-foreground" />
+                                  </Button>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={() => handleDeleteCategory(cat.id)}
+                                  >
+                                    <Trash2 className="h-4 w-4 text-red-500" />
+                                  </Button>
+                                </div>
                               </div>
+                              {/* Progress bar for expense categories with budget */}
+                              {cat.tipo === "despesa" && cat.percentual_meta && cat.percentual_meta > 0 && (
+                                <div className="mt-2">
+                                  <Progress 
+                                    value={Math.min(progressoCategoria, 100)} 
+                                    className={`h-1.5 ${progressoCategoria >= 100 ? '[&>div]:bg-red-500' : progressoCategoria >= 80 ? '[&>div]:bg-amber-500' : '[&>div]:bg-emerald-500'}`}
+                                  />
+                                </div>
+                              )}
                             </div>
-                            <div className="flex items-center gap-2">
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => setEditingCategory(cat)}
-                              >
-                                <Edit className="h-4 w-4 text-muted-foreground" />
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => handleDeleteCategory(cat.id)}
-                              >
-                                <Trash2 className="h-4 w-4 text-red-500" />
-                              </Button>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </TabsContent>
+
+              {/* Config Tab - Advanced Budget Settings */}
+              <TabsContent value="config" className="space-y-6">
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Settings className="h-5 w-5 text-indigo-600" />
+                      Configurações do Orçamento
+                    </CardTitle>
+                    <CardDescription>
+                      Configure seu modelo de orçamento e preferências financeiras
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-6">
+                    {/* Budget Model Selection */}
+                    <div className="space-y-4">
+                      <Label className="text-base font-medium">Modelo de Orçamento</Label>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {BUDGET_MODELS.map((model) => (
+                          <div
+                            key={model.id}
+                            onClick={() => setBudgetModel(model.id)}
+                            className={`p-4 rounded-lg border-2 cursor-pointer transition-all ${
+                              budgetModel === model.id
+                                ? "border-indigo-600 bg-indigo-50 dark:bg-indigo-950/20"
+                                : "border-muted hover:border-indigo-300"
+                            }`}
+                          >
+                            <div className="flex items-center gap-2 mb-1">
+                              <div className={`w-3 h-3 rounded-full ${budgetModel === model.id ? 'bg-indigo-600' : 'bg-muted'}`} />
+                              <span className="font-semibold">{model.label}</span>
                             </div>
+                            <p className="text-xs text-muted-foreground">{model.description}</p>
                           </div>
                         ))}
                       </div>
-                    )}
+                    </div>
+
+                    {/* Quick Setup Info */}
+                    <div className="p-4 bg-amber-50 dark:bg-amber-950/20 rounded-lg border border-amber-200 dark:border-amber-800">
+                      <div className="flex items-start gap-3">
+                        <Lightbulb className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
+                        <div>
+                          <h4 className="font-medium text-amber-800 dark:text-amber-200">Dica sobre Modelos</h4>
+                          <p className="text-sm text-amber-700 dark:text-amber-300 mt-1">
+                            O modelo 50/30/20 é recomendado para iniciantes. Você pode personalizar os percentuais 
+                            de cada categoria na aba "Categorias" para criar seu próprio modelo.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Current Budget Summary */}
+                    <div className="p-4 bg-slate-100 dark:bg-muted rounded-lg">
+                      <h4 className="font-medium mb-3">Resumo do Orçamento Atual</h4>
+                      <div className="space-y-2">
+                        <div className="flex justify-between text-sm">
+                          <span>Salário Mensal</span>
+                          <span className="font-medium">{formatCurrency(metricas.salario_mensal)}</span>
+                        </div>
+                        <div className="flex justify-between text-sm">
+                          <span>Despesas Recorrentes</span>
+                          <span className="font-medium text-red-600">-{formatCurrency(totalRecorrentes)}</span>
+                        </div>
+                        <div className="flex justify-between text-sm border-t pt-2">
+                          <span>Disponível para Orçamentar</span>
+                          <span className="font-bold text-indigo-600">{formatCurrency(sobraMensal)}</span>
+                        </div>
+                        <div className="flex justify-between text-sm">
+                          <span>Total Alocado em Categorias</span>
+                          <span className={`font-medium ${calcularTotalPercentual() > 100 ? 'text-red-600' : 'text-emerald-600'}`}>
+                            {calcularTotalPercentual().toFixed(1)}%
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <Button 
+                      onClick={() => setActiveTab("categorias")} 
+                      className="w-full bg-indigo-600 hover:bg-indigo-700"
+                    >
+                      <Edit className="h-4 w-4 mr-2" />
+                      Editar Categorias e Percentuais
+                    </Button>
                   </CardContent>
                 </Card>
               </TabsContent>
@@ -1671,6 +1863,22 @@ const Financas = () => {
                     />
                   </div>
                 </div>
+                {editingCategory.tipo === "despesa" && (
+                  <div className="space-y-2">
+                    <Label>Percentual Meta (%)</Label>
+                    <Input
+                      type="number"
+                      min="0"
+                      max="100"
+                      placeholder="Ex.: 15"
+                      value={editingCategory.percentual_meta || ""}
+                      onChange={(e) => setEditingCategory(prev => prev ? { ...prev, percentual_meta: parseFloat(e.target.value) || 0 } : null)}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Disponível: {(100 - calcularTotalPercentual(editingCategory.id)).toFixed(1)}%
+                    </p>
+                  </div>
+                )}
                 <Button onClick={handleEditCategory} className="w-full bg-indigo-600 hover:bg-indigo-700">
                   Salvar Alterações
                 </Button>
