@@ -412,7 +412,7 @@ const Financas = () => {
               {/* Dashboard Tab */}
               <TabsContent value="dashboard" className="space-y-6">
                 {/* Summary Cards */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                   <Card className="bg-gradient-to-br from-indigo-600 to-purple-600 text-white border-0">
                     <CardContent className="pt-6">
                       <div className="flex items-center gap-2 mb-2">
@@ -427,19 +427,31 @@ const Financas = () => {
                     <CardContent className="pt-6">
                       <div className="flex items-center gap-2 mb-2">
                         <TrendingUp className="h-5 w-5 text-emerald-200" />
-                        <p className="text-emerald-100 text-sm">Sobra Calculada</p>
+                        <p className="text-emerald-100 text-sm">Sobra do Mês</p>
                       </div>
                       <p className="text-3xl font-bold">{formatCurrency(sobraMensal - gastoMes)}</p>
                     </CardContent>
                   </Card>
 
-                  <Card className="bg-gradient-to-br from-amber-600 to-orange-600 text-white border-0">
+                  <Card className="bg-gradient-to-br from-cyan-600 to-blue-600 text-white border-0">
                     <CardContent className="pt-6">
                       <div className="flex items-center gap-2 mb-2">
-                        <Calendar className="h-5 w-5 text-amber-200" />
-                        <p className="text-amber-100 text-sm">Valor Diário Disponível</p>
+                        <Target className="h-5 w-5 text-cyan-200" />
+                        <p className="text-cyan-100 text-sm">Meta Diária</p>
                       </div>
                       <p className="text-3xl font-bold">{formatCurrency(metaDiaria > 0 ? metaDiaria : 0)}</p>
+                      <p className="text-cyan-200 text-xs mt-1">{diasRestantes} dias restantes</p>
+                    </CardContent>
+                  </Card>
+
+                  <Card className={`border-0 ${saldoHoje >= 0 ? 'bg-gradient-to-br from-amber-500 to-orange-600' : 'bg-gradient-to-br from-red-500 to-rose-600'} text-white`}>
+                    <CardContent className="pt-6">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Sun className="h-5 w-5 text-white/80" />
+                        <p className="text-white/80 text-sm">Disponível Hoje</p>
+                      </div>
+                      <p className="text-3xl font-bold">{formatCurrency(saldoHoje)}</p>
+                      <p className="text-white/70 text-xs mt-1">Gasto hoje: {formatCurrency(gastoHoje)}</p>
                     </CardContent>
                   </Card>
                 </div>
