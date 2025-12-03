@@ -93,6 +93,7 @@ export default function Financas() {
   // Form fields
   const [categoriaNome, setCategoriaNome] = useState("");
   const [categoriaTipo, setCategoriaTipo] = useState("essencial");
+  const [categoriaTipoCustom, setCategoriaTipoCustom] = useState("");
   const [categoriaCor, setCategoriaCor] = useState("#06B6D4");
   const [categoriaPercentual, setCategoriaPercentual] = useState(0);
   const [categoriaMetaValor, setCategoriaMetaValor] = useState(0);
@@ -257,9 +258,11 @@ export default function Financas() {
   const handleSaveCategoria = async () => {
     if (!user || !categoriaNome) return;
 
+    const tipoFinal = categoriaTipo === "custom" ? categoriaTipoCustom : categoriaTipo;
+    
     const categoriaData = {
       nome: categoriaNome,
-      tipo: categoriaTipo,
+      tipo: tipoFinal,
       cor: categoriaCor,
       percentual_meta: categoriaPercentual,
       meta_valor: categoriaMetaValor,
@@ -493,6 +496,7 @@ export default function Financas() {
     setEditingCategoria(null);
     setCategoriaNome("");
     setCategoriaTipo("essencial");
+    setCategoriaTipoCustom("");
     setCategoriaCor("#06B6D4");
     setCategoriaPercentual(0);
     setCategoriaMetaValor(0);
@@ -511,7 +515,17 @@ export default function Financas() {
   const openEditCategoria = (cat: Categoria) => {
     setEditingCategoria(cat);
     setCategoriaNome(cat.nome);
-    setCategoriaTipo(cat.tipo);
+    
+    // Check if tipo is a predefined one or custom
+    const isPredefinedType = TIPOS_CATEGORIA.some(t => t.value === cat.tipo);
+    if (isPredefinedType) {
+      setCategoriaTipo(cat.tipo);
+      setCategoriaTipoCustom("");
+    } else {
+      setCategoriaTipo("custom");
+      setCategoriaTipoCustom(cat.tipo);
+    }
+    
     setCategoriaCor(cat.cor);
     setCategoriaPercentual(cat.percentual_meta);
     setCategoriaMetaValor(cat.meta_valor);
@@ -785,7 +799,7 @@ export default function Financas() {
                           placeholder="Ex: Alimentação"
                         />
                       </div>
-                      <div>
+                      <div className="space-y-2">
                         <Label>Tipo</Label>
                         <Select value={categoriaTipo} onValueChange={setCategoriaTipo}>
                           <SelectTrigger>
@@ -797,8 +811,16 @@ export default function Financas() {
                                 {t.label}
                               </SelectItem>
                             ))}
+                            <SelectItem value="custom">+ Criar novo tipo</SelectItem>
                           </SelectContent>
                         </Select>
+                        {categoriaTipo === "custom" && (
+                          <Input
+                            value={categoriaTipoCustom}
+                            onChange={(e) => setCategoriaTipoCustom(e.target.value)}
+                            placeholder="Digite o nome do novo tipo"
+                          />
+                        )}
                       </div>
                       <div>
                         <Label>Cor</Label>
