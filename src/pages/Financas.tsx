@@ -337,6 +337,34 @@ export default function Financas() {
     setTipoDialog(true);
   };
 
+  const handleDeleteTipo = async (tipo: string) => {
+    if (!user) return;
+
+    // Check if tipo is a default one
+    const isDefaultTipo = TIPOS_CATEGORIA_PADRAO.some(t => t.value === tipo);
+    if (isDefaultTipo) {
+      toast({ title: "Tipos padrão não podem ser excluídos", variant: "destructive" });
+      return;
+    }
+
+    // Check if any category uses this tipo
+    const categoriasUsandoTipo = categorias.filter(c => c.tipo === tipo);
+    if (categoriasUsandoTipo.length > 0) {
+      toast({ 
+        title: "Tipo em uso", 
+        description: `${categoriasUsandoTipo.length} categoria(s) usa(m) este tipo. Remova ou altere as categorias primeiro.`,
+        variant: "destructive" 
+      });
+      return;
+    }
+
+    toast({ title: "Tipo removido com sucesso" });
+  };
+
+  const getTipoUsageCount = (tipo: string) => {
+    return categorias.filter(c => c.tipo === tipo).length;
+  };
+
   const handleSaveLancamento = async () => {
     if (!user || !lancamentoCategoriaId || lancamentoValor <= 0) return;
 
@@ -1112,22 +1140,41 @@ export default function Financas() {
                     Gerenciar Tipos
                   </CardTitle>
                   <CardDescription>
-                    Renomeie tipos de categoria existentes
+                    Renomeie ou exclua tipos de categoria (tipos em uso não podem ser excluídos)
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="flex flex-wrap gap-2">
-                    {tiposCategoria.map((tipo) => (
-                      <Badge
-                        key={tipo.value}
-                        variant="secondary"
-                        className="cursor-pointer hover:bg-primary/20 transition-colors px-3 py-1.5"
-                        onClick={() => openEditTipo(tipo.value)}
-                      >
-                        {tipo.label}
-                        <Pencil className="h-3 w-3 ml-2" />
-                      </Badge>
-                    ))}
+                    {tiposCategoria.map((tipo) => {
+                      const usageCount = getTipoUsageCount(tipo.value);
+                      const isDefault = TIPOS_CATEGORIA_PADRAO.some(t => t.value === tipo.value);
+                      return (
+                        <div key={tipo.value} className="flex items-center gap-1 bg-secondary rounded-md px-2 py-1">
+                          <span className="text-sm">{tipo.label}</span>
+                          <Badge variant="outline" className="text-xs ml-1">
+                            {usageCount}
+                          </Badge>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-6 w-6"
+                            onClick={() => openEditTipo(tipo.value)}
+                          >
+                            <Pencil className="h-3 w-3" />
+                          </Button>
+                          {!isDefault && usageCount === 0 && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-6 w-6 text-destructive hover:text-destructive"
+                              onClick={() => handleDeleteTipo(tipo.value)}
+                            >
+                              <Trash2 className="h-3 w-3" />
+                            </Button>
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
                 </CardContent>
               </Card>
