@@ -62,7 +62,7 @@ const CORES_CATEGORIAS = [
   "#EAB308", "#EF4444", "#3B82F6", "#14B8A6", "#A855F7"
 ];
 
-const TIPOS_CATEGORIA = [
+const TIPOS_CATEGORIA_PADRAO = [
   { value: "essencial", label: "Essencial" },
   { value: "nao_essencial", label: "Não Essencial" },
   { value: "lazer", label: "Lazer" },
@@ -253,6 +253,21 @@ export default function Financas() {
       valor,
     }));
   }, [lancamentos]);
+
+  // Lista dinâmica de tipos (padrão + customizados do usuário)
+  const tiposCategoria = useMemo(() => {
+    const tiposCustomizados = categorias
+      .map(c => c.tipo)
+      .filter(tipo => !TIPOS_CATEGORIA_PADRAO.some(t => t.value === tipo))
+      .filter((tipo, index, self) => self.indexOf(tipo) === index);
+    
+    const listaPadrao = [...TIPOS_CATEGORIA_PADRAO];
+    tiposCustomizados.forEach(tipo => {
+      listaPadrao.push({ value: tipo, label: tipo });
+    });
+    
+    return listaPadrao;
+  }, [categorias]);
 
   // Funções CRUD
   const handleSaveCategoria = async () => {
@@ -517,13 +532,13 @@ export default function Financas() {
     setCategoriaNome(cat.nome);
     
     // Check if tipo is a predefined one or custom
-    const isPredefinedType = TIPOS_CATEGORIA.some(t => t.value === cat.tipo);
+    const isPredefinedType = TIPOS_CATEGORIA_PADRAO.some(t => t.value === cat.tipo);
     if (isPredefinedType) {
       setCategoriaTipo(cat.tipo);
       setCategoriaTipoCustom("");
     } else {
-      setCategoriaTipo("custom");
-      setCategoriaTipoCustom(cat.tipo);
+      setCategoriaTipo(cat.tipo);
+      setCategoriaTipoCustom("");
     }
     
     setCategoriaCor(cat.cor);
@@ -806,7 +821,7 @@ export default function Financas() {
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
-                            {TIPOS_CATEGORIA.map((t) => (
+                            {tiposCategoria.map((t) => (
                               <SelectItem key={t.value} value={t.value}>
                                 {t.label}
                               </SelectItem>
@@ -884,7 +899,7 @@ export default function Financas() {
                           <TableCell className="font-medium">{cat.nome}</TableCell>
                           <TableCell>
                             <Badge variant="outline">
-                              {TIPOS_CATEGORIA.find((t) => t.value === cat.tipo)?.label || cat.tipo}
+                              {tiposCategoria.find((t) => t.value === cat.tipo)?.label || cat.tipo}
                             </Badge>
                           </TableCell>
                           <TableCell>
