@@ -58,7 +58,7 @@ export const RestrictedAccess = ({ accessStatus, userName }: RestrictedAccessPro
   const Icon = config.icon;
 
   const handleContactAssessor = () => {
-    window.open("https://wa.me/5511999999999?text=Olá! Preciso de ajuda com meu acesso ao Zeve Hub.", "_blank");
+    window.open("https://wa.me/5562981114546?text=Olá! Preciso de ajuda com meu acesso ao Zeve Hub.", "_blank");
   };
 
   return (
