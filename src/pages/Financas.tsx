@@ -12,6 +12,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
+import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
 import { 
   Wallet, 
@@ -25,16 +26,21 @@ import {
   ArrowUpCircle,
   ArrowDownCircle,
   Trash2,
-  Edit
+  Edit,
+  PieChart,
+  Target,
+  TrendingDown
 } from "lucide-react";
 import { format, startOfMonth, endOfMonth, startOfDay, endOfDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { PieChart as RechartsPie, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from "recharts";
 
 interface Categoria {
   id: string;
   nome: string;
   tipo: string;
   cor: string;
+  percentual_meta?: number;
 }
 
 interface Lancamento {
@@ -361,102 +367,189 @@ const Financas = () => {
 
             {/* Tabs */}
             <Tabs value={activeTab} onValueChange={setActiveTab}>
-              <TabsList className="grid w-full grid-cols-3 lg:w-auto lg:inline-flex">
+              <TabsList className="grid w-full grid-cols-4 lg:w-auto lg:inline-flex">
                 <TabsTrigger value="dashboard">Resumo</TabsTrigger>
                 <TabsTrigger value="diario">Controle Diário</TabsTrigger>
+                <TabsTrigger value="categorias">Categorias</TabsTrigger>
                 <TabsTrigger value="lancamentos">Lançamentos</TabsTrigger>
               </TabsList>
 
               {/* Dashboard Tab */}
               <TabsContent value="dashboard" className="space-y-6">
-                {/* Hero Card */}
-                <Card className="bg-gradient-to-br from-indigo-600 to-purple-600 text-white border-0">
-                  <CardContent className="pt-6">
-                    <p className="text-indigo-100 text-sm">Saldo Mensal Disponível</p>
-                    <p className="text-4xl font-bold mt-1">{formatCurrency(sobraMensal - gastoMes)}</p>
-                    <p className="text-indigo-200 text-sm mt-2">Quanto resta do seu orçamento</p>
-                  </CardContent>
-                </Card>
-
-                {/* Metric Cards */}
+                {/* Summary Cards */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <Card>
+                  <Card className="bg-gradient-to-br from-indigo-600 to-purple-600 text-white border-0">
                     <CardContent className="pt-6">
-                      <div className="flex items-center gap-3">
-                        <div className="p-2 rounded-lg bg-indigo-100 dark:bg-indigo-950">
-                          <Calendar className="h-5 w-5 text-indigo-600" />
-                        </div>
-                        <div>
-                          <p className="text-sm text-muted-foreground">Meta Diária</p>
-                          <p className="text-xl font-bold">{formatCurrency(metaDiaria > 0 ? metaDiaria : 0)}</p>
-                        </div>
+                      <div className="flex items-center gap-2 mb-2">
+                        <DollarSign className="h-5 w-5 text-indigo-200" />
+                        <p className="text-indigo-100 text-sm">Salário Mensal</p>
                       </div>
+                      <p className="text-3xl font-bold">{formatCurrency(metricas.salario_mensal)}</p>
                     </CardContent>
                   </Card>
 
-                  <Card>
+                  <Card className="bg-gradient-to-br from-emerald-600 to-teal-600 text-white border-0">
                     <CardContent className="pt-6">
-                      <div className="flex items-center gap-3">
-                        <div className="p-2 rounded-lg bg-amber-100 dark:bg-amber-950">
-                          <Sun className="h-5 w-5 text-amber-600" />
-                        </div>
-                        <div>
-                          <p className="text-sm text-muted-foreground">Gasto Hoje</p>
-                          <p className="text-xl font-bold">{formatCurrency(gastoHoje)}</p>
-                        </div>
+                      <div className="flex items-center gap-2 mb-2">
+                        <TrendingUp className="h-5 w-5 text-emerald-200" />
+                        <p className="text-emerald-100 text-sm">Sobra Calculada</p>
                       </div>
+                      <p className="text-3xl font-bold">{formatCurrency(sobraMensal - gastoMes)}</p>
                     </CardContent>
                   </Card>
 
-                  <Card>
+                  <Card className="bg-gradient-to-br from-amber-600 to-orange-600 text-white border-0">
                     <CardContent className="pt-6">
-                      <div className="flex items-center gap-3">
-                        <div className="p-2 rounded-lg bg-emerald-100 dark:bg-emerald-950">
-                          <TrendingUp className="h-5 w-5 text-emerald-600" />
-                        </div>
-                        <div>
-                          <p className="text-sm text-muted-foreground">Gasto no Mês</p>
-                          <p className="text-xl font-bold">{formatCurrency(gastoMes)}</p>
-                        </div>
+                      <div className="flex items-center gap-2 mb-2">
+                        <Calendar className="h-5 w-5 text-amber-200" />
+                        <p className="text-amber-100 text-sm">Valor Diário Disponível</p>
                       </div>
+                      <p className="text-3xl font-bold">{formatCurrency(metaDiaria > 0 ? metaDiaria : 0)}</p>
                     </CardContent>
                   </Card>
                 </div>
 
-                {/* Insights */}
+                {/* Pie Chart Section */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <PieChart className="h-5 w-5 text-indigo-600" />
+                      Distribuição de Gastos (Mês Atual)
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {(() => {
+                      const gastosPorCategoria = lancamentosMes
+                        .filter(l => {
+                          const cat = categorias.find(c => c.id === l.categoria_id);
+                          return cat && cat.tipo === "despesa";
+                        })
+                        .reduce((acc, l) => {
+                          const cat = categorias.find(c => c.id === l.categoria_id);
+                          if (cat) {
+                            acc[cat.id] = {
+                              nome: cat.nome,
+                              cor: cat.cor,
+                              valor: (acc[cat.id]?.valor || 0) + Number(l.valor)
+                            };
+                          }
+                          return acc;
+                        }, {} as Record<string, { nome: string; cor: string; valor: number }>);
+
+                      const chartData = Object.entries(gastosPorCategoria).map(([id, data]) => ({
+                        name: data.nome,
+                        value: data.valor,
+                        color: data.cor
+                      }));
+
+                      if (chartData.length === 0) {
+                        return (
+                          <div className="text-center py-12 text-muted-foreground">
+                            <PieChart className="h-12 w-12 mx-auto mb-3 opacity-30" />
+                            <p>Nenhum gasto registrado este mês.</p>
+                          </div>
+                        );
+                      }
+
+                      return (
+                        <div className="h-80">
+                          <ResponsiveContainer width="100%" height="100%">
+                            <RechartsPie>
+                              <Pie
+                                data={chartData}
+                                cx="50%"
+                                cy="50%"
+                                innerRadius={60}
+                                outerRadius={100}
+                                paddingAngle={2}
+                                dataKey="value"
+                                label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
+                              >
+                                {chartData.map((entry, index) => (
+                                  <Cell key={`cell-${index}`} fill={entry.color} />
+                                ))}
+                              </Pie>
+                              <Tooltip 
+                                formatter={(value: number) => formatCurrency(value)}
+                                contentStyle={{ 
+                                  backgroundColor: 'hsl(var(--card))', 
+                                  border: '1px solid hsl(var(--border))',
+                                  borderRadius: '8px'
+                                }}
+                              />
+                              <Legend />
+                            </RechartsPie>
+                          </ResponsiveContainer>
+                        </div>
+                      );
+                    })()}
+                  </CardContent>
+                </Card>
+
+                {/* Smart Indicators */}
                 <Card>
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2">
                       <Lightbulb className="h-5 w-5 text-amber-500" />
-                      Insights
+                      Indicadores Inteligentes
                     </CardTitle>
                   </CardHeader>
-                  <CardContent className="space-y-3">
-                    {metaDiaria > 0 && (
-                      <div className="p-3 rounded-lg bg-slate-50 dark:bg-muted">
-                        <p className="text-sm">
-                          📊 Se o gasto médio diário continuar neste ritmo, você vai terminar o mês com{" "}
-                          <span className="font-semibold">{formatCurrency(sobraMensal - (gastoMes / today.getDate()) * diasRestantes)}</span>
-                        </p>
-                      </div>
-                    )}
+                  <CardContent className="space-y-4">
+                    {/* Categoria com maior gasto */}
                     {categoriaTop && (
-                      <div className="p-3 rounded-lg bg-slate-50 dark:bg-muted">
-                        <p className="text-sm">
-                          💰 Sua maior categoria no mês é{" "}
-                          <Badge style={{ backgroundColor: categoriaTop.cor }}>{categoriaTop.nome}</Badge>{" "}
-                          com <span className="font-semibold">{formatCurrency(categoriaTopId[1])}</span>
-                        </p>
+                      <div className="flex items-center justify-between p-4 rounded-lg bg-red-50 dark:bg-red-950/20 border border-red-100 dark:border-red-900">
+                        <div className="flex items-center gap-3">
+                          <TrendingUp className="h-5 w-5 text-red-600" />
+                          <div>
+                            <p className="text-sm text-muted-foreground">Categoria com maior gasto</p>
+                            <p className="font-semibold flex items-center gap-2">
+                              <span className="w-3 h-3 rounded-full" style={{ backgroundColor: categoriaTop.cor }} />
+                              {categoriaTop.nome}
+                            </p>
+                          </div>
+                        </div>
+                        <span className="text-xl font-bold text-red-600">{formatCurrency(categoriaTopId[1])}</span>
                       </div>
                     )}
-                    {gastoHoje > metaDiaria && metaDiaria > 0 && (
-                      <div className="p-3 rounded-lg bg-red-50 dark:bg-red-950/20">
-                        <p className="text-sm text-red-700 dark:text-red-300">
-                          ⚠️ Você ultrapassou sua meta diária em{" "}
-                          <span className="font-semibold">{formatCurrency(gastoHoje - metaDiaria)}</span>
-                        </p>
+
+                    {/* Categoria com menor gasto */}
+                    {(() => {
+                      const categoriaMinId = Object.entries(categoriaMaisPesada).sort((a, b) => a[1] - b[1])[0];
+                      const categoriaMin = categoriaMinId ? categorias.find(c => c.id === categoriaMinId[0]) : null;
+                      
+                      if (categoriaMin && categoriaMinId) {
+                        return (
+                          <div className="flex items-center justify-between p-4 rounded-lg bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-100 dark:border-emerald-900">
+                            <div className="flex items-center gap-3">
+                              <TrendingDown className="h-5 w-5 text-emerald-600" />
+                              <div>
+                                <p className="text-sm text-muted-foreground">Categoria com menor gasto</p>
+                                <p className="font-semibold flex items-center gap-2">
+                                  <span className="w-3 h-3 rounded-full" style={{ backgroundColor: categoriaMin.cor }} />
+                                  {categoriaMin.nome}
+                                </p>
+                              </div>
+                            </div>
+                            <span className="text-xl font-bold text-emerald-600">{formatCurrency(categoriaMinId[1])}</span>
+                          </div>
+                        );
+                      }
+                      return null;
+                    })()}
+
+                    {/* Saldo Diário Recomendado */}
+                    <div className="flex items-center justify-between p-4 rounded-lg bg-indigo-50 dark:bg-indigo-950/20 border border-indigo-100 dark:border-indigo-900">
+                      <div className="flex items-center gap-3">
+                        <Target className="h-5 w-5 text-indigo-600" />
+                        <div>
+                          <p className="text-sm text-muted-foreground">Saldo Diário Recomendado</p>
+                          <p className="text-xs text-muted-foreground">{diasRestantes} dias restantes no mês</p>
+                        </div>
                       </div>
-                    )}
+                      <span className="text-xl font-bold text-indigo-600">
+                        {formatCurrency(diasRestantes > 0 ? (sobraMensal - gastoMes) / diasRestantes : 0)}
+                      </span>
+                    </div>
                   </CardContent>
                 </Card>
 
@@ -524,6 +617,95 @@ const Financas = () => {
                     </div>
                   </DialogContent>
                 </Dialog>
+              </TabsContent>
+
+              {/* Categories Tab with Percentage Control */}
+              <TabsContent value="categorias" className="space-y-6">
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Target className="h-5 w-5 text-indigo-600" />
+                      Controle de Percentuais
+                    </CardTitle>
+                    <CardDescription>Defina o percentual máximo do orçamento para cada categoria</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    {(() => {
+                      const totalPercentual = categorias
+                        .filter(c => c.tipo === "despesa")
+                        .reduce((acc, c) => acc + (c.percentual_meta || 0), 0);
+
+                      return (
+                        <>
+                          <div className="flex items-center justify-between p-3 rounded-lg bg-slate-100 dark:bg-muted">
+                            <span className="font-medium">Total Alocado</span>
+                            <span className={`font-bold ${totalPercentual > 100 ? 'text-red-600' : 'text-emerald-600'}`}>
+                              {totalPercentual.toFixed(0)}%
+                            </span>
+                          </div>
+                          {totalPercentual > 100 && (
+                            <div className="p-3 rounded-lg bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800">
+                              <p className="text-sm text-red-700 dark:text-red-300">
+                                ⚠️ A soma dos percentuais ultrapassa 100%. Ajuste as categorias.
+                              </p>
+                            </div>
+                          )}
+                        </>
+                      );
+                    })()}
+
+                    {categorias.filter(c => c.tipo === "despesa").map(cat => {
+                      const gastoCategoria = lancamentosMes
+                        .filter(l => l.categoria_id === cat.id)
+                        .reduce((acc, l) => acc + Number(l.valor), 0);
+                      const metaValor = sobraMensal * (cat.percentual_meta || 0) / 100;
+                      const percentualUsado = metaValor > 0 ? (gastoCategoria / metaValor) * 100 : 0;
+
+                      return (
+                        <div key={cat.id} className="p-4 rounded-lg border">
+                          <div className="flex items-center justify-between mb-3">
+                            <div className="flex items-center gap-3">
+                              <div className="w-4 h-4 rounded-full" style={{ backgroundColor: cat.cor }} />
+                              <span className="font-medium">{cat.nome}</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Input
+                                type="number"
+                                className="w-20 text-right"
+                                value={cat.percentual_meta || 0}
+                                onChange={async (e) => {
+                                  const newValue = parseFloat(e.target.value) || 0;
+                                  await supabase
+                                    .from("categorias_financas")
+                                    .update({ percentual_meta: newValue })
+                                    .eq("id", cat.id);
+                                  loadData();
+                                }}
+                              />
+                              <span className="text-sm text-muted-foreground">%</span>
+                            </div>
+                          </div>
+                          {cat.percentual_meta && cat.percentual_meta > 0 && (
+                            <>
+                              <Progress 
+                                value={Math.min(percentualUsado, 100)} 
+                                className={`h-2 ${percentualUsado > 100 ? '[&>div]:bg-red-500' : '[&>div]:bg-emerald-500'}`}
+                              />
+                              <div className="flex justify-between mt-2 text-sm">
+                                <span className="text-muted-foreground">
+                                  Gasto: {formatCurrency(gastoCategoria)}
+                                </span>
+                                <span className="text-muted-foreground">
+                                  Meta: {formatCurrency(metaValor)}
+                                </span>
+                              </div>
+                            </>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </CardContent>
+                </Card>
               </TabsContent>
 
               {/* Daily Control Tab */}
