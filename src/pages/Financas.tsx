@@ -235,16 +235,51 @@ const Financas = () => {
       return;
     }
 
+    const valorGasto = parseFloat(novoGasto.valor);
+
     await supabase.from("lancamentos_financas").insert({
       user_id: userId,
       descricao: novoGasto.descricao,
-      valor: parseFloat(novoGasto.valor),
+      valor: valorGasto,
       categoria_id: novoGasto.categoria_id || null,
       recorrente: novoGasto.recorrente,
       data: format(today, "yyyy-MM-dd")
     });
 
-    toast.success(novoGasto.recorrente ? "Despesa recorrente adicionada!" : "Gasto registrado!");
+    // Check if daily budget exceeded
+    const novoGastoHoje = gastoHoje + valorGasto;
+    if (metaDiaria > 0 && novoGastoHoje > metaDiaria) {
+      toast.warning("⚠️ Você ultrapassou o limite diário de gastos!", {
+        description: `Gasto hoje: ${formatCurrency(novoGastoHoje)} / Meta: ${formatCurrency(metaDiaria)}`,
+        duration: 5000
+      });
+    } else {
+      toast.success(novoGasto.recorrente ? "Despesa recorrente adicionada!" : "Gasto registrado!");
+    }
+
+    // Check category budget exceeded
+    if (novoGasto.categoria_id) {
+      const categoria = categorias.find(c => c.id === novoGasto.categoria_id);
+      if (categoria && categoria.percentual_meta && categoria.percentual_meta > 0) {
+        const gastoCategoria = lancamentosMes
+          .filter(l => l.categoria_id === categoria.id)
+          .reduce((acc, l) => acc + Number(l.valor), 0) + valorGasto;
+        const metaCategoria = sobraMensal * categoria.percentual_meta / 100;
+        
+        if (gastoCategoria > metaCategoria) {
+          toast.error(`🚨 Orçamento de "${categoria.nome}" ultrapassado!`, {
+            description: `Gasto: ${formatCurrency(gastoCategoria)} / Meta: ${formatCurrency(metaCategoria)}`,
+            duration: 6000
+          });
+        } else if (gastoCategoria >= metaCategoria * 0.8) {
+          toast.warning(`⚠️ "${categoria.nome}" está em 80% do orçamento!`, {
+            description: `Gasto: ${formatCurrency(gastoCategoria)} / Meta: ${formatCurrency(metaCategoria)}`,
+            duration: 5000
+          });
+        }
+      }
+    }
+
     setNovoGasto({ descricao: "", valor: "", categoria_id: "", recorrente: false });
     setDialogOpen(false);
     loadData();
