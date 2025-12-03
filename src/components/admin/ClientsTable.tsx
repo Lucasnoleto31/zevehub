@@ -3,11 +3,18 @@ import { supabase } from "@/integrations/supabase/client";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Settings, Eye, Pencil } from "lucide-react";
+import { Settings, Eye, Pencil, Check, X, Ban, Unlock } from "lucide-react";
 import { toast } from "sonner";
 import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import ClientEditDialog from "./ClientEditDialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu";
 
 interface Client {
   id: string;
@@ -17,6 +24,10 @@ interface Client {
   status: string;
   created_at: string;
   last_login: string | null;
+  access_status: string | null;
+  has_genial_account: boolean | null;
+  genial_id: string | null;
+  cpf: string | null;
   roles?: string[];
 }
 
@@ -28,6 +39,7 @@ const ClientsTable = ({ onUpdate }: ClientsTableProps) => {
   const [clients, setClients] = useState<Client[]>([]);
   const [loading, setLoading] = useState(true);
   const [editingClient, setEditingClient] = useState<Client | null>(null);
+  const [actionLoading, setActionLoading] = useState<string | null>(null);
 
   useEffect(() => {
     loadClients();
@@ -64,6 +76,84 @@ const ClientsTable = ({ onUpdate }: ClientsTableProps) => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleChangeAccessStatus = async (clientId: string, newStatus: string, clientName: string) => {
+    setActionLoading(clientId);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      const { error } = await supabase
+        .from("profiles")
+        .update({
+          access_status: newStatus as "aprovado" | "bloqueado" | "pendente" | "reprovado",
+          access_approved_at: new Date().toISOString(),
+          access_approved_by: session?.user.id,
+        })
+        .eq("id", clientId);
+
+      if (error) throw error;
+
+      // Criar notificação
+      const messages: Record<string, { title: string; content: string }> = {
+        aprovado: { 
+          title: "Acesso Aprovado!", 
+          content: "Seu acesso ao Zeve Hub foi liberado! Bem-vindo à plataforma." 
+        },
+        bloqueado: { 
+          title: "Acesso Bloqueado", 
+          content: "Seu acesso ao Zeve Hub foi temporariamente bloqueado. Entre em contato com seu assessor." 
+        },
+        reprovado: { 
+          title: "Acesso Não Aprovado", 
+          content: "Seu acesso ao Zeve Hub não foi aprovado. Entre em contato com seu assessor." 
+        },
+      };
+
+      if (messages[newStatus]) {
+        await supabase.from("messages").insert({
+          user_id: clientId,
+          title: messages[newStatus].title,
+          content: messages[newStatus].content,
+          priority: "high",
+          is_global: false,
+        });
+      }
+
+      const statusLabels: Record<string, string> = {
+        aprovado: "aprovado",
+        bloqueado: "bloqueado",
+        reprovado: "reprovado",
+        pendente: "pendente",
+      };
+
+      toast.success(`Status de ${clientName} alterado para ${statusLabels[newStatus]}`);
+      loadClients();
+      onUpdate();
+    } catch (error) {
+      console.error("Erro ao alterar status:", error);
+      toast.error("Erro ao alterar status do cliente");
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const getAccessStatusBadge = (accessStatus: string | null) => {
+    const config: Record<string, { variant: "default" | "secondary" | "destructive" | "outline"; label: string; className?: string }> = {
+      aprovado: { variant: "default", label: "Aprovado", className: "bg-green-500 hover:bg-green-600" },
+      pendente: { variant: "secondary", label: "Pendente", className: "bg-yellow-500 text-black hover:bg-yellow-600" },
+      reprovado: { variant: "destructive", label: "Reprovado" },
+      bloqueado: { variant: "destructive", label: "Bloqueado" },
+    };
+
+    const status = accessStatus || "pendente";
+    const statusConfig = config[status] || config.pendente;
+
+    return (
+      <Badge variant={statusConfig.variant} className={statusConfig.className}>
+        {statusConfig.label}
+      </Badge>
+    );
   };
 
   const getStatusBadge = (status: string) => {
@@ -116,7 +206,8 @@ const ClientsTable = ({ onUpdate }: ClientsTableProps) => {
           <TableRow>
             <TableHead>Cliente</TableHead>
             <TableHead>E-mail</TableHead>
-            <TableHead>Status</TableHead>
+            <TableHead>Acesso</TableHead>
+            <TableHead>Conta Genial</TableHead>
             <TableHead>Perfil</TableHead>
             <TableHead>Último Acesso</TableHead>
             <TableHead className="text-right">Ações</TableHead>
@@ -126,10 +217,29 @@ const ClientsTable = ({ onUpdate }: ClientsTableProps) => {
           {clients.map((client) => (
             <TableRow key={client.id}>
               <TableCell className="font-medium">
-                {client.full_name || "Sem nome"}
+                <div>
+                  {client.full_name || "Sem nome"}
+                  {client.cpf && (
+                    <p className="text-xs text-muted-foreground">CPF: {client.cpf}</p>
+                  )}
+                </div>
               </TableCell>
               <TableCell>{client.email}</TableCell>
-              <TableCell>{getStatusBadge(client.status)}</TableCell>
+              <TableCell>{getAccessStatusBadge(client.access_status)}</TableCell>
+              <TableCell>
+                {client.has_genial_account ? (
+                  <div className="flex flex-col">
+                    <Badge variant="default" className="w-fit bg-green-500">Sim</Badge>
+                    {client.genial_id && (
+                      <span className="text-xs text-muted-foreground mt-1">
+                        ID: {client.genial_id}
+                      </span>
+                    )}
+                  </div>
+                ) : (
+                  <Badge variant="secondary">Não</Badge>
+                )}
+              </TableCell>
               <TableCell>
                 <div className="flex gap-1 flex-wrap">
                   {client.roles?.map((role) => (
@@ -149,6 +259,42 @@ const ClientsTable = ({ onUpdate }: ClientsTableProps) => {
               </TableCell>
               <TableCell className="text-right">
                 <div className="flex justify-end gap-2">
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        disabled={actionLoading === client.id}
+                      >
+                        <Settings className="w-4 h-4 mr-1" />
+                        Acesso
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem 
+                        onClick={() => handleChangeAccessStatus(client.id, "aprovado", client.full_name || client.email)}
+                        className="gap-2"
+                      >
+                        <Check className="w-4 h-4 text-green-500" />
+                        Aprovar Acesso
+                      </DropdownMenuItem>
+                      <DropdownMenuItem 
+                        onClick={() => handleChangeAccessStatus(client.id, "bloqueado", client.full_name || client.email)}
+                        className="gap-2"
+                      >
+                        <Ban className="w-4 h-4 text-red-500" />
+                        Bloquear Acesso
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem 
+                        onClick={() => handleChangeAccessStatus(client.id, "pendente", client.full_name || client.email)}
+                        className="gap-2"
+                      >
+                        <Unlock className="w-4 h-4" />
+                        Voltar para Pendente
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                   <Button
                     variant="ghost"
                     size="sm"

@@ -7,8 +7,9 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
-import { Loader2, Shield, TrendingUp } from "lucide-react";
+import { Loader2, Shield, TrendingUp, Clock, MessageSquare } from "lucide-react";
 import { z } from "zod";
 import * as OTPAuth from "otpauth";
 import { TwoFactorVerification } from "@/components/auth/TwoFactorVerification";
@@ -26,6 +27,9 @@ const signUpSchema = z.object({
   password: z.string().min(6, { message: "Senha deve ter no mínimo 6 caracteres" }),
   fullName: z.string().min(3, { message: "Nome deve ter no mínimo 3 caracteres" }),
   phone: z.string().min(10, { message: "Telefone deve ter no mínimo 10 dígitos" }).regex(/^\d+$/, { message: "Telefone deve conter apenas números" }),
+  cpf: z.string().min(11, { message: "CPF deve ter 11 dígitos" }).max(11, { message: "CPF deve ter 11 dígitos" }).regex(/^\d+$/, { message: "CPF deve conter apenas números" }),
+  hasGenialAccount: z.boolean(),
+  genialId: z.string().optional(),
   acceptTerms: z.boolean().refine((val) => val === true, { message: "Você deve aceitar os termos de uso" }),
 });
 
@@ -47,12 +51,16 @@ const Auth = () => {
     password: "", 
     fullName: "", 
     phone: "", 
+    cpf: "",
+    hasGenialAccount: false,
+    genialId: "",
     acceptTerms: false 
   });
   const [signInData, setSignInData] = useState({ email: "", password: "" });
   const [resetEmail, setResetEmail] = useState("");
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [showEmailConfirmation, setShowEmailConfirmation] = useState(false);
+  const [showPendingMessage, setShowPendingMessage] = useState(false);
   const [show2FADialog, setShow2FADialog] = useState(false);
   const [pendingUserId, setPendingUserId] = useState<string | null>(null);
   const [totpSecret, setTotpSecret] = useState<string | null>(null);
@@ -114,12 +122,20 @@ const Auth = () => {
       if (error) throw error;
 
       if (data.user) {
+        // Atualizar o perfil com os dados adicionais (CPF, conta Genial)
+        await supabase.from("profiles").update({
+          cpf: validatedData.cpf,
+          has_genial_account: validatedData.hasGenialAccount,
+          genial_id: validatedData.genialId || null,
+          access_status: "pendente",
+        }).eq("id", data.user.id);
+
         // Check if email confirmation is required
         if (data.user.identities && data.user.identities.length === 0) {
           setShowEmailConfirmation(true);
         } else {
-          toast.success("Cadastro realizado com sucesso!");
-          navigate("/dashboard");
+          // Mostrar mensagem de cadastro pendente
+          setShowPendingMessage(true);
         }
       }
     } catch (error: any) {
@@ -307,6 +323,52 @@ const Auth = () => {
     await supabase.auth.signOut();
     toast.info("Login cancelado");
   };
+
+  if (showPendingMessage) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background p-4">
+        <div className="w-full max-w-md animate-fade-in space-y-6">
+          <div className="flex flex-col items-center justify-center space-y-2">
+            <div className="w-20 h-20 rounded-2xl bg-yellow-500/10 flex items-center justify-center mb-2">
+              <Clock className="w-10 h-10 text-yellow-500" />
+            </div>
+            <h1 className="text-3xl font-bold text-foreground">Cadastro Realizado!</h1>
+            <p className="text-center text-muted-foreground">
+              Seu cadastro está em análise por um administrador da Zeve.
+            </p>
+          </div>
+
+          <div className="bg-muted/30 p-6 rounded-xl space-y-3 border border-border/50">
+            <p className="text-sm text-foreground/80">
+              Você receberá uma notificação assim que seu acesso for liberado.
+            </p>
+            <p className="text-sm text-muted-foreground">
+              Enquanto isso, você pode acessar o sistema com funcionalidades limitadas.
+            </p>
+          </div>
+
+          <div className="space-y-3">
+            <Button 
+              className="w-full h-12 gap-2"
+              onClick={() => navigate("/dashboard")}
+            >
+              <TrendingUp className="w-4 h-4" />
+              Ir para o Portal
+            </Button>
+            
+            <Button 
+              variant="outline" 
+              className="w-full h-12 gap-2"
+              onClick={() => window.open("https://wa.me/5511999999999?text=Olá! Acabei de me cadastrar no Zeve Hub e gostaria de informações sobre a aprovação do meu acesso.", "_blank")}
+            >
+              <MessageSquare className="w-4 h-4" />
+              Falar com meu assessor
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (showEmailConfirmation) {
     return (
@@ -601,6 +663,70 @@ const Auth = () => {
                   />
                   {fieldErrors.phone && (
                     <p className="text-sm text-destructive">{fieldErrors.phone}</p>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="signup-cpf" className="text-sm font-medium text-foreground">
+                    CPF
+                  </Label>
+                  <Input
+                    id="signup-cpf"
+                    type="text"
+                    placeholder="12345678900"
+                    value={signUpData.cpf}
+                    onChange={(e) => {
+                      const value = e.target.value.replace(/\D/g, '').slice(0, 11);
+                      setSignUpData({ ...signUpData, cpf: value });
+                      validateField('cpf', value, signUpSchema);
+                    }}
+                    disabled={loading}
+                    required
+                    maxLength={11}
+                    className={`h-12 bg-background border-border/50 focus:border-primary ${
+                      fieldErrors.cpf ? "border-destructive" : ""
+                    }`}
+                  />
+                  {fieldErrors.cpf && (
+                    <p className="text-sm text-destructive">{fieldErrors.cpf}</p>
+                  )}
+                </div>
+
+                <div className="space-y-3 p-4 rounded-lg bg-muted/30 border border-border/50">
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="has-genial" className="text-sm font-medium text-foreground">
+                      Possui conta na Genial Investimentos?
+                    </Label>
+                    <Switch
+                      id="has-genial"
+                      checked={signUpData.hasGenialAccount}
+                      onCheckedChange={(checked) => {
+                        setSignUpData({ ...signUpData, hasGenialAccount: checked, genialId: checked ? signUpData.genialId : "" });
+                      }}
+                      disabled={loading}
+                    />
+                  </div>
+                  
+                  {signUpData.hasGenialAccount && (
+                    <div className="space-y-2 animate-fade-in">
+                      <Label htmlFor="signup-genial-id" className="text-sm font-medium text-foreground">
+                        ID da conta Genial
+                      </Label>
+                      <Input
+                        id="signup-genial-id"
+                        type="text"
+                        placeholder="Seu ID na Genial"
+                        value={signUpData.genialId}
+                        onChange={(e) => {
+                          setSignUpData({ ...signUpData, genialId: e.target.value });
+                        }}
+                        disabled={loading}
+                        className="h-12 bg-background border-border/50 focus:border-primary"
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Informe o ID da sua conta na Genial para agilizar a aprovação
+                      </p>
+                    </div>
                   )}
                 </div>
 

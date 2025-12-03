@@ -771,13 +771,20 @@ export type Database = {
       }
       profiles: {
         Row: {
+          access_approved_at: string | null
+          access_approved_by: string | null
+          access_status: Database["public"]["Enums"]["access_status"] | null
+          assessor_id: string | null
           avatar_url: string | null
+          cpf: string | null
           created_at: string
           daily_login_streak: number
           email: string
           followers_count: number | null
           following_count: number | null
           full_name: string | null
+          genial_id: string | null
+          has_genial_account: boolean | null
           id: string
           investment_profile:
             | Database["public"]["Enums"]["investment_profile"]
@@ -794,13 +801,20 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          access_approved_at?: string | null
+          access_approved_by?: string | null
+          access_status?: Database["public"]["Enums"]["access_status"] | null
+          assessor_id?: string | null
           avatar_url?: string | null
+          cpf?: string | null
           created_at?: string
           daily_login_streak?: number
           email: string
           followers_count?: number | null
           following_count?: number | null
           full_name?: string | null
+          genial_id?: string | null
+          has_genial_account?: boolean | null
           id: string
           investment_profile?:
             | Database["public"]["Enums"]["investment_profile"]
@@ -817,13 +831,20 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          access_approved_at?: string | null
+          access_approved_by?: string | null
+          access_status?: Database["public"]["Enums"]["access_status"] | null
+          assessor_id?: string | null
           avatar_url?: string | null
+          cpf?: string | null
           created_at?: string
           daily_login_streak?: number
           email?: string
           followers_count?: number | null
           following_count?: number | null
           full_name?: string | null
+          genial_id?: string | null
+          has_genial_account?: boolean | null
           id?: string
           investment_profile?:
             | Database["public"]["Enums"]["investment_profile"]
@@ -1313,6 +1334,7 @@ export type Database = {
           love_count: number
         }[]
       }
+      has_approved_access: { Args: { _user_id: string }; Returns: boolean }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["user_role"]
@@ -1345,6 +1367,7 @@ export type Database = {
       }
     }
     Enums: {
+      access_status: "pendente" | "aprovado" | "reprovado" | "bloqueado"
       investment_profile:
         | "start"
         | "perfil_1"
@@ -1479,6 +1502,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      access_status: ["pendente", "aprovado", "reprovado", "bloqueado"],
       investment_profile: [
         "start",
         "perfil_1",
