@@ -43,6 +43,8 @@ interface Lancamento {
   categoria_id: string;
   descricao: string;
   recorrente: boolean;
+  tipo_transacao: 'receita' | 'despesa';
+  frequencia_recorrencia: 'semanal' | 'quinzenal' | 'mensal' | 'anual' | null;
   categoria?: Categoria;
 }
 
@@ -107,6 +109,8 @@ export default function Financas() {
   const [lancamentoCategoriaId, setLancamentoCategoriaId] = useState("");
   const [lancamentoDescricao, setLancamentoDescricao] = useState("");
   const [lancamentoRecorrente, setLancamentoRecorrente] = useState(false);
+  const [lancamentoTipoTransacao, setLancamentoTipoTransacao] = useState<'receita' | 'despesa'>('despesa');
+  const [lancamentoFrequencia, setLancamentoFrequencia] = useState<'semanal' | 'quinzenal' | 'mensal' | 'anual' | ''>('');
 
   const [salarioMensal, setSalarioMensal] = useState(0);
   const [modeloOrcamento, setModeloOrcamento] = useState("50/30/20");
@@ -374,6 +378,8 @@ export default function Financas() {
       categoria_id: lancamentoCategoriaId,
       descricao: lancamentoDescricao,
       recorrente: lancamentoRecorrente,
+      tipo_transacao: lancamentoTipoTransacao,
+      frequencia_recorrencia: lancamentoRecorrente && lancamentoFrequencia ? lancamentoFrequencia : null,
       user_id: user.id,
     };
 
@@ -495,13 +501,15 @@ export default function Financas() {
   };
 
   const handleExportCSV = () => {
-    const headers = ["Data", "Valor", "Categoria", "Descrição", "Recorrente"];
+    const headers = ["Tipo", "Data", "Valor", "Categoria", "Descrição", "Recorrente", "Frequência"];
     const rows = lancamentos.map((l) => [
+      l.tipo_transacao === 'receita' ? 'Receita' : 'Despesa',
       format(parseISO(l.data), "dd/MM/yyyy"),
       l.valor.toFixed(2),
       l.categoria?.nome || "",
       l.descricao || "",
       l.recorrente ? "Sim" : "Não",
+      l.frequencia_recorrencia || "",
     ]);
 
     const csvContent = [headers.join(","), ...rows.map((r) => r.join(","))].join("\n");
@@ -540,13 +548,14 @@ export default function Financas() {
     // Tabela
     autoTable(doc, {
       startY: 75,
-      head: [["Data", "Categoria", "Descrição", "Valor", "Recorrente"]],
+      head: [["Tipo", "Data", "Categoria", "Descrição", "Valor", "Recorrência"]],
       body: lancamentos.map((l) => [
+        l.tipo_transacao === 'receita' ? 'Receita' : 'Despesa',
         format(parseISO(l.data), "dd/MM/yyyy"),
         l.categoria?.nome || "",
         l.descricao || "",
-        `R$ ${l.valor.toFixed(2)}`,
-        l.recorrente ? "Sim" : "Não",
+        `${l.tipo_transacao === 'receita' ? '+' : '-'}R$ ${l.valor.toFixed(2)}`,
+        l.recorrente ? (l.frequencia_recorrencia || "Sim") : "-",
       ]),
       theme: "striped",
       headStyles: { fillColor: [30, 58, 138] },
@@ -568,9 +577,9 @@ export default function Financas() {
 
   const handleDownloadTemplate = () => {
     const template = [
-      { Data: "2024-01-15", Valor: 150.00, Tipo: "despesa", Categoria: "Alimentação", Descricao: "Supermercado", Recorrente: "Não" },
-      { Data: "2024-01-16", Valor: 50.00, Tipo: "despesa", Categoria: "Transporte", Descricao: "Uber", Recorrente: "Não" },
-      { Data: "2024-01-01", Valor: 5000.00, Tipo: "receita", Categoria: "Salário", Descricao: "Salário mensal", Recorrente: "Sim" },
+      { Data: "2024-01-15", Valor: 150.00, Tipo: "despesa", Categoria: "Alimentação", Descricao: "Supermercado", Recorrente: "Não", Frequencia: "" },
+      { Data: "2024-01-16", Valor: 50.00, Tipo: "despesa", Categoria: "Transporte", Descricao: "Uber", Recorrente: "Não", Frequencia: "" },
+      { Data: "2024-01-01", Valor: 5000.00, Tipo: "receita", Categoria: "Salário", Descricao: "Salário mensal", Recorrente: "Sim", Frequencia: "mensal" },
     ];
 
     const ws = XLSX.utils.json_to_sheet(template);
@@ -585,6 +594,7 @@ export default function Financas() {
       { wch: 15 }, // Categoria
       { wch: 25 }, // Descricao
       { wch: 12 }, // Recorrente
+      { wch: 12 }, // Frequencia
     ];
 
     XLSX.writeFile(wb, "modelo_importacao_financas.xlsx");
@@ -628,6 +638,7 @@ export default function Financas() {
             categoria: row.Categoria || "Outros",
             descricao: row.Descricao || "",
             recorrente: row.Recorrente?.toLowerCase() === "sim" || row.Recorrente === true,
+            frequencia: (row.Frequencia || "").toLowerCase(),
             valid: formattedDate && parseFloat(row.Valor) > 0,
           };
         });
@@ -675,12 +686,15 @@ export default function Financas() {
       }
 
       if (categoriaId) {
+        const frequenciaValida = ['semanal', 'quinzenal', 'mensal', 'anual'].includes(item.frequencia) ? item.frequencia : null;
         const { error } = await supabase.from("lancamentos_financas").insert({
           data: item.data,
           valor: item.valor,
           categoria_id: categoriaId,
           descricao: item.descricao,
           recorrente: item.recorrente,
+          tipo_transacao: item.tipo === 'receita' ? 'receita' : 'despesa',
+          frequencia_recorrencia: item.recorrente ? frequenciaValida : null,
           user_id: user.id,
         });
 
@@ -725,6 +739,8 @@ export default function Financas() {
     setLancamentoCategoriaId("");
     setLancamentoDescricao("");
     setLancamentoRecorrente(false);
+    setLancamentoTipoTransacao('despesa');
+    setLancamentoFrequencia('');
   };
 
   const openEditCategoria = (cat: Categoria) => {
@@ -754,6 +770,8 @@ export default function Financas() {
     setLancamentoCategoriaId(lanc.categoria_id);
     setLancamentoDescricao(lanc.descricao || "");
     setLancamentoRecorrente(lanc.recorrente);
+    setLancamentoTipoTransacao(lanc.tipo_transacao || 'despesa');
+    setLancamentoFrequencia(lanc.frequencia_recorrencia || '');
     setLancamentoDialog(true);
   };
 
@@ -1225,6 +1243,28 @@ export default function Financas() {
                     </DialogHeader>
                     <div className="space-y-4">
                       <div>
+                        <Label>Tipo</Label>
+                        <Select value={lancamentoTipoTransacao} onValueChange={(v: 'receita' | 'despesa') => setLancamentoTipoTransacao(v)}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Selecione o tipo" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="receita">
+                              <div className="flex items-center gap-2">
+                                <TrendingUp className="h-4 w-4 text-green-500" />
+                                Receita
+                              </div>
+                            </SelectItem>
+                            <SelectItem value="despesa">
+                              <div className="flex items-center gap-2">
+                                <TrendingDown className="h-4 w-4 text-red-500" />
+                                Despesa
+                              </div>
+                            </SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div>
                         <Label>Data</Label>
                         <Input
                           type="date"
@@ -1272,11 +1312,30 @@ export default function Financas() {
                           type="checkbox"
                           id="recorrente"
                           checked={lancamentoRecorrente}
-                          onChange={(e) => setLancamentoRecorrente(e.target.checked)}
+                          onChange={(e) => {
+                            setLancamentoRecorrente(e.target.checked);
+                            if (!e.target.checked) setLancamentoFrequencia('');
+                          }}
                           className="w-4 h-4"
                         />
-                        <Label htmlFor="recorrente">Gasto recorrente</Label>
+                        <Label htmlFor="recorrente">Lançamento recorrente</Label>
                       </div>
+                      {lancamentoRecorrente && (
+                        <div>
+                          <Label>Frequência da Recorrência</Label>
+                          <Select value={lancamentoFrequencia} onValueChange={(v: 'semanal' | 'quinzenal' | 'mensal' | 'anual') => setLancamentoFrequencia(v)}>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Selecione a frequência" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="semanal">Semanal</SelectItem>
+                              <SelectItem value="quinzenal">Quinzenal</SelectItem>
+                              <SelectItem value="mensal">Mensal</SelectItem>
+                              <SelectItem value="anual">Anual</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      )}
                     </div>
                     <DialogFooter>
                       <Button variant="outline" onClick={resetLancamentoForm}>
@@ -1293,17 +1352,23 @@ export default function Financas() {
                   <Table>
                     <TableHeader>
                       <TableRow>
+                        <TableHead>Tipo</TableHead>
                         <TableHead>Data</TableHead>
                         <TableHead>Categoria</TableHead>
                         <TableHead>Descrição</TableHead>
                         <TableHead>Valor</TableHead>
-                        <TableHead>Recorrente</TableHead>
+                        <TableHead>Recorrência</TableHead>
                         <TableHead className="text-right">Ações</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {lancamentos.map((lanc) => (
                         <TableRow key={lanc.id}>
+                          <TableCell>
+                            <Badge variant={lanc.tipo_transacao === 'receita' ? 'default' : 'secondary'} className={lanc.tipo_transacao === 'receita' ? 'bg-green-500/20 text-green-500' : 'bg-red-500/20 text-red-500'}>
+                              {lanc.tipo_transacao === 'receita' ? 'Receita' : 'Despesa'}
+                            </Badge>
+                          </TableCell>
                           <TableCell>{format(parseISO(lanc.data), "dd/MM/yyyy")}</TableCell>
                           <TableCell>
                             <div className="flex items-center gap-2">
@@ -1315,12 +1380,18 @@ export default function Financas() {
                             </div>
                           </TableCell>
                           <TableCell>{lanc.descricao || "-"}</TableCell>
-                          <TableCell className="font-medium">{formatCurrency(lanc.valor)}</TableCell>
+                          <TableCell className={`font-medium ${lanc.tipo_transacao === 'receita' ? 'text-green-500' : ''}`}>
+                            {lanc.tipo_transacao === 'receita' ? '+' : '-'}{formatCurrency(lanc.valor)}
+                          </TableCell>
                           <TableCell>
                             {lanc.recorrente ? (
-                              <Badge variant="secondary">Sim</Badge>
+                              <Badge variant="outline">
+                                {lanc.frequencia_recorrencia 
+                                  ? lanc.frequencia_recorrencia.charAt(0).toUpperCase() + lanc.frequencia_recorrencia.slice(1)
+                                  : 'Sim'}
+                              </Badge>
                             ) : (
-                              <span className="text-muted-foreground">Não</span>
+                              <span className="text-muted-foreground">-</span>
                             )}
                           </TableCell>
                           <TableCell className="text-right">
@@ -1335,7 +1406,7 @@ export default function Financas() {
                       ))}
                       {lancamentos.length === 0 && (
                         <TableRow>
-                          <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                          <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
                             Nenhum lançamento neste mês
                           </TableCell>
                         </TableRow>
@@ -1500,7 +1571,7 @@ export default function Financas() {
                     <AlertCircle className="h-4 w-4" />
                     <AlertTitle>Formato da Planilha</AlertTitle>
                     <AlertDescription>
-                      Use as colunas: Data, Valor, Tipo (receita/despesa), Categoria, Descricao, Recorrente (Sim/Não)
+                      Use as colunas: Data, Valor, Tipo (receita/despesa), Categoria, Descricao, Recorrente (Sim/Não), Frequencia (semanal/quinzenal/mensal/anual)
                     </AlertDescription>
                   </Alert>
                 </CardContent>
