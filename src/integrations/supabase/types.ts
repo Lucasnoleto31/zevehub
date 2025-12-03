@@ -223,6 +223,33 @@ export type Database = {
         }
         Relationships: []
       }
+      categorias_financas: {
+        Row: {
+          cor: string
+          created_at: string
+          id: string
+          nome: string
+          tipo: string
+          user_id: string
+        }
+        Insert: {
+          cor?: string
+          created_at?: string
+          id?: string
+          nome: string
+          tipo?: string
+          user_id: string
+        }
+        Update: {
+          cor?: string
+          created_at?: string
+          id?: string
+          nome?: string
+          tipo?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       category_budgets: {
         Row: {
           alert_threshold: number | null
@@ -507,6 +534,47 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      lancamentos_financas: {
+        Row: {
+          categoria_id: string | null
+          created_at: string
+          data: string
+          descricao: string | null
+          id: string
+          recorrente: boolean
+          user_id: string
+          valor: number
+        }
+        Insert: {
+          categoria_id?: string | null
+          created_at?: string
+          data?: string
+          descricao?: string | null
+          id?: string
+          recorrente?: boolean
+          user_id: string
+          valor: number
+        }
+        Update: {
+          categoria_id?: string | null
+          created_at?: string
+          data?: string
+          descricao?: string | null
+          id?: string
+          recorrente?: boolean
+          user_id?: string
+          valor?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lancamentos_financas_categoria_id_fkey"
+            columns: ["categoria_id"]
+            isOneToOne: false
+            referencedRelation: "categorias_financas"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       messages: {
         Row: {
@@ -1266,6 +1334,39 @@ export type Database = {
           id?: string
           role?: Database["public"]["Enums"]["user_role"]
           user_id?: string
+        }
+        Relationships: []
+      }
+      usuario_metricas_financas: {
+        Row: {
+          created_at: string
+          id: string
+          mes_referencia: string | null
+          salario_mensal: number
+          sobra_calculada: number
+          updated_at: string
+          user_id: string
+          valor_diario_meta: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          mes_referencia?: string | null
+          salario_mensal?: number
+          sobra_calculada?: number
+          updated_at?: string
+          user_id: string
+          valor_diario_meta?: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          mes_referencia?: string | null
+          salario_mensal?: number
+          sobra_calculada?: number
+          updated_at?: string
+          user_id?: string
+          valor_diario_meta?: number
         }
         Relationships: []
       }
