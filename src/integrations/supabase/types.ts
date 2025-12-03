@@ -229,6 +229,7 @@ export type Database = {
           created_at: string
           id: string
           nome: string
+          percentual_meta: number | null
           tipo: string
           user_id: string
         }
@@ -237,6 +238,7 @@ export type Database = {
           created_at?: string
           id?: string
           nome: string
+          percentual_meta?: number | null
           tipo?: string
           user_id: string
         }
@@ -245,6 +247,7 @@ export type Database = {
           created_at?: string
           id?: string
           nome?: string
+          percentual_meta?: number | null
           tipo?: string
           user_id?: string
         }
