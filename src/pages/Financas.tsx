@@ -83,11 +83,21 @@ const Financas = () => {
     descricao: "",
     valor: "",
     categoria_id: "",
-    recorrente: false
+    recorrente: false,
+    data: format(new Date(), "yyyy-MM-dd")
   });
   const [dialogOpen, setDialogOpen] = useState(false);
   const [configDialogOpen, setConfigDialogOpen] = useState(false);
   const [salarioInput, setSalarioInput] = useState("");
+
+  // Edit state
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [editingLancamento, setEditingLancamento] = useState<Lancamento | null>(null);
+
+  // Filter states
+  const [filtroCategoria, setFiltroCategoria] = useState<string>("all");
+  const [filtroDataInicio, setFiltroDataInicio] = useState<string>("");
+  const [filtroDataFim, setFiltroDataFim] = useState<string>("");
 
   useEffect(() => {
     checkAuth();
@@ -243,7 +253,7 @@ const Financas = () => {
       valor: valorGasto,
       categoria_id: novoGasto.categoria_id || null,
       recorrente: novoGasto.recorrente,
-      data: format(today, "yyyy-MM-dd")
+      data: novoGasto.data
     });
 
     // Check if daily budget exceeded
@@ -280,8 +290,33 @@ const Financas = () => {
       }
     }
 
-    setNovoGasto({ descricao: "", valor: "", categoria_id: "", recorrente: false });
+    setNovoGasto({ descricao: "", valor: "", categoria_id: "", recorrente: false, data: format(new Date(), "yyyy-MM-dd") });
     setDialogOpen(false);
+    loadData();
+  };
+
+  const handleEditLancamento = (lancamento: Lancamento) => {
+    setEditingLancamento(lancamento);
+    setEditDialogOpen(true);
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editingLancamento) return;
+
+    await supabase
+      .from("lancamentos_financas")
+      .update({
+        descricao: editingLancamento.descricao,
+        valor: editingLancamento.valor,
+        categoria_id: editingLancamento.categoria_id || null,
+        recorrente: editingLancamento.recorrente,
+        data: editingLancamento.data
+      })
+      .eq("id", editingLancamento.id);
+
+    toast.success("Lançamento atualizado!");
+    setEditDialogOpen(false);
+    setEditingLancamento(null);
     loadData();
   };
 
@@ -290,6 +325,14 @@ const Financas = () => {
     toast.success("Lançamento removido!");
     loadData();
   };
+
+  // Filtered lancamentos
+  const lancamentosFiltrados = lancamentos.filter(l => {
+    if (filtroCategoria && filtroCategoria !== "all" && l.categoria_id !== filtroCategoria) return false;
+    if (filtroDataInicio && l.data < filtroDataInicio) return false;
+    if (filtroDataFim && l.data > filtroDataFim) return false;
+    return true;
+  });
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat("pt-BR", {
@@ -811,17 +854,153 @@ const Financas = () => {
 
               {/* Transactions Tab */}
               <TabsContent value="lancamentos" className="space-y-6">
+                {/* Add New Transaction */}
                 <Card>
                   <CardHeader>
-                    <CardTitle>Todos os Lançamentos</CardTitle>
-                    <CardDescription>Histórico completo de gastos e receitas</CardDescription>
+                    <CardTitle className="flex items-center gap-2">
+                      <Plus className="h-5 w-5 text-indigo-600" />
+                      Adicionar Lançamento
+                    </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    {lancamentos.length === 0 ? (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
+                      <div className="space-y-2">
+                        <Label>Data</Label>
+                        <Input
+                          type="date"
+                          value={novoGasto.data}
+                          onChange={(e) => setNovoGasto(prev => ({ ...prev, data: e.target.value }))}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Valor (R$)</Label>
+                        <Input
+                          type="number"
+                          placeholder="0,00"
+                          value={novoGasto.valor}
+                          onChange={(e) => setNovoGasto(prev => ({ ...prev, valor: e.target.value }))}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Categoria</Label>
+                        <Select
+                          value={novoGasto.categoria_id}
+                          onValueChange={(value) => setNovoGasto(prev => ({ ...prev, categoria_id: value }))}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Selecione" />
+                          </SelectTrigger>
+                          <SelectContent className="bg-card border z-50">
+                            {categorias.map(cat => (
+                              <SelectItem key={cat.id} value={cat.id}>
+                                <div className="flex items-center gap-2">
+                                  <div className="w-3 h-3 rounded-full" style={{ backgroundColor: cat.cor }} />
+                                  {cat.nome}
+                                </div>
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2 lg:col-span-2">
+                        <Label>Descrição</Label>
+                        <Input
+                          placeholder="Ex.: Almoço"
+                          value={novoGasto.descricao}
+                          onChange={(e) => setNovoGasto(prev => ({ ...prev, descricao: e.target.value }))}
+                        />
+                      </div>
+                      <div className="flex items-end gap-2">
+                        <div className="flex items-center gap-2">
+                          <Switch
+                            checked={novoGasto.recorrente}
+                            onCheckedChange={(checked) => setNovoGasto(prev => ({ ...prev, recorrente: checked }))}
+                          />
+                          <Label className="text-sm">Recorrente</Label>
+                        </div>
+                      </div>
+                    </div>
+                    <Button onClick={handleAddGasto} className="w-full mt-4 bg-indigo-600 hover:bg-indigo-700">
+                      <Plus className="h-4 w-4 mr-2" />
+                      Salvar Lançamento
+                    </Button>
+                  </CardContent>
+                </Card>
+
+                {/* Filters */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-base">Filtrar Lançamentos</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div className="space-y-2">
+                        <Label>Categoria</Label>
+                        <Select value={filtroCategoria} onValueChange={setFiltroCategoria}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Todas" />
+                          </SelectTrigger>
+                          <SelectContent className="bg-card border z-50">
+                            <SelectItem value="all">Todas as categorias</SelectItem>
+                            {categorias.map(cat => (
+                              <SelectItem key={cat.id} value={cat.id}>
+                                <div className="flex items-center gap-2">
+                                  <div className="w-3 h-3 rounded-full" style={{ backgroundColor: cat.cor }} />
+                                  {cat.nome}
+                                </div>
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Data Inicial</Label>
+                        <Input
+                          type="date"
+                          value={filtroDataInicio}
+                          onChange={(e) => setFiltroDataInicio(e.target.value)}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Data Final</Label>
+                        <Input
+                          type="date"
+                          value={filtroDataFim}
+                          onChange={(e) => setFiltroDataFim(e.target.value)}
+                        />
+                      </div>
+                    </div>
+                    {(filtroCategoria !== "all" || filtroDataInicio || filtroDataFim) && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="mt-3"
+                        onClick={() => {
+                          setFiltroCategoria("all");
+                          setFiltroDataInicio("");
+                          setFiltroDataFim("");
+                        }}
+                      >
+                        Limpar Filtros
+                      </Button>
+                    )}
+                  </CardContent>
+                </Card>
+
+                {/* Transactions List */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Lista de Lançamentos</CardTitle>
+                    <CardDescription>
+                      {lancamentosFiltrados.length} lançamento(s) encontrado(s)
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    {lancamentosFiltrados.length === 0 ? (
                       <p className="text-center text-muted-foreground py-8">Nenhum lançamento encontrado</p>
                     ) : (
                       <div className="space-y-3">
-                        {lancamentos.map(l => {
+                        {lancamentosFiltrados.map(l => {
                           const isReceita = l.categoria?.tipo === "receita";
                           return (
                             <div key={l.id} className="flex items-center justify-between p-3 rounded-lg border hover:bg-slate-50 dark:hover:bg-muted transition-colors">
@@ -835,7 +1014,7 @@ const Financas = () => {
                                 </div>
                                 <div>
                                   <div className="flex items-center gap-2">
-                                    <p className="font-medium">{l.descricao}</p>
+                                    <p className="font-medium">{l.descricao || "Sem descrição"}</p>
                                     {l.recorrente && (
                                       <Badge variant="outline" className="text-xs">Recorrente</Badge>
                                     )}
@@ -855,8 +1034,11 @@ const Financas = () => {
                                 <span className={`font-semibold ${isReceita ? 'text-emerald-600' : 'text-red-600'}`}>
                                   {isReceita ? '+' : '-'}{formatCurrency(Number(l.valor))}
                                 </span>
+                                <Button variant="ghost" size="icon" onClick={() => handleEditLancamento(l)}>
+                                  <Edit className="h-4 w-4 text-muted-foreground" />
+                                </Button>
                                 <Button variant="ghost" size="icon" onClick={() => handleDeleteLancamento(l.id)}>
-                                  <Trash2 className="h-4 w-4 text-muted-foreground" />
+                                  <Trash2 className="h-4 w-4 text-red-500" />
                                 </Button>
                               </div>
                             </div>
@@ -870,6 +1052,75 @@ const Financas = () => {
             </Tabs>
           </div>
         </main>
+
+        {/* Edit Dialog */}
+        <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Editar Lançamento</DialogTitle>
+            </DialogHeader>
+            {editingLancamento && (
+              <div className="space-y-4 py-4">
+                <div className="space-y-2">
+                  <Label>Data</Label>
+                  <Input
+                    type="date"
+                    value={editingLancamento.data}
+                    onChange={(e) => setEditingLancamento(prev => prev ? { ...prev, data: e.target.value } : null)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Descrição</Label>
+                  <Input
+                    placeholder="Descrição"
+                    value={editingLancamento.descricao || ""}
+                    onChange={(e) => setEditingLancamento(prev => prev ? { ...prev, descricao: e.target.value } : null)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Valor (R$)</Label>
+                  <Input
+                    type="number"
+                    value={editingLancamento.valor}
+                    onChange={(e) => setEditingLancamento(prev => prev ? { ...prev, valor: parseFloat(e.target.value) || 0 } : null)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Categoria</Label>
+                  <Select
+                    value={editingLancamento.categoria_id || "none"}
+                    onValueChange={(value) => setEditingLancamento(prev => prev ? { ...prev, categoria_id: value === "none" ? null : value } : null)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-card border z-50">
+                      <SelectItem value="none">Sem categoria</SelectItem>
+                      {categorias.map(cat => (
+                        <SelectItem key={cat.id} value={cat.id}>
+                          <div className="flex items-center gap-2">
+                            <div className="w-3 h-3 rounded-full" style={{ backgroundColor: cat.cor }} />
+                            {cat.nome}
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="flex items-center justify-between">
+                  <Label>Despesa Recorrente</Label>
+                  <Switch
+                    checked={editingLancamento.recorrente}
+                    onCheckedChange={(checked) => setEditingLancamento(prev => prev ? { ...prev, recorrente: checked } : null)}
+                  />
+                </div>
+                <Button onClick={handleSaveEdit} className="w-full bg-indigo-600 hover:bg-indigo-700">
+                  Salvar Alterações
+                </Button>
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
       </div>
     </SidebarProvider>
   );
