@@ -21,10 +21,11 @@ import { ptBR } from "date-fns/locale";
 import { 
   Wallet, Plus, Pencil, Trash2, Download, FileText, AlertTriangle, 
   TrendingUp, TrendingDown, Calendar, Target, DollarSign, PiggyBank,
-  LayoutDashboard, ListChecks, Settings, FileDown, AlertCircle, CheckCircle2, Tag
+  LayoutDashboard, ListChecks, Settings, FileDown, AlertCircle, CheckCircle2, Tag, Upload, FileSpreadsheet
 } from "lucide-react";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+import * as XLSX from "xlsx";
 
 interface Categoria {
   id: string;
@@ -109,6 +110,11 @@ export default function Financas() {
 
   const [salarioMensal, setSalarioMensal] = useState(0);
   const [modeloOrcamento, setModeloOrcamento] = useState("50/30/20");
+
+  // Import states
+  const [importDialog, setImportDialog] = useState(false);
+  const [importData, setImportData] = useState<any[]>([]);
+  const [importLoading, setImportLoading] = useState(false);
 
   useEffect(() => {
     checkUser();
@@ -530,6 +536,146 @@ export default function Financas() {
 
     doc.save(`relatorio_${format(new Date(), "yyyy-MM")}.pdf`);
     toast({ title: "PDF exportado" });
+  };
+
+  const handleDownloadTemplate = () => {
+    const template = [
+      { Data: "2024-01-15", Valor: 150.00, Tipo: "despesa", Categoria: "Alimentação", Descricao: "Supermercado", Recorrente: "Não" },
+      { Data: "2024-01-16", Valor: 50.00, Tipo: "despesa", Categoria: "Transporte", Descricao: "Uber", Recorrente: "Não" },
+      { Data: "2024-01-01", Valor: 5000.00, Tipo: "receita", Categoria: "Salário", Descricao: "Salário mensal", Recorrente: "Sim" },
+    ];
+
+    const ws = XLSX.utils.json_to_sheet(template);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Modelo");
+    
+    // Set column widths
+    ws["!cols"] = [
+      { wch: 12 }, // Data
+      { wch: 12 }, // Valor
+      { wch: 10 }, // Tipo
+      { wch: 15 }, // Categoria
+      { wch: 25 }, // Descricao
+      { wch: 12 }, // Recorrente
+    ];
+
+    XLSX.writeFile(wb, "modelo_importacao_financas.xlsx");
+    toast({ title: "Modelo baixado" });
+  };
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const data = new Uint8Array(event.target?.result as ArrayBuffer);
+        const workbook = XLSX.read(data, { type: "array" });
+        const sheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[sheetName];
+        const jsonData = XLSX.utils.sheet_to_json(worksheet);
+        
+        // Validate and transform data
+        const transformedData = jsonData.map((row: any, index: number) => {
+          const dataStr = row.Data?.toString() || "";
+          let formattedDate = "";
+          
+          // Handle Excel date serial number
+          if (typeof row.Data === "number") {
+            const excelDate = new Date((row.Data - 25569) * 86400 * 1000);
+            formattedDate = format(excelDate, "yyyy-MM-dd");
+          } else if (dataStr.includes("/")) {
+            const [day, month, year] = dataStr.split("/");
+            formattedDate = `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`;
+          } else {
+            formattedDate = dataStr;
+          }
+
+          return {
+            index,
+            data: formattedDate,
+            valor: parseFloat(row.Valor) || 0,
+            tipo: (row.Tipo || "despesa").toLowerCase(),
+            categoria: row.Categoria || "Outros",
+            descricao: row.Descricao || "",
+            recorrente: row.Recorrente?.toLowerCase() === "sim" || row.Recorrente === true,
+            valid: formattedDate && parseFloat(row.Valor) > 0,
+          };
+        });
+
+        setImportData(transformedData);
+        setImportDialog(true);
+      } catch (error) {
+        console.error("Erro ao processar arquivo:", error);
+        toast({ title: "Erro ao processar arquivo", variant: "destructive" });
+      }
+    };
+    reader.readAsArrayBuffer(file);
+    e.target.value = "";
+  };
+
+  const handleConfirmImport = async () => {
+    if (!user || importData.length === 0) return;
+
+    setImportLoading(true);
+    let imported = 0;
+    let errors = 0;
+
+    for (const item of importData.filter(d => d.valid)) {
+      // Find or create category
+      let categoriaId = categorias.find(c => 
+        c.nome.toLowerCase() === item.categoria.toLowerCase()
+      )?.id;
+
+      if (!categoriaId) {
+        // Create new category
+        const { data: newCat } = await supabase
+          .from("categorias_financas")
+          .insert({
+            nome: item.categoria,
+            tipo: item.tipo,
+            cor: CORES_CATEGORIAS[Math.floor(Math.random() * CORES_CATEGORIAS.length)],
+            user_id: user.id,
+          })
+          .select()
+          .single();
+        
+        if (newCat) {
+          categoriaId = newCat.id;
+        }
+      }
+
+      if (categoriaId) {
+        const { error } = await supabase.from("lancamentos_financas").insert({
+          data: item.data,
+          valor: item.valor,
+          categoria_id: categoriaId,
+          descricao: item.descricao,
+          recorrente: item.recorrente,
+          user_id: user.id,
+        });
+
+        if (error) {
+          errors++;
+        } else {
+          imported++;
+        }
+      } else {
+        errors++;
+      }
+    }
+
+    await recalcularMetricas();
+    setImportLoading(false);
+    setImportDialog(false);
+    setImportData([]);
+    loadData();
+
+    toast({
+      title: `Importação concluída`,
+      description: `${imported} lançamentos importados${errors > 0 ? `, ${errors} erros` : ""}`,
+    });
   };
 
   const resetCategoriaForm = () => {
@@ -1271,8 +1417,49 @@ export default function Financas() {
 
             {/* EXPORTAR TAB */}
             <TabsContent value="exportar" className="space-y-6">
-              <h2 className="text-xl font-semibold">Exportar Dados</h2>
+              <h2 className="text-xl font-semibold">Importar e Exportar Dados</h2>
 
+              {/* Import Section */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Upload className="h-5 w-5" />
+                    Importar Planilha
+                  </CardTitle>
+                  <CardDescription>
+                    Importe lançamentos de receitas e despesas através de uma planilha Excel ou CSV
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex gap-2">
+                    <Button variant="outline" onClick={handleDownloadTemplate}>
+                      <FileSpreadsheet className="h-4 w-4 mr-2" />
+                      Baixar Modelo
+                    </Button>
+                    <div className="relative">
+                      <Input
+                        type="file"
+                        accept=".xlsx,.xls,.csv"
+                        onChange={handleFileUpload}
+                        className="absolute inset-0 opacity-0 cursor-pointer"
+                      />
+                      <Button>
+                        <Upload className="h-4 w-4 mr-2" />
+                        Selecionar Arquivo
+                      </Button>
+                    </div>
+                  </div>
+                  <Alert>
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertTitle>Formato da Planilha</AlertTitle>
+                    <AlertDescription>
+                      Use as colunas: Data, Valor, Tipo (receita/despesa), Categoria, Descricao, Recorrente (Sim/Não)
+                    </AlertDescription>
+                  </Alert>
+                </CardContent>
+              </Card>
+
+              {/* Export Section */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <Card>
                   <CardHeader>
@@ -1310,6 +1497,65 @@ export default function Financas() {
                   </CardContent>
                 </Card>
               </div>
+
+              {/* Import Dialog */}
+              <Dialog open={importDialog} onOpenChange={setImportDialog}>
+                <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+                  <DialogHeader>
+                    <DialogTitle>Confirmar Importação</DialogTitle>
+                    <DialogDescription>
+                      Verifique os dados antes de importar. {importData.filter(d => d.valid).length} de {importData.length} registros válidos.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Data</TableHead>
+                        <TableHead>Valor</TableHead>
+                        <TableHead>Tipo</TableHead>
+                        <TableHead>Categoria</TableHead>
+                        <TableHead>Descrição</TableHead>
+                        <TableHead>Status</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {importData.slice(0, 50).map((item) => (
+                        <TableRow key={item.index} className={!item.valid ? "bg-destructive/10" : ""}>
+                          <TableCell>{item.data}</TableCell>
+                          <TableCell>{formatCurrency(item.valor)}</TableCell>
+                          <TableCell>
+                            <Badge variant={item.tipo === "receita" ? "default" : "secondary"}>
+                              {item.tipo}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>{item.categoria}</TableCell>
+                          <TableCell className="max-w-[200px] truncate">{item.descricao}</TableCell>
+                          <TableCell>
+                            {item.valid ? (
+                              <CheckCircle2 className="h-4 w-4 text-green-500" />
+                            ) : (
+                              <AlertCircle className="h-4 w-4 text-destructive" />
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                  {importData.length > 50 && (
+                    <p className="text-sm text-muted-foreground text-center">
+                      Mostrando 50 de {importData.length} registros
+                    </p>
+                  )}
+                  <DialogFooter>
+                    <Button variant="outline" onClick={() => setImportDialog(false)}>
+                      Cancelar
+                    </Button>
+                    <Button onClick={handleConfirmImport} disabled={importLoading || importData.filter(d => d.valid).length === 0}>
+                      {importLoading ? "Importando..." : `Importar ${importData.filter(d => d.valid).length} Registros`}
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
             </TabsContent>
           </Tabs>
         </main>
