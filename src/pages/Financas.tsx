@@ -29,11 +29,28 @@ import {
   Edit,
   PieChart,
   Target,
-  TrendingDown
+  TrendingDown,
+  BarChart3,
+  AlertTriangle,
+  CheckCircle2
 } from "lucide-react";
-import { format, startOfMonth, endOfMonth, startOfDay, endOfDay } from "date-fns";
+import { format, startOfMonth, endOfMonth, startOfDay, endOfDay, subMonths, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { PieChart as RechartsPie, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from "recharts";
+import { 
+  PieChart as RechartsPie, 
+  Pie, 
+  Cell, 
+  ResponsiveContainer, 
+  Legend, 
+  Tooltip,
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  BarChart,
+  Bar
+} from "recharts";
 
 interface Categoria {
   id: string;
@@ -98,6 +115,13 @@ const Financas = () => {
   const [filtroCategoria, setFiltroCategoria] = useState<string>("all");
   const [filtroDataInicio, setFiltroDataInicio] = useState<string>("");
   const [filtroDataFim, setFiltroDataFim] = useState<string>("");
+
+  // Category management states
+  const [newCategoryName, setNewCategoryName] = useState("");
+  const [newCategoryType, setNewCategoryType] = useState<"despesa" | "receita">("despesa");
+  const [newCategoryColor, setNewCategoryColor] = useState("#4F46E5");
+  const [editingCategory, setEditingCategory] = useState<Categoria | null>(null);
+  const [categoryDialogOpen, setCategoryDialogOpen] = useState(false);
 
   useEffect(() => {
     checkAuth();
@@ -326,6 +350,140 @@ const Financas = () => {
     loadData();
   };
 
+  // Category management functions
+  const handleAddCategory = async () => {
+    if (!userId || !newCategoryName.trim()) {
+      toast.error("Preencha o nome da categoria");
+      return;
+    }
+
+    await supabase.from("categorias_financas").insert({
+      user_id: userId,
+      nome: newCategoryName.trim(),
+      tipo: newCategoryType,
+      cor: newCategoryColor,
+      percentual_meta: 0
+    });
+
+    toast.success("Categoria criada!");
+    setNewCategoryName("");
+    setNewCategoryType("despesa");
+    setNewCategoryColor("#4F46E5");
+    setCategoryDialogOpen(false);
+    loadData();
+  };
+
+  const handleEditCategory = async () => {
+    if (!editingCategory) return;
+
+    await supabase
+      .from("categorias_financas")
+      .update({
+        nome: editingCategory.nome,
+        tipo: editingCategory.tipo,
+        cor: editingCategory.cor
+      })
+      .eq("id", editingCategory.id);
+
+    toast.success("Categoria atualizada!");
+    setEditingCategory(null);
+    loadData();
+  };
+
+  const handleDeleteCategory = async (id: string) => {
+    // Check if category has lancamentos
+    const hasLancamentos = lancamentos.some(l => l.categoria_id === id);
+    if (hasLancamentos) {
+      toast.error("Remova os lançamentos desta categoria primeiro");
+      return;
+    }
+
+    await supabase.from("categorias_financas").delete().eq("id", id);
+    toast.success("Categoria removida!");
+    loadData();
+  };
+
+  // Reports data
+  const getMonthlyData = () => {
+    const last6Months: { month: string; gastos: number; sobra: number }[] = [];
+    
+    for (let i = 5; i >= 0; i--) {
+      const date = subMonths(today, i);
+      const monthKey = format(date, "yyyy-MM");
+      const monthLabel = format(date, "MMM/yy", { locale: ptBR });
+      
+      const gastosMes = lancamentos
+        .filter(l => l.data.startsWith(monthKey))
+        .filter(l => {
+          const cat = categorias.find(c => c.id === l.categoria_id);
+          return !cat || cat.tipo === "despesa";
+        })
+        .reduce((acc, l) => acc + Number(l.valor), 0);
+      
+      const sobraMes = metricas.salario_mensal - gastosMes;
+      
+      last6Months.push({
+        month: monthLabel,
+        gastos: gastosMes,
+        sobra: Math.max(sobraMes, 0)
+      });
+    }
+    
+    return last6Months;
+  };
+
+  // Smart alerts check
+  const checkSmartAlerts = () => {
+    const alerts: { type: "warning" | "danger" | "success"; message: string }[] = [];
+    
+    // Alert 70% monthly budget
+    const percentualGasto = metricas.salario_mensal > 0 
+      ? (gastoMes / metricas.salario_mensal) * 100 
+      : 0;
+    
+    if (percentualGasto >= 70 && percentualGasto < 100) {
+      alerts.push({
+        type: "warning",
+        message: `Você já gastou ${percentualGasto.toFixed(0)}% do orçamento mensal`
+      });
+    } else if (percentualGasto >= 100) {
+      alerts.push({
+        type: "danger",
+        message: `Orçamento mensal ultrapassado! (${percentualGasto.toFixed(0)}%)`
+      });
+    }
+    
+    // Risk prediction
+    const diasPassados = today.getDate();
+    if (diasPassados >= 7 && diasRestantes > 0) {
+      const mediaDiaria = gastoMes / diasPassados;
+      const projecaoFimMes = mediaDiaria * (diasPassados + diasRestantes);
+      
+      if (projecaoFimMes > metricas.salario_mensal) {
+        alerts.push({
+          type: "danger",
+          message: "Se continuar assim, você fechará o mês no vermelho"
+        });
+      }
+    }
+    
+    // Daily average above target
+    if (metaDiaria > 0 && gastoMes > 0) {
+      const mediaDiaria = gastoMes / today.getDate();
+      if (mediaDiaria > metaDiaria * 1.2) {
+        alerts.push({
+          type: "warning",
+          message: `Média diária (${formatCurrency(mediaDiaria)}) acima da meta`
+        });
+      }
+    }
+    
+    return alerts;
+  };
+
+  const smartAlerts = checkSmartAlerts();
+  const monthlyData = getMonthlyData();
+
   // Filtered lancamentos
   const lancamentosFiltrados = lancamentos.filter(l => {
     if (filtroCategoria && filtroCategoria !== "all" && l.categoria_id !== filtroCategoria) return false;
@@ -445,12 +603,53 @@ const Financas = () => {
 
             {/* Tabs */}
             <Tabs value={activeTab} onValueChange={setActiveTab}>
-              <TabsList className="grid w-full grid-cols-4 lg:w-auto lg:inline-flex">
+              <TabsList className="grid w-full grid-cols-6 lg:w-auto lg:inline-flex">
                 <TabsTrigger value="dashboard">Resumo</TabsTrigger>
-                <TabsTrigger value="diario">Controle Diário</TabsTrigger>
-                <TabsTrigger value="categorias">Categorias</TabsTrigger>
+                <TabsTrigger value="diario">Diário</TabsTrigger>
                 <TabsTrigger value="lancamentos">Lançamentos</TabsTrigger>
+                <TabsTrigger value="categorias">Categorias</TabsTrigger>
+                <TabsTrigger value="setup">Setup</TabsTrigger>
+                <TabsTrigger value="relatorios">Relatórios</TabsTrigger>
               </TabsList>
+
+              {/* Smart Alerts */}
+              {smartAlerts.length > 0 && activeTab === "dashboard" && (
+                <div className="mt-4 space-y-2">
+                  {smartAlerts.map((alert, idx) => (
+                    <div
+                      key={idx}
+                      className={`flex items-center gap-3 p-3 rounded-lg border ${
+                        alert.type === "danger"
+                          ? "bg-red-50 dark:bg-red-950/20 border-red-200 dark:border-red-800"
+                          : alert.type === "warning"
+                          ? "bg-amber-50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-800"
+                          : "bg-emerald-50 dark:bg-emerald-950/20 border-emerald-200 dark:border-emerald-800"
+                      }`}
+                    >
+                      <AlertTriangle
+                        className={`h-5 w-5 ${
+                          alert.type === "danger"
+                            ? "text-red-600"
+                            : alert.type === "warning"
+                            ? "text-amber-600"
+                            : "text-emerald-600"
+                        }`}
+                      />
+                      <p
+                        className={`text-sm font-medium ${
+                          alert.type === "danger"
+                            ? "text-red-700 dark:text-red-300"
+                            : alert.type === "warning"
+                            ? "text-amber-700 dark:text-amber-300"
+                            : "text-emerald-700 dark:text-emerald-300"
+                        }`}
+                      >
+                        {alert.message}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              )}
 
               {/* Dashboard Tab */}
               <TabsContent value="dashboard" className="space-y-6">
@@ -1049,6 +1248,309 @@ const Financas = () => {
                   </CardContent>
                 </Card>
               </TabsContent>
+
+              {/* Setup Tab */}
+              <TabsContent value="setup" className="space-y-6">
+                {/* Salary Configuration */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Settings className="h-5 w-5 text-indigo-600" />
+                      Configurações Iniciais
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div className="space-y-2">
+                        <Label>Salário Mensal (R$)</Label>
+                        <Input
+                          type="number"
+                          placeholder="Ex.: 3500"
+                          value={salarioInput}
+                          onChange={(e) => setSalarioInput(e.target.value)}
+                        />
+                      </div>
+                      <div className="flex items-end">
+                        <Button onClick={handleSaveConfig} className="bg-indigo-600 hover:bg-indigo-700">
+                          <CheckCircle2 className="h-4 w-4 mr-2" />
+                          Salvar Configurações
+                        </Button>
+                      </div>
+                    </div>
+                    
+                    {/* Recurring expenses summary */}
+                    <div className="p-4 bg-slate-100 dark:bg-muted rounded-lg">
+                      <h4 className="font-medium mb-3">Despesas Recorrentes</h4>
+                      {despesasRecorrentes.length === 0 ? (
+                        <p className="text-sm text-muted-foreground">Nenhuma despesa recorrente cadastrada</p>
+                      ) : (
+                        <div className="space-y-2">
+                          {despesasRecorrentes.map(d => (
+                            <div key={d.id} className="flex justify-between items-center text-sm">
+                              <span>{d.descricao}</span>
+                              <span className="font-medium">{formatCurrency(Number(d.valor))}</span>
+                            </div>
+                          ))}
+                          <div className="pt-2 border-t flex justify-between font-medium">
+                            <span>Total</span>
+                            <span className="text-indigo-600">{formatCurrency(totalRecorrentes)}</span>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Category Management */}
+                <Card>
+                  <CardHeader>
+                    <div className="flex items-center justify-between">
+                      <CardTitle className="flex items-center gap-2">
+                        <Target className="h-5 w-5 text-indigo-600" />
+                        Gerenciar Categorias
+                      </CardTitle>
+                      <Dialog open={categoryDialogOpen} onOpenChange={setCategoryDialogOpen}>
+                        <DialogTrigger asChild>
+                          <Button size="sm" className="bg-indigo-600 hover:bg-indigo-700">
+                            <Plus className="h-4 w-4 mr-2" />
+                            Adicionar Categoria
+                          </Button>
+                        </DialogTrigger>
+                        <DialogContent>
+                          <DialogHeader>
+                            <DialogTitle>Nova Categoria</DialogTitle>
+                          </DialogHeader>
+                          <div className="space-y-4 py-4">
+                            <div className="space-y-2">
+                              <Label>Nome</Label>
+                              <Input
+                                placeholder="Ex.: Alimentação"
+                                value={newCategoryName}
+                                onChange={(e) => setNewCategoryName(e.target.value)}
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <Label>Tipo</Label>
+                              <Select value={newCategoryType} onValueChange={(v) => setNewCategoryType(v as "despesa" | "receita")}>
+                                <SelectTrigger>
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent className="bg-card border z-50">
+                                  <SelectItem value="despesa">Despesa</SelectItem>
+                                  <SelectItem value="receita">Receita</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            <div className="space-y-2">
+                              <Label>Cor</Label>
+                              <div className="flex gap-2">
+                                <Input
+                                  type="color"
+                                  value={newCategoryColor}
+                                  onChange={(e) => setNewCategoryColor(e.target.value)}
+                                  className="w-16 h-10 p-1"
+                                />
+                                <Input
+                                  value={newCategoryColor}
+                                  onChange={(e) => setNewCategoryColor(e.target.value)}
+                                  className="flex-1"
+                                />
+                              </div>
+                            </div>
+                            <Button onClick={handleAddCategory} className="w-full bg-indigo-600 hover:bg-indigo-700">
+                              Criar Categoria
+                            </Button>
+                          </div>
+                        </DialogContent>
+                      </Dialog>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    {categorias.length === 0 ? (
+                      <p className="text-center text-muted-foreground py-8">Nenhuma categoria cadastrada</p>
+                    ) : (
+                      <div className="space-y-3">
+                        {categorias.map(cat => (
+                          <div key={cat.id} className="flex items-center justify-between p-3 rounded-lg border hover:bg-slate-50 dark:hover:bg-muted transition-colors">
+                            <div className="flex items-center gap-3">
+                              <div className="w-4 h-4 rounded-full" style={{ backgroundColor: cat.cor }} />
+                              <div>
+                                <p className="font-medium">{cat.nome}</p>
+                                <p className="text-xs text-muted-foreground capitalize">{cat.tipo}</p>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => setEditingCategory(cat)}
+                              >
+                                <Edit className="h-4 w-4 text-muted-foreground" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => handleDeleteCategory(cat.id)}
+                              >
+                                <Trash2 className="h-4 w-4 text-red-500" />
+                              </Button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </TabsContent>
+
+              {/* Reports Tab */}
+              <TabsContent value="relatorios" className="space-y-6">
+                {/* Monthly Expenses Chart */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <BarChart3 className="h-5 w-5 text-indigo-600" />
+                      Gastos por Mês (Últimos 6 meses)
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="h-80">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={monthlyData}>
+                          <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                          <XAxis dataKey="month" stroke="hsl(var(--muted-foreground))" />
+                          <YAxis stroke="hsl(var(--muted-foreground))" tickFormatter={(v) => `R$${v}`} />
+                          <Tooltip
+                            formatter={(value: number) => formatCurrency(value)}
+                            contentStyle={{
+                              backgroundColor: "hsl(var(--card))",
+                              border: "1px solid hsl(var(--border))",
+                              borderRadius: "8px"
+                            }}
+                          />
+                          <Legend />
+                          <Bar dataKey="gastos" name="Gastos" fill="#EF4444" radius={[4, 4, 0, 0]} />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Monthly Balance Chart */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <TrendingUp className="h-5 w-5 text-emerald-600" />
+                      Sobra Mensal (Últimos 6 meses)
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="h-80">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <LineChart data={monthlyData}>
+                          <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                          <XAxis dataKey="month" stroke="hsl(var(--muted-foreground))" />
+                          <YAxis stroke="hsl(var(--muted-foreground))" tickFormatter={(v) => `R$${v}`} />
+                          <Tooltip
+                            formatter={(value: number) => formatCurrency(value)}
+                            contentStyle={{
+                              backgroundColor: "hsl(var(--card))",
+                              border: "1px solid hsl(var(--border))",
+                              borderRadius: "8px"
+                            }}
+                          />
+                          <Legend />
+                          <Line
+                            type="monotone"
+                            dataKey="sobra"
+                            name="Sobra"
+                            stroke="#10B981"
+                            strokeWidth={3}
+                            dot={{ fill: "#10B981", strokeWidth: 2 }}
+                          />
+                        </LineChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Expenses by Category (current month) */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <PieChart className="h-5 w-5 text-indigo-600" />
+                      Gastos por Categoria ({format(today, "MMMM/yyyy", { locale: ptBR })})
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {(() => {
+                      const gastosPorCategoria = lancamentosMes
+                        .filter(l => {
+                          const cat = categorias.find(c => c.id === l.categoria_id);
+                          return cat && cat.tipo === "despesa";
+                        })
+                        .reduce((acc, l) => {
+                          const cat = categorias.find(c => c.id === l.categoria_id);
+                          if (cat) {
+                            acc[cat.id] = {
+                              nome: cat.nome,
+                              cor: cat.cor,
+                              valor: (acc[cat.id]?.valor || 0) + Number(l.valor)
+                            };
+                          }
+                          return acc;
+                        }, {} as Record<string, { nome: string; cor: string; valor: number }>);
+
+                      const chartData = Object.entries(gastosPorCategoria).map(([id, data]) => ({
+                        name: data.nome,
+                        value: data.valor,
+                        color: data.cor
+                      }));
+
+                      if (chartData.length === 0) {
+                        return (
+                          <div className="text-center py-12 text-muted-foreground">
+                            <PieChart className="h-12 w-12 mx-auto mb-3 opacity-30" />
+                            <p>Nenhum gasto registrado este mês.</p>
+                          </div>
+                        );
+                      }
+
+                      return (
+                        <div className="h-80">
+                          <ResponsiveContainer width="100%" height="100%">
+                            <RechartsPie>
+                              <Pie
+                                data={chartData}
+                                cx="50%"
+                                cy="50%"
+                                innerRadius={60}
+                                outerRadius={100}
+                                paddingAngle={2}
+                                dataKey="value"
+                                label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
+                              >
+                                {chartData.map((entry, index) => (
+                                  <Cell key={`cell-${index}`} fill={entry.color} />
+                                ))}
+                              </Pie>
+                              <Tooltip
+                                formatter={(value: number) => formatCurrency(value)}
+                                contentStyle={{
+                                  backgroundColor: "hsl(var(--card))",
+                                  border: "1px solid hsl(var(--border))",
+                                  borderRadius: "8px"
+                                }}
+                              />
+                              <Legend />
+                            </RechartsPie>
+                          </ResponsiveContainer>
+                        </div>
+                      );
+                    })()}
+                  </CardContent>
+                </Card>
+              </TabsContent>
             </Tabs>
           </div>
         </main>
@@ -1115,6 +1617,61 @@ const Financas = () => {
                   />
                 </div>
                 <Button onClick={handleSaveEdit} className="w-full bg-indigo-600 hover:bg-indigo-700">
+                  Salvar Alterações
+                </Button>
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
+
+        {/* Edit Category Dialog */}
+        <Dialog open={!!editingCategory} onOpenChange={(open) => !open && setEditingCategory(null)}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Editar Categoria</DialogTitle>
+            </DialogHeader>
+            {editingCategory && (
+              <div className="space-y-4 py-4">
+                <div className="space-y-2">
+                  <Label>Nome</Label>
+                  <Input
+                    placeholder="Nome da categoria"
+                    value={editingCategory.nome}
+                    onChange={(e) => setEditingCategory(prev => prev ? { ...prev, nome: e.target.value } : null)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Tipo</Label>
+                  <Select
+                    value={editingCategory.tipo}
+                    onValueChange={(value) => setEditingCategory(prev => prev ? { ...prev, tipo: value } : null)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="bg-card border z-50">
+                      <SelectItem value="despesa">Despesa</SelectItem>
+                      <SelectItem value="receita">Receita</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Cor</Label>
+                  <div className="flex gap-2">
+                    <Input
+                      type="color"
+                      value={editingCategory.cor}
+                      onChange={(e) => setEditingCategory(prev => prev ? { ...prev, cor: e.target.value } : null)}
+                      className="w-16 h-10 p-1"
+                    />
+                    <Input
+                      value={editingCategory.cor}
+                      onChange={(e) => setEditingCategory(prev => prev ? { ...prev, cor: e.target.value } : null)}
+                      className="flex-1"
+                    />
+                  </div>
+                </div>
+                <Button onClick={handleEditCategory} className="w-full bg-indigo-600 hover:bg-indigo-700">
                   Salvar Alterações
                 </Button>
               </div>
