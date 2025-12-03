@@ -17,6 +17,7 @@ import { DashboardStats } from "@/components/dashboard/DashboardStats";
 import { RecentOperationsTable } from "@/components/dashboard/RecentOperationsTable";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/dashboard/AppSidebar";
+import { RestrictedAccess } from "@/components/dashboard/RestrictedAccess";
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -24,6 +25,7 @@ const Dashboard = () => {
   const [profile, setProfile] = useState<any>(null);
   const [roles, setRoles] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
+  const [accessStatus, setAccessStatus] = useState<string>("aprovado");
   const [stats, setStats] = useState({
     totalOperations: 0,
     totalProfit: 0,
@@ -54,6 +56,7 @@ const Dashboard = () => {
         .single();
 
       setProfile(profileData);
+      setAccessStatus(profileData?.access_status || "pendente");
 
       const { data: rolesData } = await supabase
         .from("user_roles")
@@ -115,12 +118,60 @@ const Dashboard = () => {
   };
 
   const isAdmin = roles.includes("admin");
+  const hasFullAccess = accessStatus === "aprovado" || isAdmin;
 
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
       </div>
+    );
+  }
+
+  // Se o usuário não tem acesso aprovado, mostrar tela restrita
+  if (!hasFullAccess) {
+    return (
+      <SidebarProvider>
+        <div className="min-h-screen flex w-full bg-gradient-to-br from-background via-accent/20 to-background">
+          <div className="flex-1 flex flex-col">
+            <header className="border-b bg-card/50 backdrop-blur-md sticky top-0 z-50">
+              <div className="px-4 py-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-lg bg-gradient-primary flex items-center justify-center">
+                        <TrendingUp className="w-5 h-5 text-primary-foreground" />
+                      </div>
+                      <div>
+                        <h1 className="text-xl font-bold text-foreground">Portal Zeve</h1>
+                        <p className="text-xs text-muted-foreground">Gestão e Performance</p>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center gap-4">
+                    <ThemeToggle />
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={handleSignOut}
+                      className="gap-2"
+                    >
+                      <LogOut className="w-4 h-4" />
+                      Sair
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </header>
+
+            <RestrictedAccess 
+              accessStatus={accessStatus} 
+              userName={profile?.full_name}
+            />
+          </div>
+        </div>
+      </SidebarProvider>
     );
   }
 
