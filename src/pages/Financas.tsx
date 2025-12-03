@@ -1,0 +1,1200 @@
+import { useState, useEffect, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
+import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
+import { AppSidebar } from "@/components/dashboard/AppSidebar";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend, LineChart, Line, XAxis, YAxis, CartesianGrid } from "recharts";
+import { format, startOfMonth, endOfMonth, getDaysInMonth, differenceInDays, subDays, parseISO } from "date-fns";
+import { ptBR } from "date-fns/locale";
+import { 
+  Wallet, Plus, Pencil, Trash2, Download, FileText, AlertTriangle, 
+  TrendingUp, TrendingDown, Calendar, Target, DollarSign, PiggyBank,
+  LayoutDashboard, ListChecks, Settings, FileDown, AlertCircle, CheckCircle2
+} from "lucide-react";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
+
+interface Categoria {
+  id: string;
+  nome: string;
+  tipo: string;
+  cor: string;
+  percentual_meta: number;
+  meta_valor: number;
+}
+
+interface Lancamento {
+  id: string;
+  data: string;
+  valor: number;
+  categoria_id: string;
+  descricao: string;
+  recorrente: boolean;
+  categoria?: Categoria;
+}
+
+interface UsuarioMetricas {
+  id: string;
+  salario_mensal: number;
+  sobra_calculada: number;
+  valor_diario_meta: number;
+  media_7_dias: number;
+  previsao_fim_mes: number;
+  desvio_padrao_14: number;
+  modelo_orcamento: string;
+  mes_referencia: string;
+}
+
+const CORES_CATEGORIAS = [
+  "#06B6D4", "#8B5CF6", "#EC4899", "#F97316", "#22C55E", 
+  "#EAB308", "#EF4444", "#3B82F6", "#14B8A6", "#A855F7"
+];
+
+const TIPOS_CATEGORIA = [
+  { value: "essencial", label: "Essencial" },
+  { value: "nao_essencial", label: "Não Essencial" },
+  { value: "lazer", label: "Lazer" },
+  { value: "educacao", label: "Educação" },
+  { value: "saude", label: "Saúde" },
+  { value: "outros", label: "Outros" },
+];
+
+export default function Financas() {
+  const navigate = useNavigate();
+  const { toast } = useToast();
+  const [user, setUser] = useState<any>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState("dashboard");
+
+  // Data states
+  const [categorias, setCategorias] = useState<Categoria[]>([]);
+  const [lancamentos, setLancamentos] = useState<Lancamento[]>([]);
+  const [metricas, setMetricas] = useState<UsuarioMetricas | null>(null);
+
+  // Form states
+  const [categoriaDialog, setCategoriaDialog] = useState(false);
+  const [lancamentoDialog, setLancamentoDialog] = useState(false);
+  const [editingCategoria, setEditingCategoria] = useState<Categoria | null>(null);
+  const [editingLancamento, setEditingLancamento] = useState<Lancamento | null>(null);
+
+  // Form fields
+  const [categoriaNome, setCategoriaNome] = useState("");
+  const [categoriaTipo, setCategoriaTipo] = useState("essencial");
+  const [categoriaCor, setCategoriaCor] = useState("#06B6D4");
+  const [categoriaPercentual, setCategoriaPercentual] = useState(0);
+  const [categoriaMetaValor, setCategoriaMetaValor] = useState(0);
+
+  const [lancamentoData, setLancamentoData] = useState(format(new Date(), "yyyy-MM-dd"));
+  const [lancamentoValor, setLancamentoValor] = useState(0);
+  const [lancamentoCategoriaId, setLancamentoCategoriaId] = useState("");
+  const [lancamentoDescricao, setLancamentoDescricao] = useState("");
+  const [lancamentoRecorrente, setLancamentoRecorrente] = useState(false);
+
+  const [salarioMensal, setSalarioMensal] = useState(0);
+  const [modeloOrcamento, setModeloOrcamento] = useState("50/30/20");
+
+  useEffect(() => {
+    checkUser();
+  }, []);
+
+  useEffect(() => {
+    if (user) {
+      loadData();
+    }
+  }, [user]);
+
+  const checkUser = async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
+      navigate("/auth");
+      return;
+    }
+    setUser(session.user);
+
+    const { data: adminRole } = await supabase
+      .from("user_roles")
+      .select("*")
+      .eq("user_id", session.user.id)
+      .eq("role", "admin")
+      .maybeSingle();
+
+    setIsAdmin(!!adminRole);
+    setLoading(false);
+  };
+
+  const loadData = async () => {
+    if (!user) return;
+
+    // Load categorias
+    const { data: categoriasData } = await supabase
+      .from("categorias_financas")
+      .select("*")
+      .eq("user_id", user.id)
+      .order("nome");
+
+    if (categoriasData) {
+      setCategorias(categoriasData as any);
+    }
+
+    // Load lancamentos do mês atual
+    const inicioMes = format(startOfMonth(new Date()), "yyyy-MM-dd");
+    const fimMes = format(endOfMonth(new Date()), "yyyy-MM-dd");
+
+    const { data: lancamentosData } = await supabase
+      .from("lancamentos_financas")
+      .select("*")
+      .eq("user_id", user.id)
+      .gte("data", inicioMes)
+      .lte("data", fimMes)
+      .order("data", { ascending: false });
+
+    if (lancamentosData && categoriasData) {
+      const lancamentosComCategoria = lancamentosData.map((l: any) => ({
+        ...l,
+        categoria: categoriasData.find((c: any) => c.id === l.categoria_id),
+      }));
+      setLancamentos(lancamentosComCategoria);
+    }
+
+    // Load or create metricas
+    const mesAtual = format(new Date(), "yyyy-MM");
+    const { data: metricasData } = await supabase
+      .from("usuario_metricas_financas")
+      .select("*")
+      .eq("user_id", user.id)
+      .eq("mes_referencia", mesAtual)
+      .maybeSingle();
+
+    if (metricasData) {
+      setMetricas(metricasData as any);
+      setSalarioMensal(metricasData.salario_mensal || 0);
+      setModeloOrcamento(metricasData.modelo_orcamento || "50/30/20");
+    } else {
+      // Create default metrics
+      const { data: newMetricas } = await supabase
+        .from("usuario_metricas_financas")
+        .insert({
+          user_id: user.id,
+          mes_referencia: mesAtual,
+          salario_mensal: 0,
+          sobra_calculada: 0,
+          valor_diario_meta: 0,
+        })
+        .select()
+        .single();
+
+      if (newMetricas) {
+        setMetricas(newMetricas as any);
+      }
+    }
+  };
+
+  // Cálculos
+  const totalGastoHoje = useMemo(() => {
+    const hoje = format(new Date(), "yyyy-MM-dd");
+    return lancamentos
+      .filter((l) => l.data === hoje)
+      .reduce((sum, l) => sum + l.valor, 0);
+  }, [lancamentos]);
+
+  const totalGastoMes = useMemo(() => {
+    return lancamentos.reduce((sum, l) => sum + l.valor, 0);
+  }, [lancamentos]);
+
+  const sobraParaGastarHoje = useMemo(() => {
+    return (metricas?.valor_diario_meta || 0) - totalGastoHoje;
+  }, [metricas, totalGastoHoje]);
+
+  const gastosPorCategoria = useMemo(() => {
+    const gastos: Record<string, { nome: string; valor: number; cor: string }> = {};
+    lancamentos.forEach((l) => {
+      const cat = l.categoria;
+      if (cat) {
+        if (!gastos[cat.id]) {
+          gastos[cat.id] = { nome: cat.nome, valor: 0, cor: cat.cor };
+        }
+        gastos[cat.id].valor += l.valor;
+      }
+    });
+    return Object.values(gastos);
+  }, [lancamentos]);
+
+  const gastosDiarios = useMemo(() => {
+    const diasNoMes = getDaysInMonth(new Date());
+    const gastos: Record<string, number> = {};
+    
+    for (let i = 1; i <= diasNoMes; i++) {
+      const dia = format(new Date(new Date().getFullYear(), new Date().getMonth(), i), "yyyy-MM-dd");
+      gastos[dia] = 0;
+    }
+
+    lancamentos.forEach((l) => {
+      if (gastos[l.data] !== undefined) {
+        gastos[l.data] += l.valor;
+      }
+    });
+
+    return Object.entries(gastos).map(([data, valor]) => ({
+      data: format(parseISO(data), "dd"),
+      valor,
+    }));
+  }, [lancamentos]);
+
+  // Funções CRUD
+  const handleSaveCategoria = async () => {
+    if (!user || !categoriaNome) return;
+
+    const categoriaData = {
+      nome: categoriaNome,
+      tipo: categoriaTipo,
+      cor: categoriaCor,
+      percentual_meta: categoriaPercentual,
+      meta_valor: categoriaMetaValor,
+      user_id: user.id,
+    };
+
+    if (editingCategoria) {
+      await supabase
+        .from("categorias_financas")
+        .update(categoriaData)
+        .eq("id", editingCategoria.id);
+      toast({ title: "Categoria atualizada" });
+    } else {
+      await supabase.from("categorias_financas").insert(categoriaData);
+      toast({ title: "Categoria criada" });
+    }
+
+    resetCategoriaForm();
+    loadData();
+  };
+
+  const handleDeleteCategoria = async (id: string) => {
+    await supabase.from("categorias_financas").delete().eq("id", id);
+    toast({ title: "Categoria excluída" });
+    loadData();
+  };
+
+  const handleSaveLancamento = async () => {
+    if (!user || !lancamentoCategoriaId || lancamentoValor <= 0) return;
+
+    const lancamentoPayload = {
+      data: lancamentoData,
+      valor: lancamentoValor,
+      categoria_id: lancamentoCategoriaId,
+      descricao: lancamentoDescricao,
+      recorrente: lancamentoRecorrente,
+      user_id: user.id,
+    };
+
+    if (editingLancamento) {
+      await supabase
+        .from("lancamentos_financas")
+        .update(lancamentoPayload)
+        .eq("id", editingLancamento.id);
+      toast({ title: "Lançamento atualizado" });
+    } else {
+      await supabase.from("lancamentos_financas").insert(lancamentoPayload);
+      toast({ title: "Lançamento criado" });
+    }
+
+    // Recalcular métricas
+    await recalcularMetricas();
+
+    resetLancamentoForm();
+    loadData();
+  };
+
+  const handleDeleteLancamento = async (id: string) => {
+    await supabase.from("lancamentos_financas").delete().eq("id", id);
+    toast({ title: "Lançamento excluído" });
+    await recalcularMetricas();
+    loadData();
+  };
+
+  const recalcularMetricas = async () => {
+    if (!user || !metricas) return;
+
+    const inicioMes = format(startOfMonth(new Date()), "yyyy-MM-dd");
+    const fimMes = format(endOfMonth(new Date()), "yyyy-MM-dd");
+
+    const { data: lancamentosData } = await supabase
+      .from("lancamentos_financas")
+      .select("*")
+      .eq("user_id", user.id)
+      .gte("data", inicioMes)
+      .lte("data", fimMes);
+
+    const totalGastos = lancamentosData?.reduce((sum, l) => sum + l.valor, 0) || 0;
+    const sobra = (metricas.salario_mensal || 0) - totalGastos;
+    
+    const diasRestantes = differenceInDays(endOfMonth(new Date()), new Date()) + 1;
+    const metaDiaria = diasRestantes > 0 ? sobra / diasRestantes : 0;
+
+    // Média últimos 7 dias
+    const seteDiasAtras = format(subDays(new Date(), 7), "yyyy-MM-dd");
+    const { data: lancamentos7Dias } = await supabase
+      .from("lancamentos_financas")
+      .select("*")
+      .eq("user_id", user.id)
+      .gte("data", seteDiasAtras);
+
+    const media7Dias = lancamentos7Dias && lancamentos7Dias.length > 0
+      ? lancamentos7Dias.reduce((sum, l) => sum + l.valor, 0) / 7
+      : 0;
+
+    const previsaoFimMes = media7Dias * getDaysInMonth(new Date());
+
+    await supabase
+      .from("usuario_metricas_financas")
+      .update({
+        sobra_calculada: sobra,
+        valor_diario_meta: Math.max(0, metaDiaria),
+        media_7_dias: media7Dias,
+        previsao_fim_mes: previsaoFimMes,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", metricas.id);
+  };
+
+  const handleSaveConfig = async () => {
+    if (!user || !metricas) return;
+
+    await supabase
+      .from("usuario_metricas_financas")
+      .update({
+        salario_mensal: salarioMensal,
+        modelo_orcamento: modeloOrcamento,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", metricas.id);
+
+    await recalcularMetricas();
+    toast({ title: "Configurações salvas" });
+    loadData();
+  };
+
+  const handleApplyBudgetModel = async () => {
+    if (!user || categorias.length === 0) return;
+
+    let distribuicao: Record<string, number> = {};
+
+    switch (modeloOrcamento) {
+      case "50/30/20":
+        distribuicao = { essencial: 50, nao_essencial: 30, lazer: 10, educacao: 5, saude: 3, outros: 2 };
+        break;
+      case "30/30/40":
+        distribuicao = { essencial: 30, nao_essencial: 30, lazer: 15, educacao: 10, saude: 10, outros: 5 };
+        break;
+      default:
+        return;
+    }
+
+    for (const cat of categorias) {
+      const percentual = distribuicao[cat.tipo] || 0;
+      const metaValor = salarioMensal * (percentual / 100);
+
+      await supabase
+        .from("categorias_financas")
+        .update({ percentual_meta: percentual, meta_valor: metaValor })
+        .eq("id", cat.id);
+    }
+
+    toast({ title: "Modelo de orçamento aplicado" });
+    loadData();
+  };
+
+  const handleExportCSV = () => {
+    const headers = ["Data", "Valor", "Categoria", "Descrição", "Recorrente"];
+    const rows = lancamentos.map((l) => [
+      format(parseISO(l.data), "dd/MM/yyyy"),
+      l.valor.toFixed(2),
+      l.categoria?.nome || "",
+      l.descricao || "",
+      l.recorrente ? "Sim" : "Não",
+    ]);
+
+    const csvContent = [headers.join(","), ...rows.map((r) => r.join(","))].join("\n");
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `lancamentos_${format(new Date(), "yyyy-MM")}.csv`;
+    link.click();
+
+    toast({ title: "CSV exportado" });
+  };
+
+  const handleExportPDF = () => {
+    const doc = new jsPDF();
+    const mesAtual = format(new Date(), "MMMM yyyy", { locale: ptBR });
+
+    // Header
+    doc.setFontSize(20);
+    doc.setTextColor(30, 58, 138);
+    doc.text("Relatório Financeiro - Zeve Hub", 14, 20);
+    doc.setFontSize(12);
+    doc.setTextColor(100);
+    doc.text(`Período: ${mesAtual}`, 14, 28);
+
+    // Resumo
+    doc.setFontSize(14);
+    doc.setTextColor(0);
+    doc.text("Resumo do Mês", 14, 40);
+    doc.setFontSize(10);
+    doc.text(`Total Gasto: R$ ${totalGastoMes.toFixed(2)}`, 14, 48);
+    doc.text(`Média Diária: R$ ${(metricas?.media_7_dias || 0).toFixed(2)}`, 14, 54);
+    doc.text(`Previsão Fim de Mês: R$ ${(metricas?.previsao_fim_mes || 0).toFixed(2)}`, 14, 60);
+    doc.text(`Saldo Previsto: R$ ${((metricas?.sobra_calculada || 0) - (metricas?.previsao_fim_mes || 0)).toFixed(2)}`, 14, 66);
+
+    // Tabela
+    autoTable(doc, {
+      startY: 75,
+      head: [["Data", "Categoria", "Descrição", "Valor", "Recorrente"]],
+      body: lancamentos.map((l) => [
+        format(parseISO(l.data), "dd/MM/yyyy"),
+        l.categoria?.nome || "",
+        l.descricao || "",
+        `R$ ${l.valor.toFixed(2)}`,
+        l.recorrente ? "Sim" : "Não",
+      ]),
+      theme: "striped",
+      headStyles: { fillColor: [30, 58, 138] },
+    });
+
+    // Footer
+    const pageCount = doc.getNumberOfPages();
+    for (let i = 1; i <= pageCount; i++) {
+      doc.setPage(i);
+      doc.setFontSize(8);
+      doc.setTextColor(150);
+      doc.text(`Gerado por Zeve Hub - ${format(new Date(), "dd/MM/yyyy HH:mm")}`, 14, doc.internal.pageSize.height - 10);
+      doc.text(`Página ${i}/${pageCount}`, doc.internal.pageSize.width - 30, doc.internal.pageSize.height - 10);
+    }
+
+    doc.save(`relatorio_${format(new Date(), "yyyy-MM")}.pdf`);
+    toast({ title: "PDF exportado" });
+  };
+
+  const resetCategoriaForm = () => {
+    setCategoriaDialog(false);
+    setEditingCategoria(null);
+    setCategoriaNome("");
+    setCategoriaTipo("essencial");
+    setCategoriaCor("#06B6D4");
+    setCategoriaPercentual(0);
+    setCategoriaMetaValor(0);
+  };
+
+  const resetLancamentoForm = () => {
+    setLancamentoDialog(false);
+    setEditingLancamento(null);
+    setLancamentoData(format(new Date(), "yyyy-MM-dd"));
+    setLancamentoValor(0);
+    setLancamentoCategoriaId("");
+    setLancamentoDescricao("");
+    setLancamentoRecorrente(false);
+  };
+
+  const openEditCategoria = (cat: Categoria) => {
+    setEditingCategoria(cat);
+    setCategoriaNome(cat.nome);
+    setCategoriaTipo(cat.tipo);
+    setCategoriaCor(cat.cor);
+    setCategoriaPercentual(cat.percentual_meta);
+    setCategoriaMetaValor(cat.meta_valor);
+    setCategoriaDialog(true);
+  };
+
+  const openEditLancamento = (lanc: Lancamento) => {
+    setEditingLancamento(lanc);
+    setLancamentoData(lanc.data);
+    setLancamentoValor(lanc.valor);
+    setLancamentoCategoriaId(lanc.categoria_id);
+    setLancamentoDescricao(lanc.descricao || "");
+    setLancamentoRecorrente(lanc.recorrente);
+    setLancamentoDialog(true);
+  };
+
+  const formatCurrency = (value: number) => {
+    return new Intl.NumberFormat("pt-BR", {
+      style: "currency",
+      currency: "BRL",
+    }).format(value);
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+
+  return (
+    <SidebarProvider>
+      <div className="min-h-screen flex w-full bg-background">
+        <AppSidebar isAdmin={isAdmin} />
+        <main className="flex-1 p-6 overflow-auto">
+          <div className="flex items-center gap-4 mb-6">
+            <SidebarTrigger />
+            <div>
+              <h1 className="text-3xl font-bold flex items-center gap-2">
+                <Wallet className="h-8 w-8 text-yellow-500" />
+                Finanças Pessoais
+              </h1>
+              <p className="text-muted-foreground">
+                Controle seu orçamento e alcance suas metas financeiras
+              </p>
+            </div>
+          </div>
+
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+            <TabsList className="grid grid-cols-6 w-full max-w-4xl">
+              <TabsTrigger value="dashboard" className="flex items-center gap-2">
+                <LayoutDashboard className="h-4 w-4" />
+                <span className="hidden sm:inline">Dashboard</span>
+              </TabsTrigger>
+              <TabsTrigger value="categorias" className="flex items-center gap-2">
+                <ListChecks className="h-4 w-4" />
+                <span className="hidden sm:inline">Categorias</span>
+              </TabsTrigger>
+              <TabsTrigger value="lancamentos" className="flex items-center gap-2">
+                <DollarSign className="h-4 w-4" />
+                <span className="hidden sm:inline">Lançamentos</span>
+              </TabsTrigger>
+              <TabsTrigger value="projecao" className="flex items-center gap-2">
+                <TrendingUp className="h-4 w-4" />
+                <span className="hidden sm:inline">Projeção</span>
+              </TabsTrigger>
+              <TabsTrigger value="config" className="flex items-center gap-2">
+                <Settings className="h-4 w-4" />
+                <span className="hidden sm:inline">Config</span>
+              </TabsTrigger>
+              <TabsTrigger value="exportar" className="flex items-center gap-2">
+                <FileDown className="h-4 w-4" />
+                <span className="hidden sm:inline">Exportar</span>
+              </TabsTrigger>
+            </TabsList>
+
+            {/* DASHBOARD TAB */}
+            <TabsContent value="dashboard" className="space-y-6">
+              {/* Alertas */}
+              {sobraParaGastarHoje < 0 && (
+                <Alert variant="destructive">
+                  <AlertTriangle className="h-4 w-4" />
+                  <AlertTitle>Limite diário ultrapassado!</AlertTitle>
+                  <AlertDescription>
+                    Você gastou {formatCurrency(Math.abs(sobraParaGastarHoje))} além da sua meta diária.
+                  </AlertDescription>
+                </Alert>
+              )}
+
+              {sobraParaGastarHoje >= 0 && sobraParaGastarHoje <= (metricas?.valor_diario_meta || 0) * 0.25 && (
+                <Alert>
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertTitle>Atenção!</AlertTitle>
+                  <AlertDescription>
+                    Você está próximo de atingir sua meta diária. Restam apenas {formatCurrency(sobraParaGastarHoje)}.
+                  </AlertDescription>
+                </Alert>
+              )}
+
+              {/* Cards de métricas */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <Card className="border-l-4 border-l-cyan-500">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm text-muted-foreground">Meta Diária</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold text-cyan-500">
+                      {formatCurrency(metricas?.valor_diario_meta || 0)}
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card className="border-l-4 border-l-purple-500">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm text-muted-foreground">Total Gasto Hoje</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold text-purple-500">
+                      {formatCurrency(totalGastoHoje)}
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card className={`border-l-4 ${sobraParaGastarHoje < 0 ? "border-l-red-500" : "border-l-green-500"}`}>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm text-muted-foreground">Sobra Hoje</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className={`text-2xl font-bold ${sobraParaGastarHoje < 0 ? "text-red-500" : "text-green-500"}`}>
+                      {formatCurrency(sobraParaGastarHoje)}
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card className="border-l-4 border-l-yellow-500">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm text-muted-foreground">Média 7 dias</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold text-yellow-500">
+                      {formatCurrency(metricas?.media_7_dias || 0)}
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Segunda linha de métricas */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm text-muted-foreground flex items-center gap-2">
+                      <PiggyBank className="h-4 w-4" />
+                      Previsão Fim de Mês
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">
+                      {formatCurrency(metricas?.previsao_fim_mes || 0)}
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm text-muted-foreground flex items-center gap-2">
+                      <Target className="h-4 w-4" />
+                      Saldo Previsto
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className={`text-2xl font-bold ${(metricas?.sobra_calculada || 0) - (metricas?.previsao_fim_mes || 0) < 0 ? "text-red-500" : "text-green-500"}`}>
+                      {formatCurrency((metricas?.sobra_calculada || 0) - (metricas?.previsao_fim_mes || 0))}
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm text-muted-foreground">Total Gasto no Mês</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">{formatCurrency(totalGastoMes)}</div>
+                    <Progress 
+                      value={metricas?.salario_mensal ? (totalGastoMes / metricas.salario_mensal) * 100 : 0} 
+                      className="mt-2"
+                    />
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Gráficos */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Gastos por Categoria</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="h-[300px]">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <PieChart>
+                          <Pie
+                            data={gastosPorCategoria}
+                            dataKey="valor"
+                            nameKey="nome"
+                            cx="50%"
+                            cy="50%"
+                            outerRadius={100}
+                            label={({ nome, percent }) => `${nome} ${(percent * 100).toFixed(0)}%`}
+                          >
+                            {gastosPorCategoria.map((entry, index) => (
+                              <Cell key={`cell-${index}`} fill={entry.cor || CORES_CATEGORIAS[index % CORES_CATEGORIAS.length]} />
+                            ))}
+                          </Pie>
+                          <Tooltip formatter={(value: number) => formatCurrency(value)} />
+                          <Legend />
+                        </PieChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Gastos Diários</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="h-[300px]">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <LineChart data={gastosDiarios}>
+                          <CartesianGrid strokeDasharray="3 3" />
+                          <XAxis dataKey="data" />
+                          <YAxis />
+                          <Tooltip formatter={(value: number) => formatCurrency(value)} />
+                          <Line 
+                            type="monotone" 
+                            dataKey="valor" 
+                            stroke="#8B5CF6" 
+                            strokeWidth={2}
+                            dot={{ fill: "#8B5CF6" }}
+                          />
+                        </LineChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            </TabsContent>
+
+            {/* CATEGORIAS TAB */}
+            <TabsContent value="categorias" className="space-y-6">
+              <div className="flex justify-between items-center">
+                <h2 className="text-xl font-semibold">Categorias de Gastos</h2>
+                <Dialog open={categoriaDialog} onOpenChange={setCategoriaDialog}>
+                  <DialogTrigger asChild>
+                    <Button onClick={() => resetCategoriaForm()}>
+                      <Plus className="h-4 w-4 mr-2" />
+                      Nova Categoria
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>{editingCategoria ? "Editar" : "Nova"} Categoria</DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-4">
+                      <div>
+                        <Label>Nome</Label>
+                        <Input
+                          value={categoriaNome}
+                          onChange={(e) => setCategoriaNome(e.target.value)}
+                          placeholder="Ex: Alimentação"
+                        />
+                      </div>
+                      <div>
+                        <Label>Tipo</Label>
+                        <Select value={categoriaTipo} onValueChange={setCategoriaTipo}>
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {TIPOS_CATEGORIA.map((t) => (
+                              <SelectItem key={t.value} value={t.value}>
+                                {t.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div>
+                        <Label>Cor</Label>
+                        <div className="flex gap-2 items-center">
+                          <Input
+                            type="color"
+                            value={categoriaCor}
+                            onChange={(e) => setCategoriaCor(e.target.value)}
+                            className="w-16 h-10 p-1"
+                          />
+                          <Input
+                            value={categoriaCor}
+                            onChange={(e) => setCategoriaCor(e.target.value)}
+                            placeholder="#000000"
+                          />
+                        </div>
+                      </div>
+                      <div>
+                        <Label>Percentual da Meta (%)</Label>
+                        <Input
+                          type="number"
+                          value={categoriaPercentual}
+                          onChange={(e) => setCategoriaPercentual(Number(e.target.value))}
+                        />
+                      </div>
+                      <div>
+                        <Label>Meta em Valor (R$)</Label>
+                        <Input
+                          type="number"
+                          value={categoriaMetaValor}
+                          onChange={(e) => setCategoriaMetaValor(Number(e.target.value))}
+                        />
+                      </div>
+                    </div>
+                    <DialogFooter>
+                      <Button variant="outline" onClick={resetCategoriaForm}>
+                        Cancelar
+                      </Button>
+                      <Button onClick={handleSaveCategoria}>Salvar</Button>
+                    </DialogFooter>
+                  </DialogContent>
+                </Dialog>
+              </div>
+
+              <Card>
+                <CardContent className="p-0">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Nome</TableHead>
+                        <TableHead>Tipo</TableHead>
+                        <TableHead>Cor</TableHead>
+                        <TableHead>Meta %</TableHead>
+                        <TableHead>Meta Valor</TableHead>
+                        <TableHead className="text-right">Ações</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {categorias.map((cat) => (
+                        <TableRow key={cat.id}>
+                          <TableCell className="font-medium">{cat.nome}</TableCell>
+                          <TableCell>
+                            <Badge variant="outline">
+                              {TIPOS_CATEGORIA.find((t) => t.value === cat.tipo)?.label || cat.tipo}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <div
+                              className="w-6 h-6 rounded"
+                              style={{ backgroundColor: cat.cor }}
+                            />
+                          </TableCell>
+                          <TableCell>{cat.percentual_meta}%</TableCell>
+                          <TableCell>{formatCurrency(cat.meta_valor || 0)}</TableCell>
+                          <TableCell className="text-right">
+                            <Button variant="ghost" size="icon" onClick={() => openEditCategoria(cat)}>
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                            <Button variant="ghost" size="icon" onClick={() => handleDeleteCategoria(cat.id)}>
+                              <Trash2 className="h-4 w-4 text-red-500" />
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                      {categorias.length === 0 && (
+                        <TableRow>
+                          <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                            Nenhuma categoria cadastrada
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            {/* LANCAMENTOS TAB */}
+            <TabsContent value="lancamentos" className="space-y-6">
+              <div className="flex justify-between items-center">
+                <h2 className="text-xl font-semibold">Lançamentos do Mês</h2>
+                <Dialog open={lancamentoDialog} onOpenChange={setLancamentoDialog}>
+                  <DialogTrigger asChild>
+                    <Button onClick={() => resetLancamentoForm()}>
+                      <Plus className="h-4 w-4 mr-2" />
+                      Novo Lançamento
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>{editingLancamento ? "Editar" : "Novo"} Lançamento</DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-4">
+                      <div>
+                        <Label>Data</Label>
+                        <Input
+                          type="date"
+                          value={lancamentoData}
+                          onChange={(e) => setLancamentoData(e.target.value)}
+                        />
+                      </div>
+                      <div>
+                        <Label>Valor (R$)</Label>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          value={lancamentoValor}
+                          onChange={(e) => setLancamentoValor(Number(e.target.value))}
+                        />
+                      </div>
+                      <div>
+                        <Label>Categoria</Label>
+                        <Select value={lancamentoCategoriaId} onValueChange={setLancamentoCategoriaId}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Selecione uma categoria" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {categorias.map((cat) => (
+                              <SelectItem key={cat.id} value={cat.id}>
+                                <div className="flex items-center gap-2">
+                                  <div className="w-3 h-3 rounded" style={{ backgroundColor: cat.cor }} />
+                                  {cat.nome}
+                                </div>
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div>
+                        <Label>Descrição</Label>
+                        <Input
+                          value={lancamentoDescricao}
+                          onChange={(e) => setLancamentoDescricao(e.target.value)}
+                          placeholder="Ex: Almoço no restaurante"
+                        />
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          id="recorrente"
+                          checked={lancamentoRecorrente}
+                          onChange={(e) => setLancamentoRecorrente(e.target.checked)}
+                          className="w-4 h-4"
+                        />
+                        <Label htmlFor="recorrente">Gasto recorrente</Label>
+                      </div>
+                    </div>
+                    <DialogFooter>
+                      <Button variant="outline" onClick={resetLancamentoForm}>
+                        Cancelar
+                      </Button>
+                      <Button onClick={handleSaveLancamento}>Salvar</Button>
+                    </DialogFooter>
+                  </DialogContent>
+                </Dialog>
+              </div>
+
+              <Card>
+                <CardContent className="p-0">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Data</TableHead>
+                        <TableHead>Categoria</TableHead>
+                        <TableHead>Descrição</TableHead>
+                        <TableHead>Valor</TableHead>
+                        <TableHead>Recorrente</TableHead>
+                        <TableHead className="text-right">Ações</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {lancamentos.map((lanc) => (
+                        <TableRow key={lanc.id}>
+                          <TableCell>{format(parseISO(lanc.data), "dd/MM/yyyy")}</TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-2">
+                              <div
+                                className="w-3 h-3 rounded"
+                                style={{ backgroundColor: lanc.categoria?.cor }}
+                              />
+                              {lanc.categoria?.nome}
+                            </div>
+                          </TableCell>
+                          <TableCell>{lanc.descricao || "-"}</TableCell>
+                          <TableCell className="font-medium">{formatCurrency(lanc.valor)}</TableCell>
+                          <TableCell>
+                            {lanc.recorrente ? (
+                              <Badge variant="secondary">Sim</Badge>
+                            ) : (
+                              <span className="text-muted-foreground">Não</span>
+                            )}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <Button variant="ghost" size="icon" onClick={() => openEditLancamento(lanc)}>
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                            <Button variant="ghost" size="icon" onClick={() => handleDeleteLancamento(lanc.id)}>
+                              <Trash2 className="h-4 w-4 text-red-500" />
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                      {lancamentos.length === 0 && (
+                        <TableRow>
+                          <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                            Nenhum lançamento neste mês
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            {/* PROJEÇÃO TAB */}
+            <TabsContent value="projecao" className="space-y-6">
+              <h2 className="text-xl font-semibold">Projeção Mensal</h2>
+
+              {(metricas?.sobra_calculada || 0) - (metricas?.previsao_fim_mes || 0) < 0 && (
+                <Alert variant="destructive">
+                  <AlertTriangle className="h-4 w-4" />
+                  <AlertTitle>Alerta: Saldo Negativo Previsto</AlertTitle>
+                  <AlertDescription>
+                    Com base nos seus gastos atuais, você pode terminar o mês com saldo negativo.
+                    Considere reduzir gastos ou aumentar sua receita.
+                  </AlertDescription>
+                </Alert>
+              )}
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <TrendingUp className="h-5 w-5 text-blue-500" />
+                      Previsão de Gastos
+                    </CardTitle>
+                    <CardDescription>Baseado na média dos últimos 7 dias</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-3xl font-bold">
+                      {formatCurrency(metricas?.previsao_fim_mes || 0)}
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <PiggyBank className="h-5 w-5 text-green-500" />
+                      Saldo Previsto
+                    </CardTitle>
+                    <CardDescription>Sobra - Previsão de gastos</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className={`text-3xl font-bold ${(metricas?.sobra_calculada || 0) - (metricas?.previsao_fim_mes || 0) < 0 ? "text-red-500" : "text-green-500"}`}>
+                      {formatCurrency((metricas?.sobra_calculada || 0) - (metricas?.previsao_fim_mes || 0))}
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>Estatísticas do Mês</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex justify-between items-center p-4 bg-muted rounded-lg">
+                    <span className="text-muted-foreground">Salário Mensal</span>
+                    <span className="font-bold">{formatCurrency(metricas?.salario_mensal || 0)}</span>
+                  </div>
+                  <div className="flex justify-between items-center p-4 bg-muted rounded-lg">
+                    <span className="text-muted-foreground">Total Gasto até Agora</span>
+                    <span className="font-bold">{formatCurrency(totalGastoMes)}</span>
+                  </div>
+                  <div className="flex justify-between items-center p-4 bg-muted rounded-lg">
+                    <span className="text-muted-foreground">Sobra Atual</span>
+                    <span className="font-bold">{formatCurrency(metricas?.sobra_calculada || 0)}</span>
+                  </div>
+                  <div className="flex justify-between items-center p-4 bg-muted rounded-lg">
+                    <span className="text-muted-foreground">Média Diária (7 dias)</span>
+                    <span className="font-bold">{formatCurrency(metricas?.media_7_dias || 0)}</span>
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            {/* CONFIG TAB */}
+            <TabsContent value="config" className="space-y-6">
+              <h2 className="text-xl font-semibold">Configurações</h2>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>Dados do Orçamento</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div>
+                    <Label>Salário Mensal (R$)</Label>
+                    <Input
+                      type="number"
+                      value={salarioMensal}
+                      onChange={(e) => setSalarioMensal(Number(e.target.value))}
+                    />
+                  </div>
+                  <div>
+                    <Label>Modelo de Orçamento</Label>
+                    <Select value={modeloOrcamento} onValueChange={setModeloOrcamento}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="50/30/20">50/30/20 (Essenciais/Desejos/Poupança)</SelectItem>
+                        <SelectItem value="30/30/40">30/30/40 (Equilibrado)</SelectItem>
+                        <SelectItem value="personalizado">Personalizado</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button onClick={handleSaveConfig}>
+                      <CheckCircle2 className="h-4 w-4 mr-2" />
+                      Salvar Configurações
+                    </Button>
+                    <Button variant="outline" onClick={handleApplyBudgetModel}>
+                      <Target className="h-4 w-4 mr-2" />
+                      Aplicar Modelo às Categorias
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            {/* EXPORTAR TAB */}
+            <TabsContent value="exportar" className="space-y-6">
+              <h2 className="text-xl font-semibold">Exportar Dados</h2>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Download className="h-5 w-5" />
+                      Exportar CSV
+                    </CardTitle>
+                    <CardDescription>
+                      Baixe seus lançamentos em formato CSV para análise em planilhas
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <Button onClick={handleExportCSV} className="w-full">
+                      <Download className="h-4 w-4 mr-2" />
+                      Baixar CSV
+                    </Button>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <FileText className="h-5 w-5" />
+                      Exportar PDF
+                    </CardTitle>
+                    <CardDescription>
+                      Gere um relatório PDF elegante com gráficos e resumo financeiro
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <Button onClick={handleExportPDF} className="w-full">
+                      <FileText className="h-4 w-4 mr-2" />
+                      Gerar Relatório PDF
+                    </Button>
+                  </CardContent>
+                </Card>
+              </div>
+            </TabsContent>
+          </Tabs>
+        </main>
+      </div>
+    </SidebarProvider>
+  );
+}

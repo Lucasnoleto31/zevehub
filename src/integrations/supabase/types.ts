@@ -228,6 +228,7 @@ export type Database = {
           cor: string
           created_at: string
           id: string
+          meta_valor: number | null
           nome: string
           percentual_meta: number | null
           tipo: string
@@ -237,6 +238,7 @@ export type Database = {
           cor?: string
           created_at?: string
           id?: string
+          meta_valor?: number | null
           nome: string
           percentual_meta?: number | null
           tipo?: string
@@ -246,6 +248,7 @@ export type Database = {
           cor?: string
           created_at?: string
           id?: string
+          meta_valor?: number | null
           nome?: string
           percentual_meta?: number | null
           tipo?: string
@@ -1343,8 +1346,12 @@ export type Database = {
       usuario_metricas_financas: {
         Row: {
           created_at: string
+          desvio_padrao_14: number | null
           id: string
+          media_7_dias: number | null
           mes_referencia: string | null
+          modelo_orcamento: string | null
+          previsao_fim_mes: number | null
           salario_mensal: number
           sobra_calculada: number
           updated_at: string
@@ -1353,8 +1360,12 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          desvio_padrao_14?: number | null
           id?: string
+          media_7_dias?: number | null
           mes_referencia?: string | null
+          modelo_orcamento?: string | null
+          previsao_fim_mes?: number | null
           salario_mensal?: number
           sobra_calculada?: number
           updated_at?: string
@@ -1363,8 +1374,12 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          desvio_padrao_14?: number | null
           id?: string
+          media_7_dias?: number | null
           mes_referencia?: string | null
+          modelo_orcamento?: string | null
+          previsao_fim_mes?: number | null
           salario_mensal?: number
           sobra_calculada?: number
           updated_at?: string
