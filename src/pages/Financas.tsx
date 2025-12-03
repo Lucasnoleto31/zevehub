@@ -21,7 +21,7 @@ import { ptBR } from "date-fns/locale";
 import { 
   Wallet, Plus, Pencil, Trash2, Download, FileText, AlertTriangle, 
   TrendingUp, TrendingDown, Calendar, Target, DollarSign, PiggyBank,
-  LayoutDashboard, ListChecks, Settings, FileDown, AlertCircle, CheckCircle2
+  LayoutDashboard, ListChecks, Settings, FileDown, AlertCircle, CheckCircle2, Tag
 } from "lucide-react";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
@@ -87,8 +87,11 @@ export default function Financas() {
   // Form states
   const [categoriaDialog, setCategoriaDialog] = useState(false);
   const [lancamentoDialog, setLancamentoDialog] = useState(false);
+  const [tipoDialog, setTipoDialog] = useState(false);
   const [editingCategoria, setEditingCategoria] = useState<Categoria | null>(null);
   const [editingLancamento, setEditingLancamento] = useState<Lancamento | null>(null);
+  const [editingTipo, setEditingTipo] = useState<string | null>(null);
+  const [novoNomeTipo, setNovoNomeTipo] = useState("");
 
   // Form fields
   const [categoriaNome, setCategoriaNome] = useState("");
@@ -303,6 +306,29 @@ export default function Financas() {
     await supabase.from("categorias_financas").delete().eq("id", id);
     toast({ title: "Categoria excluída" });
     loadData();
+  };
+
+  const handleRenameTipo = async () => {
+    if (!user || !editingTipo || !novoNomeTipo.trim()) return;
+
+    // Update all categories with the old tipo name to the new name
+    await supabase
+      .from("categorias_financas")
+      .update({ tipo: novoNomeTipo.trim() })
+      .eq("user_id", user.id)
+      .eq("tipo", editingTipo);
+
+    toast({ title: "Tipo renomeado com sucesso" });
+    setTipoDialog(false);
+    setEditingTipo(null);
+    setNovoNomeTipo("");
+    loadData();
+  };
+
+  const openEditTipo = (tipo: string) => {
+    setEditingTipo(tipo);
+    setNovoNomeTipo(tipo);
+    setTipoDialog(true);
   };
 
   const handleSaveLancamento = async () => {
@@ -931,6 +957,62 @@ export default function Financas() {
                   </Table>
                 </CardContent>
               </Card>
+
+              {/* Gerenciador de Tipos */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Tag className="h-5 w-5" />
+                    Gerenciar Tipos
+                  </CardTitle>
+                  <CardDescription>
+                    Renomeie tipos de categoria existentes
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex flex-wrap gap-2">
+                    {tiposCategoria.map((tipo) => (
+                      <Badge
+                        key={tipo.value}
+                        variant="secondary"
+                        className="cursor-pointer hover:bg-primary/20 transition-colors px-3 py-1.5"
+                        onClick={() => openEditTipo(tipo.value)}
+                      >
+                        {tipo.label}
+                        <Pencil className="h-3 w-3 ml-2" />
+                      </Badge>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Dialog para renomear tipo */}
+              <Dialog open={tipoDialog} onOpenChange={setTipoDialog}>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Renomear Tipo</DialogTitle>
+                    <DialogDescription>
+                      Todas as categorias com o tipo "{editingTipo}" serão atualizadas.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="space-y-4">
+                    <div>
+                      <Label>Novo nome do tipo</Label>
+                      <Input
+                        value={novoNomeTipo}
+                        onChange={(e) => setNovoNomeTipo(e.target.value)}
+                        placeholder="Digite o novo nome"
+                      />
+                    </div>
+                  </div>
+                  <DialogFooter>
+                    <Button variant="outline" onClick={() => setTipoDialog(false)}>
+                      Cancelar
+                    </Button>
+                    <Button onClick={handleRenameTipo}>Salvar</Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
             </TabsContent>
 
             {/* LANCAMENTOS TAB */}
