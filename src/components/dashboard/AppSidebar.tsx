@@ -6,6 +6,7 @@ import {
   User,
   Shield,
   Users,
+  Wallet,
 } from "lucide-react";
 
 import {
@@ -36,6 +37,12 @@ const menuItems = [
     url: "/operations",
     icon: LineChart,
     color: "text-green-500",
+  },
+  {
+    title: "Finanças",
+    url: "/financas",
+    icon: Wallet,
+    color: "text-yellow-500",
   },
   {
     title: "Comunidade",
