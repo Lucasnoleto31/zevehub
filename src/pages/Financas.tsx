@@ -15,13 +15,13 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend, LineChart, Line, XAxis, YAxis, CartesianGrid } from "recharts";
-import { format, startOfMonth, endOfMonth, getDaysInMonth, differenceInDays, subDays, parseISO } from "date-fns";
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend, LineChart, Line, XAxis, YAxis, CartesianGrid, AreaChart, Area, BarChart, Bar } from "recharts";
+import { format, startOfMonth, endOfMonth, getDaysInMonth, differenceInDays, subDays, parseISO, getDate } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { 
   Wallet, Plus, Pencil, Trash2, Download, FileText, AlertTriangle, 
   TrendingUp, TrendingDown, Calendar, Target, DollarSign, PiggyBank,
-  LayoutDashboard, ListChecks, Settings, FileDown, AlertCircle, CheckCircle2, Tag, Upload, FileSpreadsheet
+  LayoutDashboard, ListChecks, Settings, FileDown, AlertCircle, CheckCircle2, Tag, Upload, FileSpreadsheet, Filter, Bell, RefreshCw
 } from "lucide-react";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
@@ -114,6 +114,9 @@ export default function Financas() {
 
   const [salarioMensal, setSalarioMensal] = useState(0);
   const [modeloOrcamento, setModeloOrcamento] = useState("50/30/20");
+
+  // Filter states
+  const [filtroTipoLancamento, setFiltroTipoLancamento] = useState<'todos' | 'receita' | 'despesa'>('todos');
 
   // Import states
   const [importDialog, setImportDialog] = useState(false);
@@ -247,24 +250,51 @@ export default function Financas() {
   }, [lancamentos]);
 
   const gastosDiarios = useMemo(() => {
-    const diasNoMes = getDaysInMonth(new Date());
-    const gastos: Record<string, number> = {};
+    const diaAtual = getDate(new Date());
+    const gastos: Record<string, { receitas: number; despesas: number }> = {};
     
-    for (let i = 1; i <= diasNoMes; i++) {
+    // Criar apenas até o dia atual
+    for (let i = 1; i <= diaAtual; i++) {
       const dia = format(new Date(new Date().getFullYear(), new Date().getMonth(), i), "yyyy-MM-dd");
-      gastos[dia] = 0;
+      gastos[dia] = { receitas: 0, despesas: 0 };
     }
 
     lancamentos.forEach((l) => {
       if (gastos[l.data] !== undefined) {
-        gastos[l.data] += l.valor;
+        if (l.tipo_transacao === 'receita') {
+          gastos[l.data].receitas += l.valor;
+        } else {
+          gastos[l.data].despesas += l.valor;
+        }
       }
     });
 
-    return Object.entries(gastos).map(([data, valor]) => ({
+    return Object.entries(gastos).map(([data, valores]) => ({
       data: format(parseISO(data), "dd"),
-      valor,
+      receitas: valores.receitas,
+      despesas: valores.despesas,
     }));
+  }, [lancamentos]);
+
+  // Totais separados por tipo
+  const totalReceitas = useMemo(() => {
+    return lancamentos.filter(l => l.tipo_transacao === 'receita').reduce((sum, l) => sum + l.valor, 0);
+  }, [lancamentos]);
+
+  const totalDespesas = useMemo(() => {
+    return lancamentos.filter(l => l.tipo_transacao === 'despesa').reduce((sum, l) => sum + l.valor, 0);
+  }, [lancamentos]);
+
+  // Lançamentos filtrados
+  const lancamentosFiltrados = useMemo(() => {
+    if (filtroTipoLancamento === 'todos') return lancamentos;
+    return lancamentos.filter(l => l.tipo_transacao === filtroTipoLancamento);
+  }, [lancamentos, filtroTipoLancamento]);
+
+  // Alertas de recorrências
+  const recorrenciasHoje = useMemo(() => {
+    const hoje = format(new Date(), "yyyy-MM-dd");
+    return lancamentos.filter(l => l.recorrente && l.data === hoje);
   }, [lancamentos]);
 
   // Lista dinâmica de tipos (padrão + customizados do usuário)
@@ -950,6 +980,48 @@ export default function Financas() {
                 </Card>
               </div>
 
+              {/* Alerta de Recorrências */}
+              {recorrenciasHoje.length > 0 && (
+                <Alert className="border-cyan-500/50 bg-cyan-500/10">
+                  <Bell className="h-4 w-4 text-cyan-500" />
+                  <AlertTitle className="text-cyan-500">Lançamentos Recorrentes Hoje</AlertTitle>
+                  <AlertDescription>
+                    {recorrenciasHoje.length} lançamento(s) recorrente(s) programado(s) para hoje: {recorrenciasHoje.map(l => l.descricao || l.categoria?.nome).join(', ')}
+                  </AlertDescription>
+                </Alert>
+              )}
+
+              {/* Cards de Receitas e Despesas */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <Card className="border-l-4 border-l-green-500">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm text-muted-foreground flex items-center gap-2">
+                      <TrendingUp className="h-4 w-4 text-green-500" />
+                      Total Receitas do Mês
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold text-green-500">
+                      +{formatCurrency(totalReceitas)}
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card className="border-l-4 border-l-red-500">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm text-muted-foreground flex items-center gap-2">
+                      <TrendingDown className="h-4 w-4 text-red-500" />
+                      Total Despesas do Mês
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold text-red-500">
+                      -{formatCurrency(totalDespesas)}
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+
               {/* Gráficos */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <Card>
@@ -983,24 +1055,52 @@ export default function Financas() {
 
                 <Card>
                   <CardHeader>
-                    <CardTitle>Gastos Diários</CardTitle>
+                    <CardTitle>Receitas vs Despesas Diárias</CardTitle>
                   </CardHeader>
                   <CardContent>
                     <div className="h-[300px]">
                       <ResponsiveContainer width="100%" height="100%">
-                        <LineChart data={gastosDiarios}>
-                          <CartesianGrid strokeDasharray="3 3" />
-                          <XAxis dataKey="data" />
-                          <YAxis />
-                          <Tooltip formatter={(value: number) => formatCurrency(value)} />
-                          <Line 
-                            type="monotone" 
-                            dataKey="valor" 
-                            stroke="#8B5CF6" 
-                            strokeWidth={2}
-                            dot={{ fill: "#8B5CF6" }}
+                        <AreaChart data={gastosDiarios}>
+                          <XAxis 
+                            dataKey="data" 
+                            axisLine={false}
+                            tickLine={false}
+                            tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))' }}
                           />
-                        </LineChart>
+                          <YAxis 
+                            axisLine={false}
+                            tickLine={false}
+                            tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))' }}
+                            tickFormatter={(value) => `R$${value}`}
+                          />
+                          <Tooltip 
+                            formatter={(value: number) => formatCurrency(value)}
+                            contentStyle={{ 
+                              backgroundColor: 'hsl(var(--background))', 
+                              border: '1px solid hsl(var(--border))',
+                              borderRadius: '8px'
+                            }}
+                          />
+                          <Area 
+                            type="monotone" 
+                            dataKey="receitas" 
+                            stroke="#22C55E"
+                            fill="#22C55E"
+                            fillOpacity={0.2}
+                            strokeWidth={2}
+                            name="Receitas"
+                          />
+                          <Area 
+                            type="monotone" 
+                            dataKey="despesas" 
+                            stroke="#EF4444"
+                            fill="#EF4444"
+                            fillOpacity={0.2}
+                            strokeWidth={2}
+                            name="Despesas"
+                          />
+                          <Legend />
+                        </AreaChart>
                       </ResponsiveContainer>
                     </div>
                   </CardContent>
@@ -1228,15 +1328,44 @@ export default function Financas() {
 
             {/* LANCAMENTOS TAB */}
             <TabsContent value="lancamentos" className="space-y-6">
-              <div className="flex justify-between items-center">
+              <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <h2 className="text-xl font-semibold">Lançamentos do Mês</h2>
-                <Dialog open={lancamentoDialog} onOpenChange={setLancamentoDialog}>
-                  <DialogTrigger asChild>
-                    <Button onClick={() => resetLancamentoForm()}>
-                      <Plus className="h-4 w-4 mr-2" />
-                      Novo Lançamento
+                <div className="flex items-center gap-2 flex-wrap">
+                  {/* Filtro por tipo */}
+                  <div className="flex items-center gap-2 bg-secondary/50 rounded-lg p-1">
+                    <Button
+                      variant={filtroTipoLancamento === 'todos' ? 'default' : 'ghost'}
+                      size="sm"
+                      onClick={() => setFiltroTipoLancamento('todos')}
+                    >
+                      Todos
                     </Button>
-                  </DialogTrigger>
+                    <Button
+                      variant={filtroTipoLancamento === 'receita' ? 'default' : 'ghost'}
+                      size="sm"
+                      onClick={() => setFiltroTipoLancamento('receita')}
+                      className={filtroTipoLancamento === 'receita' ? 'bg-green-500 hover:bg-green-600' : ''}
+                    >
+                      <TrendingUp className="h-4 w-4 mr-1" />
+                      Receitas
+                    </Button>
+                    <Button
+                      variant={filtroTipoLancamento === 'despesa' ? 'default' : 'ghost'}
+                      size="sm"
+                      onClick={() => setFiltroTipoLancamento('despesa')}
+                      className={filtroTipoLancamento === 'despesa' ? 'bg-red-500 hover:bg-red-600' : ''}
+                    >
+                      <TrendingDown className="h-4 w-4 mr-1" />
+                      Despesas
+                    </Button>
+                  </div>
+                  <Dialog open={lancamentoDialog} onOpenChange={setLancamentoDialog}>
+                    <DialogTrigger asChild>
+                      <Button onClick={() => resetLancamentoForm()}>
+                        <Plus className="h-4 w-4 mr-2" />
+                        Novo Lançamento
+                      </Button>
+                    </DialogTrigger>
                   <DialogContent>
                     <DialogHeader>
                       <DialogTitle>{editingLancamento ? "Editar" : "Novo"} Lançamento</DialogTitle>
@@ -1345,6 +1474,7 @@ export default function Financas() {
                     </DialogFooter>
                   </DialogContent>
                 </Dialog>
+                </div>
               </div>
 
               <Card>
@@ -1362,7 +1492,7 @@ export default function Financas() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {lancamentos.map((lanc) => (
+                      {lancamentosFiltrados.map((lanc) => (
                         <TableRow key={lanc.id}>
                           <TableCell>
                             <Badge variant={lanc.tipo_transacao === 'receita' ? 'default' : 'secondary'} className={lanc.tipo_transacao === 'receita' ? 'bg-green-500/20 text-green-500' : 'bg-red-500/20 text-red-500'}>
@@ -1404,10 +1534,12 @@ export default function Financas() {
                           </TableCell>
                         </TableRow>
                       ))}
-                      {lancamentos.length === 0 && (
+                      {lancamentosFiltrados.length === 0 && (
                         <TableRow>
                           <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
-                            Nenhum lançamento neste mês
+                            {filtroTipoLancamento === 'todos' 
+                              ? 'Nenhum lançamento neste mês'
+                              : `Nenhuma ${filtroTipoLancamento === 'receita' ? 'receita' : 'despesa'} neste mês`}
                           </TableCell>
                         </TableRow>
                       )}
