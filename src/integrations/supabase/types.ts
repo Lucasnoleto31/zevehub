@@ -229,6 +229,7 @@ export type Database = {
           created_at: string
           id: string
           meta_valor: number | null
+          natureza: string
           nome: string
           percentual_meta: number | null
           tipo: string
@@ -239,6 +240,7 @@ export type Database = {
           created_at?: string
           id?: string
           meta_valor?: number | null
+          natureza?: string
           nome: string
           percentual_meta?: number | null
           tipo?: string
@@ -249,6 +251,7 @@ export type Database = {
           created_at?: string
           id?: string
           meta_valor?: number | null
+          natureza?: string
           nome?: string
           percentual_meta?: number | null
           tipo?: string
@@ -621,6 +624,54 @@ export type Database = {
           read?: boolean | null
           title?: string
           user_id?: string | null
+        }
+        Relationships: []
+      }
+      metas_financeiras: {
+        Row: {
+          cor: string | null
+          created_at: string
+          data_fim: string | null
+          data_inicio: string
+          descricao: string | null
+          id: string
+          is_active: boolean | null
+          nome: string
+          tipo: string
+          updated_at: string
+          user_id: string
+          valor_alvo: number
+          valor_atual: number
+        }
+        Insert: {
+          cor?: string | null
+          created_at?: string
+          data_fim?: string | null
+          data_inicio?: string
+          descricao?: string | null
+          id?: string
+          is_active?: boolean | null
+          nome: string
+          tipo: string
+          updated_at?: string
+          user_id: string
+          valor_alvo?: number
+          valor_atual?: number
+        }
+        Update: {
+          cor?: string | null
+          created_at?: string
+          data_fim?: string | null
+          data_inicio?: string
+          descricao?: string | null
+          id?: string
+          is_active?: boolean | null
+          nome?: string
+          tipo?: string
+          updated_at?: string
+          user_id?: string
+          valor_alvo?: number
+          valor_atual?: number
         }
         Relationships: []
       }
