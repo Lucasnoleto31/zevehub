@@ -155,7 +155,7 @@ export default function Financas() {
   const [filtroCategoria, setFiltroCategoria] = useState<string>('todas');
   const [filtroDataInicio, setFiltroDataInicio] = useState<string>('');
   const [filtroDataFim, setFiltroDataFim] = useState<string>('');
-
+  const [filtroPago, setFiltroPago] = useState<'todos' | 'pago' | 'aberto'>('todos');
   // Bulk selection states
   const [selectedLancamentos, setSelectedLancamentos] = useState<string[]>([]);
 
@@ -358,6 +358,20 @@ export default function Financas() {
       .reduce((sum, l) => sum + l.valor, 0);
   }, [lancamentosDashboard]);
 
+  // Despesas em aberto próximas do vencimento (próximos 3 dias)
+  const despesasProximasVencimento = useMemo(() => {
+    const hoje = new Date();
+    const tresDiasFrente = new Date(hoje.getTime() + 3 * 24 * 60 * 60 * 1000);
+    
+    return lancamentosDashboard
+      .filter(l => {
+        if (l.tipo_transacao !== 'despesa' || l.pago) return false;
+        const dataLancamento = parseISO(l.data);
+        return dataLancamento >= hoje && dataLancamento <= tresDiasFrente;
+      })
+      .sort((a, b) => parseISO(a.data).getTime() - parseISO(b.data).getTime());
+  }, [lancamentosDashboard]);
+
   const gastosDiarios = useMemo(() => {
     const [ano, mes] = dashboardMes.split('-');
     const dataInicio = new Date(parseInt(ano), parseInt(mes) - 1, 1);
@@ -454,8 +468,12 @@ export default function Financas() {
       resultado = resultado.filter(l => l.data <= filtroDataFim);
     }
     
+    if (filtroPago !== 'todos') {
+      resultado = resultado.filter(l => filtroPago === 'pago' ? l.pago : !l.pago);
+    }
+    
     return resultado;
-  }, [lancamentos, filtroTipoLancamento, filtroCategoria, filtroDataInicio, filtroDataFim]);
+  }, [lancamentos, filtroTipoLancamento, filtroCategoria, filtroDataInicio, filtroDataFim, filtroPago]);
 
   // Cálculos corrigidos de previsão (baseados apenas em despesas)
   const previsaoFimMes = useMemo(() => {
@@ -1081,6 +1099,7 @@ export default function Financas() {
     setFiltroCategoria('todas');
     setFiltroDataInicio('');
     setFiltroDataFim('');
+    setFiltroPago('todos');
     setSelectedLancamentos([]);
   };
 
@@ -1309,6 +1328,25 @@ export default function Financas() {
                   <AlertTitle className="text-cyan-500">Lançamentos Recorrentes Hoje</AlertTitle>
                   <AlertDescription>
                     {recorrenciasHoje.length} lançamento(s) recorrente(s) programado(s) para hoje: {recorrenciasHoje.map(l => l.descricao || l.categoria?.nome).join(', ')}
+                  </AlertDescription>
+                </Alert>
+              )}
+
+              {/* Alerta de Despesas Próximas do Vencimento */}
+              {despesasProximasVencimento.length > 0 && (
+                <Alert className="border-amber-500/50 bg-amber-500/10">
+                  <DollarSign className="h-4 w-4 text-amber-500" />
+                  <AlertTitle className="text-amber-500">Despesas Próximas do Vencimento</AlertTitle>
+                  <AlertDescription>
+                    <p className="mb-2">{despesasProximasVencimento.length} despesa(s) em aberto nos próximos 3 dias:</p>
+                    <ul className="space-y-1">
+                      {despesasProximasVencimento.map(l => (
+                        <li key={l.id} className="flex justify-between items-center text-sm">
+                          <span>{l.descricao || l.categoria?.nome || 'Sem descrição'} - {format(parseISO(l.data), "dd/MM")}</span>
+                          <span className="font-semibold">{formatCurrency(l.valor)}</span>
+                        </li>
+                      ))}
+                    </ul>
                   </AlertDescription>
                 </Alert>
               )}
@@ -1787,7 +1825,7 @@ export default function Financas() {
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
                       <div>
                         <Label>Tipo</Label>
                         <Select value={filtroTipoLancamento} onValueChange={(v: 'todos' | 'receita' | 'despesa') => setFiltroTipoLancamento(v)}>
@@ -1832,6 +1870,19 @@ export default function Financas() {
                           value={filtroDataFim}
                           onChange={(e) => setFiltroDataFim(e.target.value)}
                         />
+                      </div>
+                      <div>
+                        <Label>Status</Label>
+                        <Select value={filtroPago} onValueChange={(v: 'todos' | 'pago' | 'aberto') => setFiltroPago(v)}>
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="todos">Todos</SelectItem>
+                            <SelectItem value="pago">Pagos</SelectItem>
+                            <SelectItem value="aberto">Em Aberto</SelectItem>
+                          </SelectContent>
+                        </Select>
                       </div>
                       <div className="flex items-end">
                         <Button variant="outline" onClick={clearFilters} className="w-full">
