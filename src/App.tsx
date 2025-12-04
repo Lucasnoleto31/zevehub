@@ -14,6 +14,7 @@ import Operations from "./pages/Operations";
 import OperationDetail from "./pages/OperationDetail";
 import Profile from "./pages/Profile";
 import Financas from "./pages/Financas";
+import GerenciamentoRisco from "./pages/GerenciamentoRisco";
 import Community from "./pages/Community";
 import Explore from "./pages/Explore";
 import PublicProfile from "./pages/PublicProfile";
@@ -50,6 +51,7 @@ const App = () => {
                 <Route path="/operation/:id" element={<OperationDetail />} />
                 <Route path="/profile" element={<Profile />} />
                 <Route path="/financas" element={<Financas />} />
+                <Route path="/risco" element={<GerenciamentoRisco />} />
                 <Route path="/perfil/:userId" element={<PublicProfile />} />
                 <Route path="/comunidade" element={<Community />} />
                 <Route path="/explorar" element={<Explore />} />
