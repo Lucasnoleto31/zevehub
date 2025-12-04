@@ -1093,10 +1093,6 @@ export default function Financas() {
                 <Goal className="h-4 w-4" />
                 <span className="hidden sm:inline">Metas</span>
               </TabsTrigger>
-              <TabsTrigger value="projecao" className="flex items-center gap-2">
-                <TrendingUp className="h-4 w-4" />
-                <span className="hidden sm:inline">Projeção</span>
-              </TabsTrigger>
               <TabsTrigger value="config" className="flex items-center gap-2">
                 <Settings className="h-4 w-4" />
                 <span className="hidden sm:inline">Config</span>
@@ -2130,77 +2126,6 @@ export default function Financas() {
               </Card>
             </TabsContent>
 
-            {/* PROJEÇÃO TAB */}
-            <TabsContent value="projecao" className="space-y-6">
-              <h2 className="text-xl font-semibold">Projeção Mensal</h2>
-
-              {(metricas?.sobra_calculada || 0) - (metricas?.previsao_fim_mes || 0) < 0 && (
-                <Alert variant="destructive">
-                  <AlertTriangle className="h-4 w-4" />
-                  <AlertTitle>Alerta: Saldo Negativo Previsto</AlertTitle>
-                  <AlertDescription>
-                    Com base nos seus gastos atuais, você pode terminar o mês com saldo negativo.
-                    Considere reduzir gastos ou aumentar sua receita.
-                  </AlertDescription>
-                </Alert>
-              )}
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <TrendingUp className="h-5 w-5 text-blue-500" />
-                      Previsão de Gastos
-                    </CardTitle>
-                    <CardDescription>Baseado na média dos últimos 7 dias</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-3xl font-bold">
-                      {formatCurrency(metricas?.previsao_fim_mes || 0)}
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <PiggyBank className="h-5 w-5 text-green-500" />
-                      Saldo Previsto
-                    </CardTitle>
-                    <CardDescription>Sobra - Previsão de gastos</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className={`text-3xl font-bold ${(metricas?.sobra_calculada || 0) - (metricas?.previsao_fim_mes || 0) < 0 ? "text-red-500" : "text-green-500"}`}>
-                      {formatCurrency((metricas?.sobra_calculada || 0) - (metricas?.previsao_fim_mes || 0))}
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle>Estatísticas do Mês</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="flex justify-between items-center p-4 bg-muted rounded-lg">
-                    <span className="text-muted-foreground">Salário Mensal</span>
-                    <span className="font-bold">{formatCurrency(metricas?.salario_mensal || 0)}</span>
-                  </div>
-                  <div className="flex justify-between items-center p-4 bg-muted rounded-lg">
-                    <span className="text-muted-foreground">Total Gasto até Agora</span>
-                    <span className="font-bold">{formatCurrency(totalDespesas)}</span>
-                  </div>
-                  <div className="flex justify-between items-center p-4 bg-muted rounded-lg">
-                    <span className="text-muted-foreground">Sobra Atual</span>
-                    <span className="font-bold">{formatCurrency(metricas?.sobra_calculada || 0)}</span>
-                  </div>
-                  <div className="flex justify-between items-center p-4 bg-muted rounded-lg">
-                    <span className="text-muted-foreground">Média Diária (7 dias)</span>
-                    <span className="font-bold">{formatCurrency(metricas?.media_7_dias || 0)}</span>
-                  </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
 
             {/* CONFIG TAB */}
             <TabsContent value="config" className="space-y-6">
