@@ -411,6 +411,38 @@ export default function Financas() {
     }));
   }, [lancamentosDashboard, dashboardMes]);
 
+  // Evolução mensal (todos os meses do ano)
+  const evolucaoMensal = useMemo(() => {
+    const anoAtual = new Date().getFullYear();
+    const meses: { mes: string; receitas: number; despesas: number; saldo: number }[] = [];
+
+    for (let i = 0; i < 12; i++) {
+      const dataInicio = new Date(anoAtual, i, 1);
+      const dataFim = endOfMonth(dataInicio);
+      const dataInicioStr = format(dataInicio, "yyyy-MM-dd");
+      const dataFimStr = format(dataFim, "yyyy-MM-dd");
+
+      const lancamentosMes = lancamentos.filter(l => l.data >= dataInicioStr && l.data <= dataFimStr);
+      
+      const receitas = lancamentosMes
+        .filter(l => l.tipo_transacao === 'receita')
+        .reduce((sum, l) => sum + l.valor, 0) + salarioMensal;
+      
+      const despesas = lancamentosMes
+        .filter(l => l.tipo_transacao === 'despesa')
+        .reduce((sum, l) => sum + l.valor, 0);
+
+      meses.push({
+        mes: format(dataInicio, "MMM", { locale: ptBR }).toUpperCase(),
+        receitas,
+        despesas,
+        saldo: receitas - despesas
+      });
+    }
+
+    return meses;
+  }, [lancamentos, salarioMensal]);
+
   // Totais separados por tipo no período (receitas inclui salário mensal)
   const totalReceitasPeriodo = useMemo(() => {
     const receitasLancamentos = lancamentosDashboard
@@ -1544,6 +1576,62 @@ export default function Financas() {
                   </CardContent>
                 </Card>
               </div>
+
+              {/* Gráfico de Evolução Mensal Anual */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <TrendingUp className="h-5 w-5 text-primary" />
+                    Evolução Mensal - {new Date().getFullYear()}
+                  </CardTitle>
+                  <CardDescription>
+                    Comparativo de receitas e despesas ao longo do ano
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="h-[350px]">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={evolucaoMensal} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.3} />
+                        <XAxis 
+                          dataKey="mes" 
+                          axisLine={false}
+                          tickLine={false}
+                          tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }}
+                        />
+                        <YAxis 
+                          axisLine={false}
+                          tickLine={false}
+                          tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }}
+                          tickFormatter={(value) => `R$${(value / 1000).toFixed(0)}k`}
+                        />
+                        <Tooltip 
+                          formatter={(value: number) => formatCurrency(value)}
+                          contentStyle={{ 
+                            backgroundColor: 'hsl(var(--card))', 
+                            border: '1px solid hsl(var(--border))',
+                            borderRadius: '8px'
+                          }}
+                          labelStyle={{ color: 'hsl(var(--foreground))' }}
+                        />
+                        <Legend />
+                        <Bar 
+                          dataKey="receitas" 
+                          fill="#22C55E" 
+                          name="Receitas"
+                          radius={[4, 4, 0, 0]}
+                        />
+                        <Bar 
+                          dataKey="despesas" 
+                          fill="#EF4444" 
+                          name="Despesas"
+                          radius={[4, 4, 0, 0]}
+                        />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                </CardContent>
+              </Card>
             </TabsContent>
 
             {/* CATEGORIAS TAB */}
