@@ -722,6 +722,54 @@ export type Database = {
           },
         ]
       }
+      opportunities: {
+        Row: {
+          alvos: number[]
+          ativo: string
+          created_at: string
+          data: string
+          descricao: string | null
+          entrada: number
+          id: string
+          resultado: string | null
+          stop: number
+          tipo: string
+          titulo: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          alvos?: number[]
+          ativo: string
+          created_at?: string
+          data?: string
+          descricao?: string | null
+          entrada: number
+          id?: string
+          resultado?: string | null
+          stop: number
+          tipo: string
+          titulo: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          alvos?: number[]
+          ativo?: string
+          created_at?: string
+          data?: string
+          descricao?: string | null
+          entrada?: number
+          id?: string
+          resultado?: string | null
+          stop?: number
+          tipo?: string
+          titulo?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       personal_finances: {
         Row: {
           account_id: string | null
