@@ -117,6 +117,9 @@ export default function Financas() {
 
   // Filter states
   const [filtroTipoLancamento, setFiltroTipoLancamento] = useState<'todos' | 'receita' | 'despesa'>('todos');
+  const [filtroCategoria, setFiltroCategoria] = useState<string>('todas');
+  const [filtroDataInicio, setFiltroDataInicio] = useState<string>('');
+  const [filtroDataFim, setFiltroDataFim] = useState<string>('');
 
   // Import states
   const [importDialog, setImportDialog] = useState(false);
@@ -287,9 +290,45 @@ export default function Financas() {
 
   // Lançamentos filtrados
   const lancamentosFiltrados = useMemo(() => {
-    if (filtroTipoLancamento === 'todos') return lancamentos;
-    return lancamentos.filter(l => l.tipo_transacao === filtroTipoLancamento);
-  }, [lancamentos, filtroTipoLancamento]);
+    let resultado = lancamentos;
+    
+    if (filtroTipoLancamento !== 'todos') {
+      resultado = resultado.filter(l => l.tipo_transacao === filtroTipoLancamento);
+    }
+    
+    if (filtroCategoria !== 'todas') {
+      resultado = resultado.filter(l => l.categoria_id === filtroCategoria);
+    }
+    
+    if (filtroDataInicio) {
+      resultado = resultado.filter(l => l.data >= filtroDataInicio);
+    }
+    
+    if (filtroDataFim) {
+      resultado = resultado.filter(l => l.data <= filtroDataFim);
+    }
+    
+    return resultado;
+  }, [lancamentos, filtroTipoLancamento, filtroCategoria, filtroDataInicio, filtroDataFim]);
+
+  // Cálculos corrigidos de previsão (baseados apenas em despesas)
+  const previsaoFimMes = useMemo(() => {
+    const hoje = new Date();
+    const diaAtual = getDate(hoje);
+    const diasNoMes = getDaysInMonth(hoje);
+    const diasRestantes = diasNoMes - diaAtual;
+    
+    // Média de despesas por dia (apenas dias passados)
+    const mediaDespesasDiaria = diaAtual > 0 ? totalDespesas / diaAtual : 0;
+    
+    // Previsão = despesas atuais + (média × dias restantes)
+    return totalDespesas + (mediaDespesasDiaria * diasRestantes);
+  }, [totalDespesas]);
+
+  const saldoPrevisto = useMemo(() => {
+    // Saldo = receitas totais - previsão de despesas
+    return totalReceitas - previsaoFimMes;
+  }, [totalReceitas, previsaoFimMes]);
 
   // Alertas de recorrências
   const recorrenciasHoje = useMemo(() => {
@@ -451,25 +490,34 @@ export default function Financas() {
       .gte("data", inicioMes)
       .lte("data", fimMes);
 
-    const totalGastos = lancamentosData?.reduce((sum, l) => sum + l.valor, 0) || 0;
-    const sobra = (metricas.salario_mensal || 0) - totalGastos;
+    // Calcular totais separados
+    const totalDespesasMes = lancamentosData?.filter(l => l.tipo_transacao === 'despesa').reduce((sum, l) => sum + l.valor, 0) || 0;
+    const totalReceitasMes = lancamentosData?.filter(l => l.tipo_transacao === 'receita').reduce((sum, l) => sum + l.valor, 0) || 0;
+    
+    // Saldo = receitas - despesas
+    const sobra = totalReceitasMes - totalDespesasMes;
     
     const diasRestantes = differenceInDays(endOfMonth(new Date()), new Date()) + 1;
     const metaDiaria = diasRestantes > 0 ? sobra / diasRestantes : 0;
 
-    // Média últimos 7 dias
+    // Média últimos 7 dias (apenas despesas)
     const seteDiasAtras = format(subDays(new Date(), 7), "yyyy-MM-dd");
     const { data: lancamentos7Dias } = await supabase
       .from("lancamentos_financas")
       .select("*")
       .eq("user_id", user.id)
+      .eq("tipo_transacao", "despesa")
       .gte("data", seteDiasAtras);
 
     const media7Dias = lancamentos7Dias && lancamentos7Dias.length > 0
       ? lancamentos7Dias.reduce((sum, l) => sum + l.valor, 0) / 7
       : 0;
 
-    const previsaoFimMes = media7Dias * getDaysInMonth(new Date());
+    // Previsão de despesas para o mês inteiro
+    const diaAtual = getDate(new Date());
+    const diasNoMes = getDaysInMonth(new Date());
+    const mediaDespesasDiaria = diaAtual > 0 ? totalDespesasMes / diaAtual : 0;
+    const previsaoFimMes = totalDespesasMes + (mediaDespesasDiaria * (diasNoMes - diaAtual));
 
     await supabase
       .from("usuario_metricas_financas")
@@ -936,68 +984,13 @@ export default function Financas() {
                 </Card>
               </div>
 
-              {/* Segunda linha de métricas */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <Card>
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm text-muted-foreground flex items-center gap-2">
-                      <PiggyBank className="h-4 w-4" />
-                      Previsão Fim de Mês
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold">
-                      {formatCurrency(metricas?.previsao_fim_mes || 0)}
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm text-muted-foreground flex items-center gap-2">
-                      <Target className="h-4 w-4" />
-                      Saldo Previsto
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className={`text-2xl font-bold ${(metricas?.sobra_calculada || 0) - (metricas?.previsao_fim_mes || 0) < 0 ? "text-red-500" : "text-green-500"}`}>
-                      {formatCurrency((metricas?.sobra_calculada || 0) - (metricas?.previsao_fim_mes || 0))}
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm text-muted-foreground">Total Gasto no Mês</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold">{formatCurrency(totalGastoMes)}</div>
-                    <Progress 
-                      value={metricas?.salario_mensal ? (totalGastoMes / metricas.salario_mensal) * 100 : 0} 
-                      className="mt-2"
-                    />
-                  </CardContent>
-                </Card>
-              </div>
-
-              {/* Alerta de Recorrências */}
-              {recorrenciasHoje.length > 0 && (
-                <Alert className="border-cyan-500/50 bg-cyan-500/10">
-                  <Bell className="h-4 w-4 text-cyan-500" />
-                  <AlertTitle className="text-cyan-500">Lançamentos Recorrentes Hoje</AlertTitle>
-                  <AlertDescription>
-                    {recorrenciasHoje.length} lançamento(s) recorrente(s) programado(s) para hoje: {recorrenciasHoje.map(l => l.descricao || l.categoria?.nome).join(', ')}
-                  </AlertDescription>
-                </Alert>
-              )}
-
-              {/* Cards de Receitas e Despesas */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Cards de Receitas e Despesas Totais */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 <Card className="border-l-4 border-l-green-500">
                   <CardHeader className="pb-2">
                     <CardTitle className="text-sm text-muted-foreground flex items-center gap-2">
                       <TrendingUp className="h-4 w-4 text-green-500" />
-                      Total Receitas do Mês
+                      Total Receitas
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
@@ -1011,7 +1004,7 @@ export default function Financas() {
                   <CardHeader className="pb-2">
                     <CardTitle className="text-sm text-muted-foreground flex items-center gap-2">
                       <TrendingDown className="h-4 w-4 text-red-500" />
-                      Total Despesas do Mês
+                      Total Despesas
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
@@ -1020,7 +1013,71 @@ export default function Financas() {
                     </div>
                   </CardContent>
                 </Card>
+
+                <Card className="border-l-4 border-l-orange-500">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm text-muted-foreground flex items-center gap-2">
+                      <PiggyBank className="h-4 w-4 text-orange-500" />
+                      Previsão Despesas (Mês)
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold text-orange-500">
+                      {formatCurrency(previsaoFimMes)}
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Baseado na média diária atual
+                    </p>
+                  </CardContent>
+                </Card>
+
+                <Card className={`border-l-4 ${saldoPrevisto >= 0 ? "border-l-emerald-500" : "border-l-red-500"}`}>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm text-muted-foreground flex items-center gap-2">
+                      <Target className="h-4 w-4" />
+                      Saldo Previsto
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className={`text-2xl font-bold ${saldoPrevisto >= 0 ? "text-emerald-500" : "text-red-500"}`}>
+                      {formatCurrency(saldoPrevisto)}
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Receitas - Previsão despesas
+                    </p>
+                  </CardContent>
+                </Card>
               </div>
+
+              {/* Barra de Saldo Atual */}
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm text-muted-foreground">Saldo Atual do Mês</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className={`text-2xl font-bold ${(totalReceitas - totalDespesas) >= 0 ? "text-green-500" : "text-red-500"}`}>
+                    {formatCurrency(totalReceitas - totalDespesas)}
+                  </div>
+                  <Progress 
+                    value={totalReceitas > 0 ? Math.min((totalDespesas / totalReceitas) * 100, 100) : 0} 
+                    className="mt-2"
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {totalReceitas > 0 ? ((totalDespesas / totalReceitas) * 100).toFixed(1) : 0}% das receitas gastas
+                  </p>
+                </CardContent>
+              </Card>
+
+              {/* Alerta de Recorrências */}
+              {recorrenciasHoje.length > 0 && (
+                <Alert className="border-cyan-500/50 bg-cyan-500/10">
+                  <Bell className="h-4 w-4 text-cyan-500" />
+                  <AlertTitle className="text-cyan-500">Lançamentos Recorrentes Hoje</AlertTitle>
+                  <AlertDescription>
+                    {recorrenciasHoje.length} lançamento(s) recorrente(s) programado(s) para hoje: {recorrenciasHoje.map(l => l.descricao || l.categoria?.nome).join(', ')}
+                  </AlertDescription>
+                </Alert>
+              )}
 
               {/* Gráficos */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -1328,37 +1385,9 @@ export default function Financas() {
 
             {/* LANCAMENTOS TAB */}
             <TabsContent value="lancamentos" className="space-y-6">
-              <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                <h2 className="text-xl font-semibold">Lançamentos do Mês</h2>
-                <div className="flex items-center gap-2 flex-wrap">
-                  {/* Filtro por tipo */}
-                  <div className="flex items-center gap-2 bg-secondary/50 rounded-lg p-1">
-                    <Button
-                      variant={filtroTipoLancamento === 'todos' ? 'default' : 'ghost'}
-                      size="sm"
-                      onClick={() => setFiltroTipoLancamento('todos')}
-                    >
-                      Todos
-                    </Button>
-                    <Button
-                      variant={filtroTipoLancamento === 'receita' ? 'default' : 'ghost'}
-                      size="sm"
-                      onClick={() => setFiltroTipoLancamento('receita')}
-                      className={filtroTipoLancamento === 'receita' ? 'bg-green-500 hover:bg-green-600' : ''}
-                    >
-                      <TrendingUp className="h-4 w-4 mr-1" />
-                      Receitas
-                    </Button>
-                    <Button
-                      variant={filtroTipoLancamento === 'despesa' ? 'default' : 'ghost'}
-                      size="sm"
-                      onClick={() => setFiltroTipoLancamento('despesa')}
-                      className={filtroTipoLancamento === 'despesa' ? 'bg-red-500 hover:bg-red-600' : ''}
-                    >
-                      <TrendingDown className="h-4 w-4 mr-1" />
-                      Despesas
-                    </Button>
-                  </div>
+              <div className="flex flex-col gap-4">
+                <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                  <h2 className="text-xl font-semibold">Lançamentos do Mês</h2>
                   <Dialog open={lancamentoDialog} onOpenChange={setLancamentoDialog}>
                     <DialogTrigger asChild>
                       <Button onClick={() => resetLancamentoForm()}>
@@ -1366,57 +1395,164 @@ export default function Financas() {
                         Novo Lançamento
                       </Button>
                     </DialogTrigger>
-                  <DialogContent>
-                    <DialogHeader>
-                      <DialogTitle>{editingLancamento ? "Editar" : "Novo"} Lançamento</DialogTitle>
-                    </DialogHeader>
-                    <div className="space-y-4">
-                      <div>
-                        <Label>Tipo</Label>
-                        <Select value={lancamentoTipoTransacao} onValueChange={(v: 'receita' | 'despesa') => setLancamentoTipoTransacao(v)}>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Selecione o tipo" />
+                    <DialogContent>
+                      <DialogHeader>
+                        <DialogTitle>{editingLancamento ? "Editar" : "Novo"} Lançamento</DialogTitle>
+                      </DialogHeader>
+                      <div className="space-y-4">
+                        <div>
+                          <Label>Tipo</Label>
+                          <Select value={lancamentoTipoTransacao} onValueChange={(v: 'receita' | 'despesa') => setLancamentoTipoTransacao(v)}>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Selecione o tipo" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="receita">
+                                <div className="flex items-center gap-2">
+                                  <TrendingUp className="h-4 w-4 text-green-500" />
+                                  Receita
+                                </div>
+                              </SelectItem>
+                              <SelectItem value="despesa">
+                                <div className="flex items-center gap-2">
+                                  <TrendingDown className="h-4 w-4 text-red-500" />
+                                  Despesa
+                                </div>
+                              </SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div>
+                          <Label>Data</Label>
+                          <Input
+                            type="date"
+                            value={lancamentoData}
+                            onChange={(e) => setLancamentoData(e.target.value)}
+                          />
+                        </div>
+                        <div>
+                          <Label>Valor (R$)</Label>
+                          <Input
+                            type="number"
+                            step="0.01"
+                            value={lancamentoValor}
+                            onChange={(e) => setLancamentoValor(Number(e.target.value))}
+                          />
+                        </div>
+                        <div>
+                          <Label>Categoria</Label>
+                          <Select value={lancamentoCategoriaId} onValueChange={setLancamentoCategoriaId}>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Selecione uma categoria" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {categorias.map((cat) => (
+                                <SelectItem key={cat.id} value={cat.id}>
+                                  <div className="flex items-center gap-2">
+                                    <div className="w-3 h-3 rounded" style={{ backgroundColor: cat.cor }} />
+                                    {cat.nome}
+                                  </div>
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div>
+                          <Label>Descrição</Label>
+                          <Input
+                            value={lancamentoDescricao}
+                            onChange={(e) => setLancamentoDescricao(e.target.value)}
+                            placeholder="Ex: Almoço no restaurante"
+                          />
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="checkbox"
+                            id="recorrente"
+                            checked={lancamentoRecorrente}
+                            onChange={(e) => {
+                              setLancamentoRecorrente(e.target.checked);
+                              if (!e.target.checked) setLancamentoFrequencia('');
+                            }}
+                            className="w-4 h-4"
+                          />
+                          <Label htmlFor="recorrente">Lançamento recorrente</Label>
+                        </div>
+                        {lancamentoRecorrente && (
+                          <div>
+                            <Label>Frequência da Recorrência</Label>
+                            <Select value={lancamentoFrequencia} onValueChange={(v: 'semanal' | 'quinzenal' | 'mensal' | 'anual') => setLancamentoFrequencia(v)}>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Selecione a frequência" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="semanal">Semanal</SelectItem>
+                                <SelectItem value="quinzenal">Quinzenal</SelectItem>
+                                <SelectItem value="mensal">Mensal</SelectItem>
+                                <SelectItem value="anual">Anual</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        )}
+                      </div>
+                      <DialogFooter>
+                        <Button variant="outline" onClick={resetLancamentoForm}>
+                          Cancelar
+                        </Button>
+                        <Button onClick={handleSaveLancamento}>Salvar</Button>
+                      </DialogFooter>
+                    </DialogContent>
+                  </Dialog>
+                </div>
+
+                {/* Filtros */}
+                <Card className="border-dashed">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-sm flex items-center gap-2">
+                      <Filter className="h-4 w-4" />
+                      Filtros
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="pt-0">
+                    <div className="flex flex-wrap gap-4 items-end">
+                      {/* Filtro por tipo */}
+                      <div className="flex items-center gap-2 bg-secondary/50 rounded-lg p-1">
+                        <Button
+                          variant={filtroTipoLancamento === 'todos' ? 'default' : 'ghost'}
+                          size="sm"
+                          onClick={() => setFiltroTipoLancamento('todos')}
+                        >
+                          Todos
+                        </Button>
+                        <Button
+                          variant={filtroTipoLancamento === 'receita' ? 'default' : 'ghost'}
+                          size="sm"
+                          onClick={() => setFiltroTipoLancamento('receita')}
+                          className={filtroTipoLancamento === 'receita' ? 'bg-green-500 hover:bg-green-600' : ''}
+                        >
+                          <TrendingUp className="h-4 w-4 mr-1" />
+                          Receitas
+                        </Button>
+                        <Button
+                          variant={filtroTipoLancamento === 'despesa' ? 'default' : 'ghost'}
+                          size="sm"
+                          onClick={() => setFiltroTipoLancamento('despesa')}
+                          className={filtroTipoLancamento === 'despesa' ? 'bg-red-500 hover:bg-red-600' : ''}
+                        >
+                          <TrendingDown className="h-4 w-4 mr-1" />
+                          Despesas
+                        </Button>
+                      </div>
+
+                      {/* Filtro por categoria */}
+                      <div className="space-y-1">
+                        <Label className="text-xs">Categoria</Label>
+                        <Select value={filtroCategoria} onValueChange={setFiltroCategoria}>
+                          <SelectTrigger className="w-[180px]">
+                            <SelectValue placeholder="Todas as categorias" />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="receita">
-                              <div className="flex items-center gap-2">
-                                <TrendingUp className="h-4 w-4 text-green-500" />
-                                Receita
-                              </div>
-                            </SelectItem>
-                            <SelectItem value="despesa">
-                              <div className="flex items-center gap-2">
-                                <TrendingDown className="h-4 w-4 text-red-500" />
-                                Despesa
-                              </div>
-                            </SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div>
-                        <Label>Data</Label>
-                        <Input
-                          type="date"
-                          value={lancamentoData}
-                          onChange={(e) => setLancamentoData(e.target.value)}
-                        />
-                      </div>
-                      <div>
-                        <Label>Valor (R$)</Label>
-                        <Input
-                          type="number"
-                          step="0.01"
-                          value={lancamentoValor}
-                          onChange={(e) => setLancamentoValor(Number(e.target.value))}
-                        />
-                      </div>
-                      <div>
-                        <Label>Categoria</Label>
-                        <Select value={lancamentoCategoriaId} onValueChange={setLancamentoCategoriaId}>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Selecione uma categoria" />
-                          </SelectTrigger>
-                          <SelectContent>
+                            <SelectItem value="todas">Todas</SelectItem>
                             {categorias.map((cat) => (
                               <SelectItem key={cat.id} value={cat.id}>
                                 <div className="flex items-center gap-2">
@@ -1428,53 +1564,58 @@ export default function Financas() {
                           </SelectContent>
                         </Select>
                       </div>
-                      <div>
-                        <Label>Descrição</Label>
+
+                      {/* Filtro por data */}
+                      <div className="space-y-1">
+                        <Label className="text-xs">Data Início</Label>
                         <Input
-                          value={lancamentoDescricao}
-                          onChange={(e) => setLancamentoDescricao(e.target.value)}
-                          placeholder="Ex: Almoço no restaurante"
+                          type="date"
+                          value={filtroDataInicio}
+                          onChange={(e) => setFiltroDataInicio(e.target.value)}
+                          className="w-[150px]"
                         />
                       </div>
-                      <div className="flex items-center gap-2">
-                        <input
-                          type="checkbox"
-                          id="recorrente"
-                          checked={lancamentoRecorrente}
-                          onChange={(e) => {
-                            setLancamentoRecorrente(e.target.checked);
-                            if (!e.target.checked) setLancamentoFrequencia('');
+
+                      <div className="space-y-1">
+                        <Label className="text-xs">Data Fim</Label>
+                        <Input
+                          type="date"
+                          value={filtroDataFim}
+                          onChange={(e) => setFiltroDataFim(e.target.value)}
+                          className="w-[150px]"
+                        />
+                      </div>
+
+                      {/* Botão limpar filtros */}
+                      {(filtroTipoLancamento !== 'todos' || filtroCategoria !== 'todas' || filtroDataInicio || filtroDataFim) && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            setFiltroTipoLancamento('todos');
+                            setFiltroCategoria('todas');
+                            setFiltroDataInicio('');
+                            setFiltroDataFim('');
                           }}
-                          className="w-4 h-4"
-                        />
-                        <Label htmlFor="recorrente">Lançamento recorrente</Label>
-                      </div>
-                      {lancamentoRecorrente && (
-                        <div>
-                          <Label>Frequência da Recorrência</Label>
-                          <Select value={lancamentoFrequencia} onValueChange={(v: 'semanal' | 'quinzenal' | 'mensal' | 'anual') => setLancamentoFrequencia(v)}>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Selecione a frequência" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="semanal">Semanal</SelectItem>
-                              <SelectItem value="quinzenal">Quinzenal</SelectItem>
-                              <SelectItem value="mensal">Mensal</SelectItem>
-                              <SelectItem value="anual">Anual</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
+                        >
+                          <RefreshCw className="h-4 w-4 mr-1" />
+                          Limpar
+                        </Button>
                       )}
                     </div>
-                    <DialogFooter>
-                      <Button variant="outline" onClick={resetLancamentoForm}>
-                        Cancelar
-                      </Button>
-                      <Button onClick={handleSaveLancamento}>Salvar</Button>
-                    </DialogFooter>
-                  </DialogContent>
-                </Dialog>
-                </div>
+
+                    {/* Resumo dos resultados filtrados */}
+                    <div className="flex gap-4 mt-4 pt-4 border-t text-sm text-muted-foreground">
+                      <span>{lancamentosFiltrados.length} lançamento(s)</span>
+                      <span className="text-green-500">
+                        +{formatCurrency(lancamentosFiltrados.filter(l => l.tipo_transacao === 'receita').reduce((s, l) => s + l.valor, 0))}
+                      </span>
+                      <span className="text-red-500">
+                        -{formatCurrency(lancamentosFiltrados.filter(l => l.tipo_transacao === 'despesa').reduce((s, l) => s + l.valor, 0))}
+                      </span>
+                    </div>
+                  </CardContent>
+                </Card>
               </div>
 
               <Card>
