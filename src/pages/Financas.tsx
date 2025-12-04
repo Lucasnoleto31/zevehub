@@ -272,16 +272,18 @@ export default function Financas() {
     }
   };
 
-  // Cálculos
+  // Cálculos - APENAS DESPESAS para gastos
   const totalGastoHoje = useMemo(() => {
     const hoje = format(new Date(), "yyyy-MM-dd");
     return lancamentos
-      .filter((l) => l.data === hoje)
+      .filter((l) => l.data === hoje && l.tipo_transacao === 'despesa')
       .reduce((sum, l) => sum + l.valor, 0);
   }, [lancamentos]);
 
   const totalGastoMes = useMemo(() => {
-    return lancamentos.reduce((sum, l) => sum + l.valor, 0);
+    return lancamentos
+      .filter(l => l.tipo_transacao === 'despesa')
+      .reduce((sum, l) => sum + l.valor, 0);
   }, [lancamentos]);
 
   const sobraParaGastarHoje = useMemo(() => {
@@ -290,15 +292,18 @@ export default function Financas() {
 
   const gastosPorCategoria = useMemo(() => {
     const gastos: Record<string, { nome: string; valor: number; cor: string }> = {};
-    lancamentos.forEach((l) => {
-      const cat = l.categoria;
-      if (cat) {
-        if (!gastos[cat.id]) {
-          gastos[cat.id] = { nome: cat.nome, valor: 0, cor: cat.cor };
+    // Apenas despesas no gráfico de gastos por categoria
+    lancamentos
+      .filter(l => l.tipo_transacao === 'despesa')
+      .forEach((l) => {
+        const cat = l.categoria;
+        if (cat) {
+          if (!gastos[cat.id]) {
+            gastos[cat.id] = { nome: cat.nome, valor: 0, cor: cat.cor };
+          }
+          gastos[cat.id].valor += l.valor;
         }
-        gastos[cat.id].valor += l.valor;
-      }
-    });
+      });
     return Object.values(gastos);
   }, [lancamentos]);
 
