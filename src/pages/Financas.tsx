@@ -1254,80 +1254,99 @@ export default function Financas() {
 
   return (
     <SidebarProvider>
-      <div className="min-h-screen flex w-full bg-background">
+      <div className="min-h-screen flex w-full bg-gradient-to-br from-background via-accent/5 to-background relative overflow-hidden">
+        {/* Background Effects */}
+        <div className="fixed inset-0 pointer-events-none overflow-hidden">
+          <div className="particle particle-1" />
+          <div className="particle particle-2" />
+          <div className="particle particle-3" />
+          <div className="glow-orb glow-orb-1" />
+          <div className="glow-orb glow-orb-2" />
+        </div>
+
         <AppSidebar isAdmin={isAdmin} />
-        <main className="flex-1 p-6 overflow-auto">
-          <div className="flex items-center gap-4 mb-6">
-            <SidebarTrigger />
-            <div>
-              <h1 className="text-3xl font-bold flex items-center gap-2">
-                <Wallet className="h-8 w-8 text-yellow-500" />
-                Finanças Pessoais
-              </h1>
-              <p className="text-muted-foreground">
-                Controle seu orçamento e alcance suas metas financeiras
-              </p>
-            </div>
-          </div>
-
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-            <TabsList className="grid grid-cols-7 w-full max-w-5xl">
-              <TabsTrigger value="dashboard" className="flex items-center gap-2">
-                <LayoutDashboard className="h-4 w-4" />
-                <span className="hidden sm:inline">Dashboard</span>
-              </TabsTrigger>
-              <TabsTrigger value="categorias" className="flex items-center gap-2">
-                <ListChecks className="h-4 w-4" />
-                <span className="hidden sm:inline">Categorias</span>
-              </TabsTrigger>
-              <TabsTrigger value="lancamentos" className="flex items-center gap-2">
-                <DollarSign className="h-4 w-4" />
-                <span className="hidden sm:inline">Lançamentos</span>
-              </TabsTrigger>
-              <TabsTrigger value="metas" className="flex items-center gap-2">
-                <Goal className="h-4 w-4" />
-                <span className="hidden sm:inline">Metas</span>
-              </TabsTrigger>
-              <TabsTrigger value="config" className="flex items-center gap-2">
-                <Settings className="h-4 w-4" />
-                <span className="hidden sm:inline">Config</span>
-              </TabsTrigger>
-              <TabsTrigger value="exportar" className="flex items-center gap-2">
-                <FileDown className="h-4 w-4" />
-                <span className="hidden sm:inline">Exportar</span>
-              </TabsTrigger>
-            </TabsList>
-
-            {/* DASHBOARD TAB */}
-            <TabsContent value="dashboard" className="space-y-6">
-              {/* Filtro de Mês */}
-              <Card>
-                <CardContent className="pt-4">
-                  <div className="flex items-center gap-4 flex-wrap">
-                    <Label className="text-muted-foreground">Mês:</Label>
-                    <Select value={dashboardMes} onValueChange={setDashboardMes}>
-                      <SelectTrigger className="w-[200px]">
-                        <SelectValue placeholder="Selecione o mês" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {Array.from({ length: 12 }, (_, i) => {
-                          const ano = new Date().getFullYear();
-                          const mes = format(new Date(ano, i, 1), "yyyy-MM");
-                          const nomeMes = format(new Date(ano, i, 1), "MMMM", { locale: ptBR });
-                          return (
-                            <SelectItem key={mes} value={mes}>
-                              {nomeMes.charAt(0).toUpperCase() + nomeMes.slice(1)} {ano}
-                            </SelectItem>
-                          );
-                        })}
-                      </SelectContent>
-                    </Select>
-                    <Badge variant="secondary" className="capitalize">
-                      {nomeMesSelecionado}
-                    </Badge>
+        
+        <div className="flex-1 flex flex-col">
+          {/* Header */}
+          <header className="border-b bg-card/50 backdrop-blur-md sticky top-0 z-50">
+            <div className="px-6 py-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <SidebarTrigger />
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-warning to-warning/80 flex items-center justify-center shadow-lg">
+                      <Wallet className="w-5 h-5 text-warning-foreground" />
+                    </div>
+                    <div>
+                      <h1 className="text-xl font-bold text-foreground">Finanças Pessoais</h1>
+                      <p className="text-sm text-muted-foreground">Controle seu orçamento e metas</p>
+                    </div>
                   </div>
-                </CardContent>
-              </Card>
+                </div>
+              </div>
+            </div>
+          </header>
+
+          <main className="flex-1 p-6 overflow-auto">
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+              <TabsList className="grid grid-cols-6 w-full max-w-4xl bg-card/50 backdrop-blur-sm border border-border/50 p-1 rounded-xl">
+                <TabsTrigger value="dashboard" className="flex items-center gap-2 rounded-lg data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+                  <LayoutDashboard className="h-4 w-4" />
+                  <span className="hidden sm:inline">Dashboard</span>
+                </TabsTrigger>
+                <TabsTrigger value="categorias" className="flex items-center gap-2 rounded-lg data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+                  <ListChecks className="h-4 w-4" />
+                  <span className="hidden sm:inline">Categorias</span>
+                </TabsTrigger>
+                <TabsTrigger value="lancamentos" className="flex items-center gap-2 rounded-lg data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+                  <DollarSign className="h-4 w-4" />
+                  <span className="hidden sm:inline">Lançamentos</span>
+                </TabsTrigger>
+                <TabsTrigger value="metas" className="flex items-center gap-2 rounded-lg data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+                  <Goal className="h-4 w-4" />
+                  <span className="hidden sm:inline">Metas</span>
+                </TabsTrigger>
+                <TabsTrigger value="config" className="flex items-center gap-2 rounded-lg data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+                  <Settings className="h-4 w-4" />
+                  <span className="hidden sm:inline">Config</span>
+                </TabsTrigger>
+                <TabsTrigger value="exportar" className="flex items-center gap-2 rounded-lg data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+                  <FileDown className="h-4 w-4" />
+                  <span className="hidden sm:inline">Exportar</span>
+                </TabsTrigger>
+              </TabsList>
+
+              {/* DASHBOARD TAB */}
+              <TabsContent value="dashboard" className="space-y-6 animate-fade-in">
+                {/* Filtro de Mês */}
+                <Card className="border-border/50 bg-card/80 backdrop-blur-sm">
+                  <CardContent className="pt-4">
+                    <div className="flex items-center gap-4 flex-wrap">
+                      <Calendar className="h-5 w-5 text-primary" />
+                      <Label className="text-muted-foreground font-medium">Período:</Label>
+                      <Select value={dashboardMes} onValueChange={setDashboardMes}>
+                        <SelectTrigger className="w-[200px] bg-background/50 border-border/50">
+                          <SelectValue placeholder="Selecione o mês" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {Array.from({ length: 12 }, (_, i) => {
+                            const ano = new Date().getFullYear();
+                            const mes = format(new Date(ano, i, 1), "yyyy-MM");
+                            const nomeMes = format(new Date(ano, i, 1), "MMMM", { locale: ptBR });
+                            return (
+                              <SelectItem key={mes} value={mes}>
+                                {nomeMes.charAt(0).toUpperCase() + nomeMes.slice(1)} {ano}
+                              </SelectItem>
+                            );
+                          })}
+                        </SelectContent>
+                      </Select>
+                      <Badge variant="outline" className="capitalize bg-primary/10 text-primary border-primary/30">
+                        {nomeMesSelecionado}
+                      </Badge>
+                    </div>
+                  </CardContent>
+                </Card>
 
               {/* Alertas */}
               {sobraParaGastarHoje < 0 && (
@@ -1350,97 +1369,127 @@ export default function Financas() {
                 </Alert>
               )}
 
-              {/* Cards de métricas */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                <Card className="border-l-4 border-l-cyan-500">
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm text-muted-foreground">Meta Diária (Metas)</CardTitle>
-                    <CardDescription className="text-xs">
-                      Valor a guardar por dia para suas metas
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold text-cyan-500">
-                      {formatCurrency(metaDiariaCalculada)}
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card className="border-l-4 border-l-purple-500">
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm text-muted-foreground">Total Gasto Hoje</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold text-purple-500">
-                      {formatCurrency(totalGastoHoje)}
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card className="border-l-4 border-l-yellow-500">
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm text-muted-foreground">Média 7 dias</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold text-yellow-500">
-                      {formatCurrency(metricas?.media_7_dias || 0)}
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-
-              {/* Cards de Receitas e Despesas por Mês */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <Card className="border-l-4 border-l-green-500">
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm text-muted-foreground flex items-center gap-2">
-                      <TrendingUp className="h-4 w-4 text-green-500" />
-                      Receitas
-                    </CardTitle>
-                    {salarioMensal > 0 && (
+                {/* Cards de métricas */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  <Card className="relative overflow-hidden transition-all duration-300 hover:shadow-lg hover:-translate-y-1 border-border/50 bg-card/80 backdrop-blur-sm">
+                    <div className="absolute top-0 left-0 w-1 h-full bg-primary" />
+                    <CardHeader className="pb-2">
+                      <div className="flex items-center justify-between">
+                        <CardTitle className="text-sm text-muted-foreground font-medium">Meta Diária</CardTitle>
+                        <div className="p-2 rounded-lg bg-primary/10">
+                          <Target className="h-4 w-4 text-primary" />
+                        </div>
+                      </div>
                       <CardDescription className="text-xs">
-                        Inclui salário de {formatCurrency(salarioMensal)}
+                        Valor a guardar por dia para suas metas
                       </CardDescription>
-                    )}
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold text-green-500">
-                      +{formatCurrency(totalReceitasPeriodo)}
-                    </div>
-                  </CardContent>
-                </Card>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-2xl font-bold text-primary">
+                        {formatCurrency(metaDiariaCalculada)}
+                      </div>
+                    </CardContent>
+                  </Card>
 
-                <Card className="border-l-4 border-l-red-500">
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm text-muted-foreground flex items-center gap-2">
-                      <TrendingDown className="h-4 w-4 text-red-500" />
-                      Despesas
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold text-red-500">
-                      -{formatCurrency(totalDespesasPeriodo)}
-                    </div>
-                  </CardContent>
-                </Card>
+                  <Card className="relative overflow-hidden transition-all duration-300 hover:shadow-lg hover:-translate-y-1 border-border/50 bg-card/80 backdrop-blur-sm">
+                    <div className="absolute top-0 left-0 w-1 h-full bg-accent-foreground" />
+                    <CardHeader className="pb-2">
+                      <div className="flex items-center justify-between">
+                        <CardTitle className="text-sm text-muted-foreground font-medium">Total Gasto Hoje</CardTitle>
+                        <div className="p-2 rounded-lg bg-accent">
+                          <DollarSign className="h-4 w-4 text-accent-foreground" />
+                        </div>
+                      </div>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-2xl font-bold text-foreground">
+                        {formatCurrency(totalGastoHoje)}
+                      </div>
+                    </CardContent>
+                  </Card>
 
-                <Card className="border-l-4 border-l-amber-500">
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm text-muted-foreground flex items-center gap-2">
-                      <DollarSign className="h-4 w-4 text-amber-500" />
-                      Despesas em Aberto
-                    </CardTitle>
-                    <CardDescription className="text-xs">
-                      Contas não pagas do período
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold text-amber-500">
-                      {formatCurrency(despesasEmAberto)}
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
+                  <Card className="relative overflow-hidden transition-all duration-300 hover:shadow-lg hover:-translate-y-1 border-border/50 bg-card/80 backdrop-blur-sm">
+                    <div className="absolute top-0 left-0 w-1 h-full bg-warning" />
+                    <CardHeader className="pb-2">
+                      <div className="flex items-center justify-between">
+                        <CardTitle className="text-sm text-muted-foreground font-medium">Média 7 dias</CardTitle>
+                        <div className="p-2 rounded-lg bg-warning/10">
+                          <TrendingUp className="h-4 w-4 text-warning" />
+                        </div>
+                      </div>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-2xl font-bold text-warning">
+                        {formatCurrency(metricas?.media_7_dias || 0)}
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+
+                {/* Cards de Receitas e Despesas por Mês */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <Card className="relative overflow-hidden transition-all duration-300 hover:shadow-lg hover:-translate-y-1 border-success/30 bg-gradient-to-br from-success/5 to-success/10">
+                    <CardHeader className="pb-2">
+                      <div className="flex items-center justify-between">
+                        <CardTitle className="text-sm text-muted-foreground font-medium flex items-center gap-2">
+                          Receitas
+                        </CardTitle>
+                        <div className="p-2 rounded-lg bg-success/10">
+                          <TrendingUp className="h-4 w-4 text-success" />
+                        </div>
+                      </div>
+                      {salarioMensal > 0 && (
+                        <CardDescription className="text-xs">
+                          Inclui salário de {formatCurrency(salarioMensal)}
+                        </CardDescription>
+                      )}
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-2xl font-bold text-success">
+                        +{formatCurrency(totalReceitasPeriodo)}
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  <Card className="relative overflow-hidden transition-all duration-300 hover:shadow-lg hover:-translate-y-1 border-destructive/30 bg-gradient-to-br from-destructive/5 to-destructive/10">
+                    <CardHeader className="pb-2">
+                      <div className="flex items-center justify-between">
+                        <CardTitle className="text-sm text-muted-foreground font-medium flex items-center gap-2">
+                          Despesas
+                        </CardTitle>
+                        <div className="p-2 rounded-lg bg-destructive/10">
+                          <TrendingDown className="h-4 w-4 text-destructive" />
+                        </div>
+                      </div>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-2xl font-bold text-destructive">
+                        -{formatCurrency(totalDespesasPeriodo)}
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  <Card className="relative overflow-hidden transition-all duration-300 hover:shadow-lg hover:-translate-y-1 border-warning/30 bg-gradient-to-br from-warning/5 to-warning/10">
+                    <CardHeader className="pb-2">
+                      <div className="flex items-center justify-between">
+                        <CardTitle className="text-sm text-muted-foreground font-medium flex items-center gap-2">
+                          Despesas em Aberto
+                        </CardTitle>
+                        <div className="p-2 rounded-lg bg-warning/10">
+                          <AlertCircle className="h-4 w-4 text-warning" />
+                        </div>
+                      </div>
+                      <CardDescription className="text-xs">
+                        Contas não pagas do período
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-2xl font-bold text-warning">
+                        {formatCurrency(despesasEmAberto)}
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
 
               <Card>
                 <CardHeader className="pb-2">
@@ -2593,9 +2642,10 @@ export default function Financas() {
                   </div>
                 </CardContent>
               </Card>
-            </TabsContent>
-          </Tabs>
-        </main>
+              </TabsContent>
+            </Tabs>
+          </main>
+        </div>
       </div>
     </SidebarProvider>
   );
