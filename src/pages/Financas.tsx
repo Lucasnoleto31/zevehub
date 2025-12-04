@@ -21,7 +21,7 @@ import { ptBR } from "date-fns/locale";
 import { 
   Wallet, Plus, Pencil, Trash2, Download, FileText, AlertTriangle, 
   TrendingUp, TrendingDown, Calendar, Target, DollarSign, PiggyBank,
-  LayoutDashboard, ListChecks, Settings, FileDown, AlertCircle, CheckCircle2, Tag, Upload, FileSpreadsheet, Filter, Bell, RefreshCw
+  LayoutDashboard, ListChecks, Settings, FileDown, AlertCircle, CheckCircle2, Upload, FileSpreadsheet, Filter, Bell, RefreshCw
 } from "lucide-react";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
@@ -68,10 +68,7 @@ const CORES_CATEGORIAS = [
 const TIPOS_CATEGORIA_PADRAO = [
   { value: "essencial", label: "Essencial" },
   { value: "nao_essencial", label: "Não Essencial" },
-  { value: "lazer", label: "Lazer" },
-  { value: "educacao", label: "Educação" },
-  { value: "saude", label: "Saúde" },
-  { value: "outros", label: "Outros" },
+  { value: "metas", label: "Metas" },
 ];
 
 export default function Financas() {
@@ -90,16 +87,12 @@ export default function Financas() {
   // Form states
   const [categoriaDialog, setCategoriaDialog] = useState(false);
   const [lancamentoDialog, setLancamentoDialog] = useState(false);
-  const [tipoDialog, setTipoDialog] = useState(false);
   const [editingCategoria, setEditingCategoria] = useState<Categoria | null>(null);
   const [editingLancamento, setEditingLancamento] = useState<Lancamento | null>(null);
-  const [editingTipo, setEditingTipo] = useState<string | null>(null);
-  const [novoNomeTipo, setNovoNomeTipo] = useState("");
 
   // Form fields
   const [categoriaNome, setCategoriaNome] = useState("");
   const [categoriaTipo, setCategoriaTipo] = useState("essencial");
-  const [categoriaTipoCustom, setCategoriaTipoCustom] = useState("");
   const [categoriaCor, setCategoriaCor] = useState("#06B6D4");
   const [categoriaPercentual, setCategoriaPercentual] = useState(0);
   const [categoriaMetaValor, setCategoriaMetaValor] = useState(0);
@@ -336,30 +329,13 @@ export default function Financas() {
     return lancamentos.filter(l => l.recorrente && l.data === hoje);
   }, [lancamentos]);
 
-  // Lista dinâmica de tipos (padrão + customizados do usuário)
-  const tiposCategoria = useMemo(() => {
-    const tiposCustomizados = categorias
-      .map(c => c.tipo)
-      .filter(tipo => !TIPOS_CATEGORIA_PADRAO.some(t => t.value === tipo))
-      .filter((tipo, index, self) => self.indexOf(tipo) === index);
-    
-    const listaPadrao = [...TIPOS_CATEGORIA_PADRAO];
-    tiposCustomizados.forEach(tipo => {
-      listaPadrao.push({ value: tipo, label: tipo });
-    });
-    
-    return listaPadrao;
-  }, [categorias]);
-
   // Funções CRUD
   const handleSaveCategoria = async () => {
     if (!user || !categoriaNome) return;
 
-    const tipoFinal = categoriaTipo === "custom" ? categoriaTipoCustom : categoriaTipo;
-    
     const categoriaData = {
       nome: categoriaNome,
-      tipo: tipoFinal,
+      tipo: categoriaTipo,
       cor: categoriaCor,
       percentual_meta: categoriaPercentual,
       meta_valor: categoriaMetaValor,
@@ -385,57 +361,6 @@ export default function Financas() {
     await supabase.from("categorias_financas").delete().eq("id", id);
     toast({ title: "Categoria excluída" });
     loadData();
-  };
-
-  const handleRenameTipo = async () => {
-    if (!user || !editingTipo || !novoNomeTipo.trim()) return;
-
-    // Update all categories with the old tipo name to the new name
-    await supabase
-      .from("categorias_financas")
-      .update({ tipo: novoNomeTipo.trim() })
-      .eq("user_id", user.id)
-      .eq("tipo", editingTipo);
-
-    toast({ title: "Tipo renomeado com sucesso" });
-    setTipoDialog(false);
-    setEditingTipo(null);
-    setNovoNomeTipo("");
-    loadData();
-  };
-
-  const openEditTipo = (tipo: string) => {
-    setEditingTipo(tipo);
-    setNovoNomeTipo(tipo);
-    setTipoDialog(true);
-  };
-
-  const handleDeleteTipo = async (tipo: string) => {
-    if (!user) return;
-
-    // Check if tipo is a default one
-    const isDefaultTipo = TIPOS_CATEGORIA_PADRAO.some(t => t.value === tipo);
-    if (isDefaultTipo) {
-      toast({ title: "Tipos padrão não podem ser excluídos", variant: "destructive" });
-      return;
-    }
-
-    // Check if any category uses this tipo
-    const categoriasUsandoTipo = categorias.filter(c => c.tipo === tipo);
-    if (categoriasUsandoTipo.length > 0) {
-      toast({ 
-        title: "Tipo em uso", 
-        description: `${categoriasUsandoTipo.length} categoria(s) usa(m) este tipo. Remova ou altere as categorias primeiro.`,
-        variant: "destructive" 
-      });
-      return;
-    }
-
-    toast({ title: "Tipo removido com sucesso" });
-  };
-
-  const getTipoUsageCount = (tipo: string) => {
-    return categorias.filter(c => c.tipo === tipo).length;
   };
 
   const handleSaveLancamento = async () => {
@@ -803,7 +728,6 @@ export default function Financas() {
     setEditingCategoria(null);
     setCategoriaNome("");
     setCategoriaTipo("essencial");
-    setCategoriaTipoCustom("");
     setCategoriaCor("#06B6D4");
     setCategoriaPercentual(0);
     setCategoriaMetaValor(0);
@@ -824,17 +748,7 @@ export default function Financas() {
   const openEditCategoria = (cat: Categoria) => {
     setEditingCategoria(cat);
     setCategoriaNome(cat.nome);
-    
-    // Check if tipo is a predefined one or custom
-    const isPredefinedType = TIPOS_CATEGORIA_PADRAO.some(t => t.value === cat.tipo);
-    if (isPredefinedType) {
-      setCategoriaTipo(cat.tipo);
-      setCategoriaTipoCustom("");
-    } else {
-      setCategoriaTipo(cat.tipo);
-      setCategoriaTipoCustom("");
-    }
-    
+    setCategoriaTipo(cat.tipo || "essencial");
     setCategoriaCor(cat.cor);
     setCategoriaPercentual(cat.percentual_meta);
     setCategoriaMetaValor(cat.meta_valor);
@@ -1196,21 +1110,13 @@ export default function Financas() {
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
-                            {tiposCategoria.map((t) => (
+                            {TIPOS_CATEGORIA_PADRAO.map((t) => (
                               <SelectItem key={t.value} value={t.value}>
                                 {t.label}
                               </SelectItem>
                             ))}
-                            <SelectItem value="custom">+ Criar novo tipo</SelectItem>
                           </SelectContent>
                         </Select>
-                        {categoriaTipo === "custom" && (
-                          <Input
-                            value={categoriaTipoCustom}
-                            onChange={(e) => setCategoriaTipoCustom(e.target.value)}
-                            placeholder="Digite o nome do novo tipo"
-                          />
-                        )}
                       </div>
                       <div>
                         <Label>Cor</Label>
@@ -1274,7 +1180,7 @@ export default function Financas() {
                           <TableCell className="font-medium">{cat.nome}</TableCell>
                           <TableCell>
                             <Badge variant="outline">
-                              {tiposCategoria.find((t) => t.value === cat.tipo)?.label || cat.tipo}
+                              {TIPOS_CATEGORIA_PADRAO.find((t) => t.value === cat.tipo)?.label || cat.tipo}
                             </Badge>
                           </TableCell>
                           <TableCell>
@@ -1307,80 +1213,6 @@ export default function Financas() {
                 </CardContent>
               </Card>
 
-              {/* Gerenciador de Tipos */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Tag className="h-5 w-5" />
-                    Gerenciar Tipos
-                  </CardTitle>
-                  <CardDescription>
-                    Renomeie ou exclua tipos de categoria (tipos em uso não podem ser excluídos)
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex flex-wrap gap-2">
-                    {tiposCategoria.map((tipo) => {
-                      const usageCount = getTipoUsageCount(tipo.value);
-                      const isDefault = TIPOS_CATEGORIA_PADRAO.some(t => t.value === tipo.value);
-                      return (
-                        <div key={tipo.value} className="flex items-center gap-1 bg-secondary rounded-md px-2 py-1">
-                          <span className="text-sm">{tipo.label}</span>
-                          <Badge variant="outline" className="text-xs ml-1">
-                            {usageCount}
-                          </Badge>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-6 w-6"
-                            onClick={() => openEditTipo(tipo.value)}
-                          >
-                            <Pencil className="h-3 w-3" />
-                          </Button>
-                          {!isDefault && usageCount === 0 && (
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-6 w-6 text-destructive hover:text-destructive"
-                              onClick={() => handleDeleteTipo(tipo.value)}
-                            >
-                              <Trash2 className="h-3 w-3" />
-                            </Button>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Dialog para renomear tipo */}
-              <Dialog open={tipoDialog} onOpenChange={setTipoDialog}>
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle>Renomear Tipo</DialogTitle>
-                    <DialogDescription>
-                      Todas as categorias com o tipo "{editingTipo}" serão atualizadas.
-                    </DialogDescription>
-                  </DialogHeader>
-                  <div className="space-y-4">
-                    <div>
-                      <Label>Novo nome do tipo</Label>
-                      <Input
-                        value={novoNomeTipo}
-                        onChange={(e) => setNovoNomeTipo(e.target.value)}
-                        placeholder="Digite o novo nome"
-                      />
-                    </div>
-                  </div>
-                  <DialogFooter>
-                    <Button variant="outline" onClick={() => setTipoDialog(false)}>
-                      Cancelar
-                    </Button>
-                    <Button onClick={handleRenameTipo}>Salvar</Button>
-                  </DialogFooter>
-                </DialogContent>
-              </Dialog>
             </TabsContent>
 
             {/* LANCAMENTOS TAB */}
