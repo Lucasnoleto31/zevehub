@@ -552,6 +552,7 @@ export type Database = {
           descricao: string | null
           frequencia_recorrencia: string | null
           id: string
+          pago: boolean
           recorrente: boolean
           tipo_transacao: string
           user_id: string
@@ -564,6 +565,7 @@ export type Database = {
           descricao?: string | null
           frequencia_recorrencia?: string | null
           id?: string
+          pago?: boolean
           recorrente?: boolean
           tipo_transacao?: string
           user_id: string
@@ -576,6 +578,7 @@ export type Database = {
           descricao?: string | null
           frequencia_recorrencia?: string | null
           id?: string
+          pago?: boolean
           recorrente?: boolean
           tipo_transacao?: string
           user_id?: string

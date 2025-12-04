@@ -47,6 +47,7 @@ interface Lancamento {
   recorrente: boolean;
   tipo_transacao: 'receita' | 'despesa';
   frequencia_recorrencia: 'semanal' | 'quinzenal' | 'mensal' | 'anual' | null;
+  pago: boolean;
   categoria?: Categoria;
 }
 
@@ -350,6 +351,13 @@ export default function Financas() {
     return Object.values(gastos);
   }, [lancamentosDashboard]);
 
+  // Despesas em aberto (não pagas) no período
+  const despesasEmAberto = useMemo(() => {
+    return lancamentosDashboard
+      .filter(l => l.tipo_transacao === 'despesa' && !l.pago)
+      .reduce((sum, l) => sum + l.valor, 0);
+  }, [lancamentosDashboard]);
+
   const gastosDiarios = useMemo(() => {
     const [ano, mes] = dashboardMes.split('-');
     const dataInicio = new Date(parseInt(ano), parseInt(mes) - 1, 1);
@@ -581,6 +589,12 @@ export default function Financas() {
     await supabase.from("lancamentos_financas").delete().eq("id", id);
     toast({ title: "Lançamento excluído" });
     await recalcularMetricas();
+    loadData();
+  };
+
+  const handleTogglePago = async (id: string, pagoAtual: boolean) => {
+    await supabase.from("lancamentos_financas").update({ pago: !pagoAtual }).eq("id", id);
+    toast({ title: !pagoAtual ? "Marcado como pago" : "Marcado como não pago" });
     loadData();
   };
 
@@ -1216,7 +1230,7 @@ export default function Financas() {
               </div>
 
               {/* Cards de Receitas e Despesas por Mês */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <Card className="border-l-4 border-l-green-500">
                   <CardHeader className="pb-2">
                     <CardTitle className="text-sm text-muted-foreground flex items-center gap-2">
@@ -1246,6 +1260,23 @@ export default function Financas() {
                   <CardContent>
                     <div className="text-2xl font-bold text-red-500">
                       -{formatCurrency(totalDespesasPeriodo)}
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card className="border-l-4 border-l-amber-500">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm text-muted-foreground flex items-center gap-2">
+                      <DollarSign className="h-4 w-4 text-amber-500" />
+                      Despesas em Aberto
+                    </CardTitle>
+                    <CardDescription className="text-xs">
+                      Contas não pagas do período
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold text-amber-500">
+                      {formatCurrency(despesasEmAberto)}
                     </div>
                   </CardContent>
                 </Card>
@@ -1862,6 +1893,7 @@ export default function Financas() {
                         <TableHead>Descrição</TableHead>
                         <TableHead>Valor</TableHead>
                         <TableHead>Recorrência</TableHead>
+                        <TableHead>Pago</TableHead>
                         <TableHead className="text-right">Ações</TableHead>
                       </TableRow>
                     </TableHeader>
@@ -1904,6 +1936,16 @@ export default function Financas() {
                               <span className="text-muted-foreground">-</span>
                             )}
                           </TableCell>
+                          <TableCell>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleTogglePago(lanc.id, lanc.pago)}
+                              className={lanc.pago ? "text-green-500 hover:text-green-600" : "text-muted-foreground hover:text-amber-500"}
+                            >
+                              <DollarSign className="h-4 w-4" />
+                            </Button>
+                          </TableCell>
                           <TableCell className="text-right">
                             <Button variant="ghost" size="icon" onClick={() => openEditLancamento(lanc)}>
                               <Pencil className="h-4 w-4" />
@@ -1916,7 +1958,7 @@ export default function Financas() {
                       ))}
                       {lancamentosFiltrados.length === 0 && (
                         <TableRow>
-                          <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                          <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
                             {filtroTipoLancamento === 'todos' 
                               ? 'Nenhum lançamento neste mês'
                               : `Nenhuma ${filtroTipoLancamento === 'receita' ? 'receita' : 'despesa'} neste mês`}
