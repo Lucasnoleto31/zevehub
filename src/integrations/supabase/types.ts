@@ -549,6 +549,7 @@ export type Database = {
           categoria_id: string | null
           created_at: string
           data: string
+          data_vencimento: string | null
           descricao: string | null
           frequencia_recorrencia: string | null
           id: string
@@ -562,6 +563,7 @@ export type Database = {
           categoria_id?: string | null
           created_at?: string
           data?: string
+          data_vencimento?: string | null
           descricao?: string | null
           frequencia_recorrencia?: string | null
           id?: string
@@ -575,6 +577,7 @@ export type Database = {
           categoria_id?: string | null
           created_at?: string
           data?: string
+          data_vencimento?: string | null
           descricao?: string | null
           frequencia_recorrencia?: string | null
           id?: string
