@@ -391,7 +391,7 @@ const GerenciamentoRisco = () => {
     label: string; 
     value: string; 
     tooltip?: string;
-    variant?: "default" | "success" | "warning"
+    variant?: "default" | "success" | "warning" | "destructive"
   }) => (
     <TooltipProvider>
       <Tooltip>
@@ -399,11 +399,13 @@ const GerenciamentoRisco = () => {
           <Card className={`relative overflow-hidden transition-all duration-300 hover:shadow-lg hover:-translate-y-1 border-border/50 ${
             variant === "success" ? "bg-success/5 border-success/20" : 
             variant === "warning" ? "bg-warning/5 border-warning/20" : 
+            variant === "destructive" ? "bg-destructive/5 border-destructive/20" :
             "bg-card"
           }`}>
             <div className={`absolute top-0 left-0 w-1 h-full ${
               variant === "success" ? "bg-success" : 
               variant === "warning" ? "bg-warning" : 
+              variant === "destructive" ? "bg-destructive" :
               "bg-primary"
             }`} />
             <CardContent className="p-5">
@@ -413,6 +415,7 @@ const GerenciamentoRisco = () => {
                   <p className={`text-2xl font-bold ${
                     variant === "success" ? "text-success" : 
                     variant === "warning" ? "text-warning" : 
+                    variant === "destructive" ? "text-destructive" :
                     "text-foreground"
                   }`}>
                     {value}
@@ -421,11 +424,13 @@ const GerenciamentoRisco = () => {
                 <div className={`p-2.5 rounded-xl ${
                   variant === "success" ? "bg-success/10" : 
                   variant === "warning" ? "bg-warning/10" : 
+                  variant === "destructive" ? "bg-destructive/10" :
                   "bg-primary/10"
                 }`}>
                   <Icon className={`w-5 h-5 ${
                     variant === "success" ? "text-success" : 
                     variant === "warning" ? "text-warning" : 
+                    variant === "destructive" ? "text-destructive" :
                     "text-primary"
                   }`} />
                 </div>
@@ -581,14 +586,14 @@ const GerenciamentoRisco = () => {
                 label="Stop Diário"
                 value={formatCurrency(calc.stopDiario)}
                 tooltip="Fórmula: Capital / 20 dias úteis"
-                variant="warning"
+                variant="destructive"
               />
               <StatCard
                 icon={Target}
                 label="Stop por Operação"
                 value={formatCurrency(calc.stopPorOperacao)}
                 tooltip="Fórmula: Stop Diário / 3 oportunidades"
-                variant="warning"
+                variant="destructive"
               />
               <StatCard
                 icon={TrendingUp}
