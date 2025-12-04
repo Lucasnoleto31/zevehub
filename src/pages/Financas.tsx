@@ -146,6 +146,9 @@ export default function Financas() {
   const [salarioMensal, setSalarioMensal] = useState(0);
   const [modeloOrcamento, setModeloOrcamento] = useState("50/30/20");
 
+  // Dashboard period filter
+  const [dashboardPeriodo, setDashboardPeriodo] = useState<'7dias' | '14dias' | 'mensal'>('mensal');
+
   // Filter states
   const [filtroTipoLancamento, setFiltroTipoLancamento] = useState<'todos' | 'receita' | 'despesa'>('todos');
   const [filtroCategoria, setFiltroCategoria] = useState<string>('todas');
@@ -272,6 +275,28 @@ export default function Financas() {
     }
   };
 
+  // Cálculos baseados no período selecionado do Dashboard
+  const lancamentosDashboard = useMemo(() => {
+    const hoje = new Date();
+    let dataInicio: Date;
+    
+    switch (dashboardPeriodo) {
+      case '7dias':
+        dataInicio = subDays(hoje, 7);
+        break;
+      case '14dias':
+        dataInicio = subDays(hoje, 14);
+        break;
+      case 'mensal':
+      default:
+        dataInicio = startOfMonth(hoje);
+        break;
+    }
+    
+    const dataInicioStr = format(dataInicio, "yyyy-MM-dd");
+    return lancamentos.filter(l => l.data >= dataInicioStr);
+  }, [lancamentos, dashboardPeriodo]);
+
   // Cálculos - APENAS DESPESAS para gastos
   const totalGastoHoje = useMemo(() => {
     const hoje = format(new Date(), "yyyy-MM-dd");
@@ -280,11 +305,11 @@ export default function Financas() {
       .reduce((sum, l) => sum + l.valor, 0);
   }, [lancamentos]);
 
-  const totalGastoMes = useMemo(() => {
-    return lancamentos
+  const totalGastoPeriodo = useMemo(() => {
+    return lancamentosDashboard
       .filter(l => l.tipo_transacao === 'despesa')
       .reduce((sum, l) => sum + l.valor, 0);
-  }, [lancamentos]);
+  }, [lancamentosDashboard]);
 
   const sobraParaGastarHoje = useMemo(() => {
     return (metricas?.valor_diario_meta || 0) - totalGastoHoje;
@@ -293,7 +318,7 @@ export default function Financas() {
   const gastosPorCategoria = useMemo(() => {
     const gastos: Record<string, { nome: string; valor: number; cor: string }> = {};
     // Apenas despesas no gráfico de gastos por categoria
-    lancamentos
+    lancamentosDashboard
       .filter(l => l.tipo_transacao === 'despesa')
       .forEach((l) => {
         const cat = l.categoria;
@@ -305,19 +330,35 @@ export default function Financas() {
         }
       });
     return Object.values(gastos);
-  }, [lancamentos]);
+  }, [lancamentosDashboard]);
 
   const gastosDiarios = useMemo(() => {
-    const diaAtual = getDate(new Date());
+    const hoje = new Date();
+    let dataInicio: Date;
+    
+    switch (dashboardPeriodo) {
+      case '7dias':
+        dataInicio = subDays(hoje, 6);
+        break;
+      case '14dias':
+        dataInicio = subDays(hoje, 13);
+        break;
+      case 'mensal':
+      default:
+        dataInicio = startOfMonth(hoje);
+        break;
+    }
+    
     const gastos: Record<string, { receitas: number; despesas: number }> = {};
     
-    // Criar apenas até o dia atual
-    for (let i = 1; i <= diaAtual; i++) {
-      const dia = format(new Date(new Date().getFullYear(), new Date().getMonth(), i), "yyyy-MM-dd");
+    let currentDate = dataInicio;
+    while (currentDate <= hoje) {
+      const dia = format(currentDate, "yyyy-MM-dd");
       gastos[dia] = { receitas: 0, despesas: 0 };
+      currentDate = new Date(currentDate.getTime() + 24 * 60 * 60 * 1000);
     }
 
-    lancamentos.forEach((l) => {
+    lancamentosDashboard.forEach((l) => {
       if (gastos[l.data] !== undefined) {
         if (l.tipo_transacao === 'receita') {
           gastos[l.data].receitas += l.valor;
@@ -328,16 +369,33 @@ export default function Financas() {
     });
 
     return Object.entries(gastos).map(([data, valores]) => ({
-      data: format(parseISO(data), "dd"),
+      data: format(parseISO(data), "dd/MM"),
       receitas: valores.receitas,
       despesas: valores.despesas,
     }));
-  }, [lancamentos]);
+  }, [lancamentosDashboard, dashboardPeriodo]);
 
-  // Totais separados por tipo
+  // Totais separados por tipo no período (receitas inclui salário mensal se mensal)
+  const totalReceitasPeriodo = useMemo(() => {
+    const receitasLancamentos = lancamentosDashboard
+      .filter(l => l.tipo_transacao === 'receita')
+      .reduce((sum, l) => sum + l.valor, 0);
+    
+    // Adiciona salário mensal automaticamente se for visualização mensal
+    const salarioAdicional = dashboardPeriodo === 'mensal' ? salarioMensal : 0;
+    return receitasLancamentos + salarioAdicional;
+  }, [lancamentosDashboard, salarioMensal, dashboardPeriodo]);
+
+  const totalDespesasPeriodo = useMemo(() => {
+    return lancamentosDashboard.filter(l => l.tipo_transacao === 'despesa').reduce((sum, l) => sum + l.valor, 0);
+  }, [lancamentosDashboard]);
+
+  // Totais do mês completo (para previsões e cálculos de saldo)
   const totalReceitas = useMemo(() => {
-    return lancamentos.filter(l => l.tipo_transacao === 'receita').reduce((sum, l) => sum + l.valor, 0);
-  }, [lancamentos]);
+    const receitasLancamentos = lancamentos.filter(l => l.tipo_transacao === 'receita').reduce((sum, l) => sum + l.valor, 0);
+    // Sempre adiciona salário mensal nas receitas totais do mês
+    return receitasLancamentos + salarioMensal;
+  }, [lancamentos, salarioMensal]);
 
   const totalDespesas = useMemo(() => {
     return lancamentos.filter(l => l.tipo_transacao === 'despesa').reduce((sum, l) => sum + l.valor, 0);
@@ -727,7 +785,7 @@ export default function Financas() {
     doc.setTextColor(0);
     doc.text("Resumo do Mês", 14, 40);
     doc.setFontSize(10);
-    doc.text(`Total Gasto: R$ ${totalGastoMes.toFixed(2)}`, 14, 48);
+    doc.text(`Total Gasto: R$ ${totalDespesas.toFixed(2)}`, 14, 48);
     doc.text(`Média Diária: R$ ${(metricas?.media_7_dias || 0).toFixed(2)}`, 14, 54);
     doc.text(`Previsão Fim de Mês: R$ ${(metricas?.previsao_fim_mes || 0).toFixed(2)}`, 14, 60);
     doc.text(`Saldo Previsto: R$ ${((metricas?.sobra_calculada || 0) - (metricas?.previsao_fim_mes || 0)).toFixed(2)}`, 14, 66);
@@ -1065,6 +1123,38 @@ export default function Financas() {
 
             {/* DASHBOARD TAB */}
             <TabsContent value="dashboard" className="space-y-6">
+              {/* Filtro de Período */}
+              <Card>
+                <CardContent className="pt-4">
+                  <div className="flex items-center gap-4 flex-wrap">
+                    <Label className="text-muted-foreground">Período:</Label>
+                    <div className="flex gap-2">
+                      <Button
+                        variant={dashboardPeriodo === '7dias' ? 'default' : 'outline'}
+                        size="sm"
+                        onClick={() => setDashboardPeriodo('7dias')}
+                      >
+                        Últimos 7 dias
+                      </Button>
+                      <Button
+                        variant={dashboardPeriodo === '14dias' ? 'default' : 'outline'}
+                        size="sm"
+                        onClick={() => setDashboardPeriodo('14dias')}
+                      >
+                        Últimos 14 dias
+                      </Button>
+                      <Button
+                        variant={dashboardPeriodo === 'mensal' ? 'default' : 'outline'}
+                        size="sm"
+                        onClick={() => setDashboardPeriodo('mensal')}
+                      >
+                        Mês Atual
+                      </Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
               {/* Alertas */}
               {sobraParaGastarHoje < 0 && (
                 <Alert variant="destructive">
@@ -1133,18 +1223,23 @@ export default function Financas() {
                 </Card>
               </div>
 
-              {/* Cards de Receitas e Despesas Totais */}
+              {/* Cards de Receitas e Despesas por Período */}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 <Card className="border-l-4 border-l-green-500">
                   <CardHeader className="pb-2">
                     <CardTitle className="text-sm text-muted-foreground flex items-center gap-2">
                       <TrendingUp className="h-4 w-4 text-green-500" />
-                      Total Receitas
+                      Receitas ({dashboardPeriodo === '7dias' ? '7 dias' : dashboardPeriodo === '14dias' ? '14 dias' : 'Mês'})
                     </CardTitle>
+                    {dashboardPeriodo === 'mensal' && salarioMensal > 0 && (
+                      <CardDescription className="text-xs">
+                        Inclui salário de {formatCurrency(salarioMensal)}
+                      </CardDescription>
+                    )}
                   </CardHeader>
                   <CardContent>
                     <div className="text-2xl font-bold text-green-500">
-                      +{formatCurrency(totalReceitas)}
+                      +{formatCurrency(totalReceitasPeriodo)}
                     </div>
                   </CardContent>
                 </Card>
@@ -1153,12 +1248,12 @@ export default function Financas() {
                   <CardHeader className="pb-2">
                     <CardTitle className="text-sm text-muted-foreground flex items-center gap-2">
                       <TrendingDown className="h-4 w-4 text-red-500" />
-                      Total Despesas
+                      Despesas ({dashboardPeriodo === '7dias' ? '7 dias' : dashboardPeriodo === '14dias' ? '14 dias' : 'Mês'})
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
                     <div className="text-2xl font-bold text-red-500">
-                      -{formatCurrency(totalDespesas)}
+                      -{formatCurrency(totalDespesasPeriodo)}
                     </div>
                   </CardContent>
                 </Card>
@@ -1200,18 +1295,20 @@ export default function Financas() {
 
               <Card>
                 <CardHeader className="pb-2">
-                  <CardTitle className="text-sm text-muted-foreground">Saldo Atual do Mês</CardTitle>
+                  <CardTitle className="text-sm text-muted-foreground">
+                    Saldo do Período ({dashboardPeriodo === '7dias' ? '7 dias' : dashboardPeriodo === '14dias' ? '14 dias' : 'Mês'})
+                  </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className={`text-2xl font-bold ${(totalReceitas - totalDespesas) >= 0 ? "text-green-500" : "text-red-500"}`}>
-                    {formatCurrency(totalReceitas - totalDespesas)}
+                  <div className={`text-2xl font-bold ${(totalReceitasPeriodo - totalDespesasPeriodo) >= 0 ? "text-green-500" : "text-red-500"}`}>
+                    {formatCurrency(totalReceitasPeriodo - totalDespesasPeriodo)}
                   </div>
                   <Progress 
-                    value={totalReceitas > 0 ? Math.min((totalDespesas / totalReceitas) * 100, 100) : 0} 
+                    value={totalReceitasPeriodo > 0 ? Math.min((totalDespesasPeriodo / totalReceitasPeriodo) * 100, 100) : 0} 
                     className="mt-2"
                   />
                   <p className="text-xs text-muted-foreground mt-1">
-                    {totalReceitas > 0 ? ((totalDespesas / totalReceitas) * 100).toFixed(1) : 0}% das receitas gastas
+                    {totalReceitasPeriodo > 0 ? ((totalDespesasPeriodo / totalReceitasPeriodo) * 100).toFixed(1) : 0}% das receitas gastas
                   </p>
                 </CardContent>
               </Card>
@@ -1231,7 +1328,7 @@ export default function Financas() {
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <Card>
                   <CardHeader>
-                    <CardTitle>Gastos por Categoria</CardTitle>
+                    <CardTitle>Gastos por Categoria ({dashboardPeriodo === '7dias' ? '7 dias' : dashboardPeriodo === '14dias' ? '14 dias' : 'Mês'})</CardTitle>
                   </CardHeader>
                   <CardContent>
                     <div className="h-[300px]">
@@ -1260,7 +1357,7 @@ export default function Financas() {
 
                 <Card>
                   <CardHeader>
-                    <CardTitle>Receitas vs Despesas Diárias</CardTitle>
+                    <CardTitle>Receitas vs Despesas ({dashboardPeriodo === '7dias' ? '7 dias' : dashboardPeriodo === '14dias' ? '14 dias' : 'Mês'})</CardTitle>
                   </CardHeader>
                   <CardContent>
                     <div className="h-[300px]">
@@ -2153,7 +2250,7 @@ export default function Financas() {
                   </div>
                   <div className="flex justify-between items-center p-4 bg-muted rounded-lg">
                     <span className="text-muted-foreground">Total Gasto até Agora</span>
-                    <span className="font-bold">{formatCurrency(totalGastoMes)}</span>
+                    <span className="font-bold">{formatCurrency(totalDespesas)}</span>
                   </div>
                   <div className="flex justify-between items-center p-4 bg-muted rounded-lg">
                     <span className="text-muted-foreground">Sobra Atual</span>
