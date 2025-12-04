@@ -15,13 +15,14 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Checkbox } from "@/components/ui/checkbox";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend, LineChart, Line, XAxis, YAxis, CartesianGrid, AreaChart, Area, BarChart, Bar } from "recharts";
 import { format, startOfMonth, endOfMonth, getDaysInMonth, differenceInDays, subDays, parseISO, getDate } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { 
   Wallet, Plus, Pencil, Trash2, Download, FileText, AlertTriangle, 
   TrendingUp, TrendingDown, Calendar, Target, DollarSign, PiggyBank,
-  LayoutDashboard, ListChecks, Settings, FileDown, AlertCircle, CheckCircle2, Upload, FileSpreadsheet, Filter, Bell, RefreshCw
+  LayoutDashboard, ListChecks, Settings, FileDown, AlertCircle, CheckCircle2, Upload, FileSpreadsheet, Filter, Bell, RefreshCw, Goal
 } from "lucide-react";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
@@ -34,6 +35,7 @@ interface Categoria {
   cor: string;
   percentual_meta: number;
   meta_valor: number;
+  natureza: 'receita' | 'despesa';
 }
 
 interface Lancamento {
@@ -60,6 +62,19 @@ interface UsuarioMetricas {
   mes_referencia: string;
 }
 
+interface MetaFinanceira {
+  id: string;
+  nome: string;
+  tipo: 'receita' | 'despesa' | 'reserva' | 'investimento';
+  valor_alvo: number;
+  valor_atual: number;
+  data_inicio: string;
+  data_fim: string | null;
+  descricao: string | null;
+  cor: string;
+  is_active: boolean;
+}
+
 const CORES_CATEGORIAS = [
   "#06B6D4", "#8B5CF6", "#EC4899", "#F97316", "#22C55E", 
   "#EAB308", "#EF4444", "#3B82F6", "#14B8A6", "#A855F7"
@@ -69,6 +84,13 @@ const TIPOS_CATEGORIA_PADRAO = [
   { value: "essencial", label: "Essencial" },
   { value: "nao_essencial", label: "Não Essencial" },
   { value: "metas", label: "Metas" },
+];
+
+const TIPOS_META = [
+  { value: "receita", label: "Receita", icon: TrendingUp, color: "text-green-500" },
+  { value: "despesa", label: "Despesa", icon: TrendingDown, color: "text-red-500" },
+  { value: "reserva", label: "Reserva Financeira", icon: PiggyBank, color: "text-blue-500" },
+  { value: "investimento", label: "Investimento", icon: Target, color: "text-purple-500" },
 ];
 
 export default function Financas() {
@@ -83,21 +105,26 @@ export default function Financas() {
   const [categorias, setCategorias] = useState<Categoria[]>([]);
   const [lancamentos, setLancamentos] = useState<Lancamento[]>([]);
   const [metricas, setMetricas] = useState<UsuarioMetricas | null>(null);
+  const [metasFinanceiras, setMetasFinanceiras] = useState<MetaFinanceira[]>([]);
 
   // Form states
   const [categoriaDialog, setCategoriaDialog] = useState(false);
   const [lancamentoDialog, setLancamentoDialog] = useState(false);
+  const [metaDialog, setMetaDialog] = useState(false);
   const [editingCategoria, setEditingCategoria] = useState<Categoria | null>(null);
   const [editingLancamento, setEditingLancamento] = useState<Lancamento | null>(null);
+  const [editingMeta, setEditingMeta] = useState<MetaFinanceira | null>(null);
 
-  // Form fields
+  // Form fields - Categoria
   const [categoriaNome, setCategoriaNome] = useState("");
   const [categoriaTipo, setCategoriaTipo] = useState("essencial");
   const [categoriaTipoCustom, setCategoriaTipoCustom] = useState("");
   const [categoriaCor, setCategoriaCor] = useState("#06B6D4");
   const [categoriaPercentual, setCategoriaPercentual] = useState(0);
   const [categoriaMetaValor, setCategoriaMetaValor] = useState(0);
+  const [categoriaNatureza, setCategoriaNatureza] = useState<'receita' | 'despesa'>('despesa');
 
+  // Form fields - Lancamento
   const [lancamentoData, setLancamentoData] = useState(format(new Date(), "yyyy-MM-dd"));
   const [lancamentoValor, setLancamentoValor] = useState(0);
   const [lancamentoCategoriaId, setLancamentoCategoriaId] = useState("");
@@ -105,6 +132,16 @@ export default function Financas() {
   const [lancamentoRecorrente, setLancamentoRecorrente] = useState(false);
   const [lancamentoTipoTransacao, setLancamentoTipoTransacao] = useState<'receita' | 'despesa'>('despesa');
   const [lancamentoFrequencia, setLancamentoFrequencia] = useState<'semanal' | 'quinzenal' | 'mensal' | 'anual' | ''>('');
+
+  // Form fields - Meta Financeira
+  const [metaNome, setMetaNome] = useState("");
+  const [metaTipo, setMetaTipo] = useState<'receita' | 'despesa' | 'reserva' | 'investimento'>('receita');
+  const [metaValorAlvo, setMetaValorAlvo] = useState(0);
+  const [metaValorAtual, setMetaValorAtual] = useState(0);
+  const [metaDataInicio, setMetaDataInicio] = useState(format(new Date(), "yyyy-MM-dd"));
+  const [metaDataFim, setMetaDataFim] = useState("");
+  const [metaDescricao, setMetaDescricao] = useState("");
+  const [metaCor, setMetaCor] = useState("#06B6D4");
 
   const [salarioMensal, setSalarioMensal] = useState(0);
   const [modeloOrcamento, setModeloOrcamento] = useState("50/30/20");
@@ -114,6 +151,9 @@ export default function Financas() {
   const [filtroCategoria, setFiltroCategoria] = useState<string>('todas');
   const [filtroDataInicio, setFiltroDataInicio] = useState<string>('');
   const [filtroDataFim, setFiltroDataFim] = useState<string>('');
+
+  // Bulk selection states
+  const [selectedLancamentos, setSelectedLancamentos] = useState<string[]>([]);
 
   // Import states
   const [importDialog, setImportDialog] = useState(false);
@@ -129,6 +169,11 @@ export default function Financas() {
       loadData();
     }
   }, [user]);
+
+  // Reset categoria ao mudar natureza
+  useEffect(() => {
+    setLancamentoCategoriaId("");
+  }, [lancamentoTipoTransacao]);
 
   const checkUser = async () => {
     const { data: { session } } = await supabase.auth.getSession();
@@ -181,6 +226,17 @@ export default function Financas() {
         categoria: categoriasData.find((c: any) => c.id === l.categoria_id),
       }));
       setLancamentos(lancamentosComCategoria);
+    }
+
+    // Load metas financeiras
+    const { data: metasData } = await supabase
+      .from("metas_financeiras")
+      .select("*")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false });
+
+    if (metasData) {
+      setMetasFinanceiras(metasData as any);
     }
 
     // Load or create metricas
@@ -282,6 +338,24 @@ export default function Financas() {
     return lancamentos.filter(l => l.tipo_transacao === 'despesa').reduce((sum, l) => sum + l.valor, 0);
   }, [lancamentos]);
 
+  // Categorias filtradas por natureza para o form de lançamento
+  const categoriasParaLancamento = useMemo(() => {
+    return categorias.filter(c => c.natureza === lancamentoTipoTransacao);
+  }, [categorias, lancamentoTipoTransacao]);
+
+  // Total de percentual usado nas categorias
+  const totalPercentualUsado = useMemo(() => {
+    return categorias.reduce((sum, cat) => sum + (cat.percentual_meta || 0), 0);
+  }, [categorias]);
+
+  // Percentual disponível para nova categoria
+  const percentualDisponivel = useMemo(() => {
+    const usado = editingCategoria 
+      ? totalPercentualUsado - (editingCategoria.percentual_meta || 0)
+      : totalPercentualUsado;
+    return Math.max(0, 100 - usado);
+  }, [totalPercentualUsado, editingCategoria]);
+
   // Lançamentos filtrados
   const lancamentosFiltrados = useMemo(() => {
     let resultado = lancamentos;
@@ -345,7 +419,7 @@ export default function Financas() {
     return listaPadrao;
   }, [categorias]);
 
-  // Funções CRUD
+  // Funções CRUD - Categoria
   const handleSaveCategoria = async () => {
     if (!user || !categoriaNome) return;
 
@@ -355,12 +429,27 @@ export default function Financas() {
       return;
     }
 
+    // Validar percentual máximo de 100%
+    const percentualAtualSemEdicao = editingCategoria 
+      ? totalPercentualUsado - (editingCategoria.percentual_meta || 0)
+      : totalPercentualUsado;
+    
+    if (percentualAtualSemEdicao + categoriaPercentual > 100) {
+      toast({ 
+        title: "Percentual excede 100%", 
+        description: `O máximo disponível é ${percentualDisponivel}%`,
+        variant: "destructive" 
+      });
+      return;
+    }
+
     const categoriaData = {
       nome: categoriaNome,
       tipo: tipoFinal,
       cor: categoriaCor,
       percentual_meta: categoriaPercentual,
       meta_valor: categoriaMetaValor,
+      natureza: categoriaNatureza,
       user_id: user.id,
     };
 
@@ -385,6 +474,7 @@ export default function Financas() {
     loadData();
   };
 
+  // Funções CRUD - Lancamento
   const handleSaveLancamento = async () => {
     if (!user || !lancamentoCategoriaId || lancamentoValor <= 0) return;
 
@@ -421,6 +511,73 @@ export default function Financas() {
     await supabase.from("lancamentos_financas").delete().eq("id", id);
     toast({ title: "Lançamento excluído" });
     await recalcularMetricas();
+    loadData();
+  };
+
+  // Bulk delete
+  const handleBulkDeleteLancamentos = async () => {
+    if (selectedLancamentos.length === 0) return;
+
+    for (const id of selectedLancamentos) {
+      await supabase.from("lancamentos_financas").delete().eq("id", id);
+    }
+    
+    toast({ title: `${selectedLancamentos.length} lançamentos excluídos` });
+    setSelectedLancamentos([]);
+    await recalcularMetricas();
+    loadData();
+  };
+
+  const toggleSelectLancamento = (id: string) => {
+    setSelectedLancamentos(prev => 
+      prev.includes(id) 
+        ? prev.filter(x => x !== id)
+        : [...prev, id]
+    );
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedLancamentos.length === lancamentosFiltrados.length) {
+      setSelectedLancamentos([]);
+    } else {
+      setSelectedLancamentos(lancamentosFiltrados.map(l => l.id));
+    }
+  };
+
+  // Funções CRUD - Meta Financeira
+  const handleSaveMeta = async () => {
+    if (!user || !metaNome || metaValorAlvo <= 0) return;
+
+    const metaData = {
+      nome: metaNome,
+      tipo: metaTipo,
+      valor_alvo: metaValorAlvo,
+      valor_atual: metaValorAtual,
+      data_inicio: metaDataInicio,
+      data_fim: metaDataFim || null,
+      descricao: metaDescricao || null,
+      cor: metaCor,
+      user_id: user.id,
+    };
+
+    if (editingMeta) {
+      await supabase
+        .from("metas_financeiras")
+        .update(metaData)
+        .eq("id", editingMeta.id);
+      toast({ title: "Meta atualizada" });
+    } else {
+      await supabase.from("metas_financeiras").insert(metaData);
+      toast({ title: "Meta criada" });
+    }
+
+    resetMetaForm();
+    loadData();
+  };
+
+  const handleDeleteMeta = async (id: string) => {
+    await supabase.from("metas_financeiras").delete().eq("id", id);
+    toast({ title: "Meta excluída" });
     loadData();
   };
 
@@ -693,13 +850,14 @@ export default function Financas() {
       )?.id;
 
       if (!categoriaId) {
-        // Create new category
+        // Create new category with correct natureza
         const { data: newCat } = await supabase
           .from("categorias_financas")
           .insert({
             nome: item.categoria,
-            tipo: item.tipo,
+            tipo: "essencial",
             cor: CORES_CATEGORIAS[Math.floor(Math.random() * CORES_CATEGORIAS.length)],
+            natureza: item.tipo === 'receita' ? 'receita' : 'despesa',
             user_id: user.id,
           })
           .select()
@@ -754,6 +912,7 @@ export default function Financas() {
     setCategoriaCor("#06B6D4");
     setCategoriaPercentual(0);
     setCategoriaMetaValor(0);
+    setCategoriaNatureza('despesa');
   };
 
   const resetLancamentoForm = () => {
@@ -766,6 +925,19 @@ export default function Financas() {
     setLancamentoRecorrente(false);
     setLancamentoTipoTransacao('despesa');
     setLancamentoFrequencia('');
+  };
+
+  const resetMetaForm = () => {
+    setMetaDialog(false);
+    setEditingMeta(null);
+    setMetaNome("");
+    setMetaTipo('receita');
+    setMetaValorAlvo(0);
+    setMetaValorAtual(0);
+    setMetaDataInicio(format(new Date(), "yyyy-MM-dd"));
+    setMetaDataFim("");
+    setMetaDescricao("");
+    setMetaCor("#06B6D4");
   };
 
   const openEditCategoria = (cat: Categoria) => {
@@ -784,6 +956,7 @@ export default function Financas() {
     setCategoriaCor(cat.cor);
     setCategoriaPercentual(cat.percentual_meta);
     setCategoriaMetaValor(cat.meta_valor);
+    setCategoriaNatureza(cat.natureza || 'despesa');
     setCategoriaDialog(true);
   };
 
@@ -791,12 +964,25 @@ export default function Financas() {
     setEditingLancamento(lanc);
     setLancamentoData(lanc.data);
     setLancamentoValor(lanc.valor);
+    setLancamentoTipoTransacao(lanc.tipo_transacao || 'despesa');
     setLancamentoCategoriaId(lanc.categoria_id);
     setLancamentoDescricao(lanc.descricao || "");
     setLancamentoRecorrente(lanc.recorrente);
-    setLancamentoTipoTransacao(lanc.tipo_transacao || 'despesa');
     setLancamentoFrequencia(lanc.frequencia_recorrencia || '');
     setLancamentoDialog(true);
+  };
+
+  const openEditMeta = (meta: MetaFinanceira) => {
+    setEditingMeta(meta);
+    setMetaNome(meta.nome);
+    setMetaTipo(meta.tipo);
+    setMetaValorAlvo(meta.valor_alvo);
+    setMetaValorAtual(meta.valor_atual);
+    setMetaDataInicio(meta.data_inicio);
+    setMetaDataFim(meta.data_fim || "");
+    setMetaDescricao(meta.descricao || "");
+    setMetaCor(meta.cor);
+    setMetaDialog(true);
   };
 
   const formatCurrency = (value: number) => {
@@ -804,6 +990,14 @@ export default function Financas() {
       style: "currency",
       currency: "BRL",
     }).format(value);
+  };
+
+  const clearFilters = () => {
+    setFiltroTipoLancamento('todos');
+    setFiltroCategoria('todas');
+    setFiltroDataInicio('');
+    setFiltroDataFim('');
+    setSelectedLancamentos([]);
   };
 
   if (loading) {
@@ -833,7 +1027,7 @@ export default function Financas() {
           </div>
 
           <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-            <TabsList className="grid grid-cols-6 w-full max-w-4xl">
+            <TabsList className="grid grid-cols-7 w-full max-w-5xl">
               <TabsTrigger value="dashboard" className="flex items-center gap-2">
                 <LayoutDashboard className="h-4 w-4" />
                 <span className="hidden sm:inline">Dashboard</span>
@@ -845,6 +1039,10 @@ export default function Financas() {
               <TabsTrigger value="lancamentos" className="flex items-center gap-2">
                 <DollarSign className="h-4 w-4" />
                 <span className="hidden sm:inline">Lançamentos</span>
+              </TabsTrigger>
+              <TabsTrigger value="metas" className="flex items-center gap-2">
+                <Goal className="h-4 w-4" />
+                <span className="hidden sm:inline">Metas</span>
               </TabsTrigger>
               <TabsTrigger value="projecao" className="flex items-center gap-2">
                 <TrendingUp className="h-4 w-4" />
@@ -963,39 +1161,38 @@ export default function Financas() {
                 <Card className="border-l-4 border-l-orange-500">
                   <CardHeader className="pb-2">
                     <CardTitle className="text-sm text-muted-foreground flex items-center gap-2">
-                      <PiggyBank className="h-4 w-4 text-orange-500" />
+                      <Calendar className="h-4 w-4 text-orange-500" />
                       Previsão Despesas (Mês)
                     </CardTitle>
+                    <CardDescription className="text-xs">
+                      Com base na média diária
+                    </CardDescription>
                   </CardHeader>
                   <CardContent>
                     <div className="text-2xl font-bold text-orange-500">
                       {formatCurrency(previsaoFimMes)}
                     </div>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Baseado na média diária atual
-                    </p>
                   </CardContent>
                 </Card>
 
                 <Card className={`border-l-4 ${saldoPrevisto >= 0 ? "border-l-emerald-500" : "border-l-red-500"}`}>
                   <CardHeader className="pb-2">
                     <CardTitle className="text-sm text-muted-foreground flex items-center gap-2">
-                      <Target className="h-4 w-4" />
+                      <PiggyBank className={`h-4 w-4 ${saldoPrevisto >= 0 ? "text-emerald-500" : "text-red-500"}`} />
                       Saldo Previsto
                     </CardTitle>
+                    <CardDescription className="text-xs">
+                      Receitas - Previsão despesas
+                    </CardDescription>
                   </CardHeader>
                   <CardContent>
                     <div className={`text-2xl font-bold ${saldoPrevisto >= 0 ? "text-emerald-500" : "text-red-500"}`}>
                       {formatCurrency(saldoPrevisto)}
                     </div>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Receitas - Previsão despesas
-                    </p>
                   </CardContent>
                 </Card>
               </div>
 
-              {/* Barra de Saldo Atual */}
               <Card>
                 <CardHeader className="pb-2">
                   <CardTitle className="text-sm text-muted-foreground">Saldo Atual do Mês</CardTitle>
@@ -1114,7 +1311,12 @@ export default function Financas() {
             {/* CATEGORIAS TAB */}
             <TabsContent value="categorias" className="space-y-6">
               <div className="flex justify-between items-center">
-                <h2 className="text-xl font-semibold">Categorias de Gastos</h2>
+                <div>
+                  <h2 className="text-xl font-semibold">Categorias</h2>
+                  <p className="text-sm text-muted-foreground">
+                    Total de metas: {totalPercentualUsado}% / 100%
+                  </p>
+                </div>
                 <Dialog open={categoriaDialog} onOpenChange={setCategoriaDialog}>
                   <DialogTrigger asChild>
                     <Button onClick={() => resetCategoriaForm()}>
@@ -1128,11 +1330,33 @@ export default function Financas() {
                     </DialogHeader>
                     <div className="space-y-4">
                       <div>
+                        <Label>Natureza</Label>
+                        <Select value={categoriaNatureza} onValueChange={(v: 'receita' | 'despesa') => setCategoriaNatureza(v)}>
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="receita">
+                              <div className="flex items-center gap-2">
+                                <TrendingUp className="h-4 w-4 text-green-500" />
+                                Receita
+                              </div>
+                            </SelectItem>
+                            <SelectItem value="despesa">
+                              <div className="flex items-center gap-2">
+                                <TrendingDown className="h-4 w-4 text-red-500" />
+                                Despesa
+                              </div>
+                            </SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div>
                         <Label>Nome</Label>
                         <Input
                           value={categoriaNome}
                           onChange={(e) => setCategoriaNome(e.target.value)}
-                          placeholder="Ex: Alimentação"
+                          placeholder={categoriaNatureza === 'receita' ? "Ex: Salário, 13º, Dividendos" : "Ex: Alimentação, Transporte"}
                         />
                       </div>
                       <div className="space-y-2">
@@ -1175,12 +1399,17 @@ export default function Financas() {
                         </div>
                       </div>
                       <div>
-                        <Label>Percentual da Meta (%)</Label>
+                        <Label>Percentual da Meta (%) - Disponível: {percentualDisponivel}%</Label>
                         <Input
                           type="number"
+                          min={0}
+                          max={percentualDisponivel}
                           value={categoriaPercentual}
-                          onChange={(e) => setCategoriaPercentual(Number(e.target.value))}
+                          onChange={(e) => setCategoriaPercentual(Math.min(Number(e.target.value), percentualDisponivel))}
                         />
+                        {categoriaPercentual > percentualDisponivel && (
+                          <p className="text-xs text-destructive mt-1">Máximo disponível: {percentualDisponivel}%</p>
+                        )}
                       </div>
                       <div>
                         <Label>Meta em Valor (R$)</Label>
@@ -1201,58 +1430,126 @@ export default function Financas() {
                 </Dialog>
               </div>
 
-              <Card>
-                <CardContent className="p-0">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Nome</TableHead>
-                        <TableHead>Tipo</TableHead>
-                        <TableHead>Cor</TableHead>
-                        <TableHead>Meta %</TableHead>
-                        <TableHead>Meta Valor</TableHead>
-                        <TableHead className="text-right">Ações</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {categorias.map((cat) => (
-                        <TableRow key={cat.id}>
-                          <TableCell className="font-medium">{cat.nome}</TableCell>
-                          <TableCell>
-                            <Badge variant="outline">
-                              {tiposCategoria.find((t) => t.value === cat.tipo)?.label || cat.tipo}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>
-                            <div
-                              className="w-6 h-6 rounded"
-                              style={{ backgroundColor: cat.cor }}
-                            />
-                          </TableCell>
-                          <TableCell>{cat.percentual_meta}%</TableCell>
-                          <TableCell>{formatCurrency(cat.meta_valor || 0)}</TableCell>
-                          <TableCell className="text-right">
-                            <Button variant="ghost" size="icon" onClick={() => openEditCategoria(cat)}>
-                              <Pencil className="h-4 w-4" />
-                            </Button>
-                            <Button variant="ghost" size="icon" onClick={() => handleDeleteCategoria(cat.id)}>
-                              <Trash2 className="h-4 w-4 text-red-500" />
-                            </Button>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                      {categorias.length === 0 && (
+              {/* Separar categorias por natureza */}
+              <div className="space-y-6">
+                {/* Categorias de Receita */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-green-500">
+                      <TrendingUp className="h-5 w-5" />
+                      Categorias de Receita
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="p-0">
+                    <Table>
+                      <TableHeader>
                         <TableRow>
-                          <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
-                            Nenhuma categoria cadastrada
-                          </TableCell>
+                          <TableHead>Nome</TableHead>
+                          <TableHead>Tipo</TableHead>
+                          <TableHead>Cor</TableHead>
+                          <TableHead>Meta %</TableHead>
+                          <TableHead>Meta Valor</TableHead>
+                          <TableHead className="text-right">Ações</TableHead>
                         </TableRow>
-                      )}
-                    </TableBody>
-                  </Table>
-                </CardContent>
-              </Card>
+                      </TableHeader>
+                      <TableBody>
+                        {categorias.filter(c => c.natureza === 'receita').map((cat) => (
+                          <TableRow key={cat.id}>
+                            <TableCell className="font-medium">{cat.nome}</TableCell>
+                            <TableCell>
+                              <Badge variant="outline">
+                                {tiposCategoria.find((t) => t.value === cat.tipo)?.label || cat.tipo}
+                              </Badge>
+                            </TableCell>
+                            <TableCell>
+                              <div
+                                className="w-6 h-6 rounded"
+                                style={{ backgroundColor: cat.cor }}
+                              />
+                            </TableCell>
+                            <TableCell>{cat.percentual_meta}%</TableCell>
+                            <TableCell>{formatCurrency(cat.meta_valor || 0)}</TableCell>
+                            <TableCell className="text-right">
+                              <Button variant="ghost" size="icon" onClick={() => openEditCategoria(cat)}>
+                                <Pencil className="h-4 w-4" />
+                              </Button>
+                              <Button variant="ghost" size="icon" onClick={() => handleDeleteCategoria(cat.id)}>
+                                <Trash2 className="h-4 w-4 text-red-500" />
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                        {categorias.filter(c => c.natureza === 'receita').length === 0 && (
+                          <TableRow>
+                            <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                              Nenhuma categoria de receita cadastrada
+                            </TableCell>
+                          </TableRow>
+                        )}
+                      </TableBody>
+                    </Table>
+                  </CardContent>
+                </Card>
 
+                {/* Categorias de Despesa */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-red-500">
+                      <TrendingDown className="h-5 w-5" />
+                      Categorias de Despesa
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="p-0">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Nome</TableHead>
+                          <TableHead>Tipo</TableHead>
+                          <TableHead>Cor</TableHead>
+                          <TableHead>Meta %</TableHead>
+                          <TableHead>Meta Valor</TableHead>
+                          <TableHead className="text-right">Ações</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {categorias.filter(c => c.natureza === 'despesa').map((cat) => (
+                          <TableRow key={cat.id}>
+                            <TableCell className="font-medium">{cat.nome}</TableCell>
+                            <TableCell>
+                              <Badge variant="outline">
+                                {tiposCategoria.find((t) => t.value === cat.tipo)?.label || cat.tipo}
+                              </Badge>
+                            </TableCell>
+                            <TableCell>
+                              <div
+                                className="w-6 h-6 rounded"
+                                style={{ backgroundColor: cat.cor }}
+                              />
+                            </TableCell>
+                            <TableCell>{cat.percentual_meta}%</TableCell>
+                            <TableCell>{formatCurrency(cat.meta_valor || 0)}</TableCell>
+                            <TableCell className="text-right">
+                              <Button variant="ghost" size="icon" onClick={() => openEditCategoria(cat)}>
+                                <Pencil className="h-4 w-4" />
+                              </Button>
+                              <Button variant="ghost" size="icon" onClick={() => handleDeleteCategoria(cat.id)}>
+                                <Trash2 className="h-4 w-4 text-red-500" />
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                        {categorias.filter(c => c.natureza === 'despesa').length === 0 && (
+                          <TableRow>
+                            <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                              Nenhuma categoria de despesa cadastrada
+                            </TableCell>
+                          </TableRow>
+                        )}
+                      </TableBody>
+                    </Table>
+                  </CardContent>
+                </Card>
+              </div>
             </TabsContent>
 
             {/* LANCAMENTOS TAB */}
@@ -1312,22 +1609,33 @@ export default function Financas() {
                           />
                         </div>
                         <div>
-                          <Label>Categoria</Label>
+                          <Label>Categoria ({lancamentoTipoTransacao === 'receita' ? 'Receita' : 'Despesa'})</Label>
                           <Select value={lancamentoCategoriaId} onValueChange={setLancamentoCategoriaId}>
                             <SelectTrigger>
                               <SelectValue placeholder="Selecione uma categoria" />
                             </SelectTrigger>
                             <SelectContent>
-                              {categorias.map((cat) => (
-                                <SelectItem key={cat.id} value={cat.id}>
-                                  <div className="flex items-center gap-2">
-                                    <div className="w-3 h-3 rounded" style={{ backgroundColor: cat.cor }} />
-                                    {cat.nome}
-                                  </div>
+                              {categoriasParaLancamento.length === 0 ? (
+                                <SelectItem value="" disabled>
+                                  Nenhuma categoria de {lancamentoTipoTransacao} cadastrada
                                 </SelectItem>
-                              ))}
+                              ) : (
+                                categoriasParaLancamento.map((cat) => (
+                                  <SelectItem key={cat.id} value={cat.id}>
+                                    <div className="flex items-center gap-2">
+                                      <div className="w-3 h-3 rounded" style={{ backgroundColor: cat.cor }} />
+                                      {cat.nome}
+                                    </div>
+                                  </SelectItem>
+                                ))
+                              )}
                             </SelectContent>
                           </Select>
+                          {categoriasParaLancamento.length === 0 && (
+                            <p className="text-xs text-muted-foreground mt-1">
+                              Crie uma categoria de {lancamentoTipoTransacao} primeiro
+                            </p>
+                          )}
                         </div>
                         <div>
                           <Label>Descrição</Label>
@@ -1371,123 +1679,110 @@ export default function Financas() {
                         <Button variant="outline" onClick={resetLancamentoForm}>
                           Cancelar
                         </Button>
-                        <Button onClick={handleSaveLancamento}>Salvar</Button>
+                        <Button onClick={handleSaveLancamento} disabled={categoriasParaLancamento.length === 0}>
+                          Salvar
+                        </Button>
                       </DialogFooter>
                     </DialogContent>
                   </Dialog>
                 </div>
 
                 {/* Filtros */}
-                <Card className="border-dashed">
+                <Card>
                   <CardHeader className="pb-3">
                     <CardTitle className="text-sm flex items-center gap-2">
                       <Filter className="h-4 w-4" />
                       Filtros
                     </CardTitle>
                   </CardHeader>
-                  <CardContent className="pt-0">
-                    <div className="flex flex-wrap gap-4 items-end">
-                      {/* Filtro por tipo */}
-                      <div className="flex items-center gap-2 bg-secondary/50 rounded-lg p-1">
-                        <Button
-                          variant={filtroTipoLancamento === 'todos' ? 'default' : 'ghost'}
-                          size="sm"
-                          onClick={() => setFiltroTipoLancamento('todos')}
-                        >
-                          Todos
-                        </Button>
-                        <Button
-                          variant={filtroTipoLancamento === 'receita' ? 'default' : 'ghost'}
-                          size="sm"
-                          onClick={() => setFiltroTipoLancamento('receita')}
-                          className={filtroTipoLancamento === 'receita' ? 'bg-green-500 hover:bg-green-600' : ''}
-                        >
-                          <TrendingUp className="h-4 w-4 mr-1" />
-                          Receitas
-                        </Button>
-                        <Button
-                          variant={filtroTipoLancamento === 'despesa' ? 'default' : 'ghost'}
-                          size="sm"
-                          onClick={() => setFiltroTipoLancamento('despesa')}
-                          className={filtroTipoLancamento === 'despesa' ? 'bg-red-500 hover:bg-red-600' : ''}
-                        >
-                          <TrendingDown className="h-4 w-4 mr-1" />
-                          Despesas
-                        </Button>
+                  <CardContent>
+                    <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+                      <div>
+                        <Label>Tipo</Label>
+                        <Select value={filtroTipoLancamento} onValueChange={(v: 'todos' | 'receita' | 'despesa') => setFiltroTipoLancamento(v)}>
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="todos">Todos</SelectItem>
+                            <SelectItem value="receita">Receitas</SelectItem>
+                            <SelectItem value="despesa">Despesas</SelectItem>
+                          </SelectContent>
+                        </Select>
                       </div>
-
-                      {/* Filtro por categoria */}
-                      <div className="space-y-1">
-                        <Label className="text-xs">Categoria</Label>
+                      <div>
+                        <Label>Categoria</Label>
                         <Select value={filtroCategoria} onValueChange={setFiltroCategoria}>
-                          <SelectTrigger className="w-[180px]">
-                            <SelectValue placeholder="Todas as categorias" />
+                          <SelectTrigger>
+                            <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
                             <SelectItem value="todas">Todas</SelectItem>
                             {categorias.map((cat) => (
                               <SelectItem key={cat.id} value={cat.id}>
-                                <div className="flex items-center gap-2">
-                                  <div className="w-3 h-3 rounded" style={{ backgroundColor: cat.cor }} />
-                                  {cat.nome}
-                                </div>
+                                {cat.nome}
                               </SelectItem>
                             ))}
                           </SelectContent>
                         </Select>
                       </div>
-
-                      {/* Filtro por data */}
-                      <div className="space-y-1">
-                        <Label className="text-xs">Data Início</Label>
+                      <div>
+                        <Label>Data Início</Label>
                         <Input
                           type="date"
                           value={filtroDataInicio}
                           onChange={(e) => setFiltroDataInicio(e.target.value)}
-                          className="w-[150px]"
                         />
                       </div>
-
-                      <div className="space-y-1">
-                        <Label className="text-xs">Data Fim</Label>
+                      <div>
+                        <Label>Data Fim</Label>
                         <Input
                           type="date"
                           value={filtroDataFim}
                           onChange={(e) => setFiltroDataFim(e.target.value)}
-                          className="w-[150px]"
                         />
                       </div>
-
-                      {/* Botão limpar filtros */}
-                      {(filtroTipoLancamento !== 'todos' || filtroCategoria !== 'todas' || filtroDataInicio || filtroDataFim) && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => {
-                            setFiltroTipoLancamento('todos');
-                            setFiltroCategoria('todas');
-                            setFiltroDataInicio('');
-                            setFiltroDataFim('');
-                          }}
-                        >
-                          <RefreshCw className="h-4 w-4 mr-1" />
+                      <div className="flex items-end">
+                        <Button variant="outline" onClick={clearFilters} className="w-full">
+                          <RefreshCw className="h-4 w-4 mr-2" />
                           Limpar
                         </Button>
-                      )}
-                    </div>
-
-                    {/* Resumo dos resultados filtrados */}
-                    <div className="flex gap-4 mt-4 pt-4 border-t text-sm text-muted-foreground">
-                      <span>{lancamentosFiltrados.length} lançamento(s)</span>
-                      <span className="text-green-500">
-                        +{formatCurrency(lancamentosFiltrados.filter(l => l.tipo_transacao === 'receita').reduce((s, l) => s + l.valor, 0))}
-                      </span>
-                      <span className="text-red-500">
-                        -{formatCurrency(lancamentosFiltrados.filter(l => l.tipo_transacao === 'despesa').reduce((s, l) => s + l.valor, 0))}
-                      </span>
+                      </div>
                     </div>
                   </CardContent>
                 </Card>
+
+                {/* Ações em massa */}
+                {selectedLancamentos.length > 0 && (
+                  <Alert className="border-yellow-500/50 bg-yellow-500/10">
+                    <AlertCircle className="h-4 w-4 text-yellow-500" />
+                    <AlertTitle className="text-yellow-500">
+                      {selectedLancamentos.length} lançamento(s) selecionado(s)
+                    </AlertTitle>
+                    <AlertDescription className="flex gap-2 mt-2">
+                      <Button variant="destructive" size="sm" onClick={handleBulkDeleteLancamentos}>
+                        <Trash2 className="h-4 w-4 mr-2" />
+                        Excluir Selecionados
+                      </Button>
+                      <Button variant="outline" size="sm" onClick={() => setSelectedLancamentos([])}>
+                        Cancelar
+                      </Button>
+                    </AlertDescription>
+                  </Alert>
+                )}
+
+                {/* Resumo dos filtros */}
+                <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                  <span>{lancamentosFiltrados.length} lançamento(s)</span>
+                  <span>|</span>
+                  <span className="text-green-500">
+                    Receitas: {formatCurrency(lancamentosFiltrados.filter(l => l.tipo_transacao === 'receita').reduce((sum, l) => sum + l.valor, 0))}
+                  </span>
+                  <span>|</span>
+                  <span className="text-red-500">
+                    Despesas: {formatCurrency(lancamentosFiltrados.filter(l => l.tipo_transacao === 'despesa').reduce((sum, l) => sum + l.valor, 0))}
+                  </span>
+                </div>
               </div>
 
               <Card>
@@ -1495,6 +1790,12 @@ export default function Financas() {
                   <Table>
                     <TableHeader>
                       <TableRow>
+                        <TableHead className="w-12">
+                          <Checkbox
+                            checked={selectedLancamentos.length === lancamentosFiltrados.length && lancamentosFiltrados.length > 0}
+                            onCheckedChange={toggleSelectAll}
+                          />
+                        </TableHead>
                         <TableHead>Tipo</TableHead>
                         <TableHead>Data</TableHead>
                         <TableHead>Categoria</TableHead>
@@ -1507,6 +1808,12 @@ export default function Financas() {
                     <TableBody>
                       {lancamentosFiltrados.map((lanc) => (
                         <TableRow key={lanc.id}>
+                          <TableCell>
+                            <Checkbox
+                              checked={selectedLancamentos.includes(lanc.id)}
+                              onCheckedChange={() => toggleSelectLancamento(lanc.id)}
+                            />
+                          </TableCell>
                           <TableCell>
                             <Badge variant={lanc.tipo_transacao === 'receita' ? 'default' : 'secondary'} className={lanc.tipo_transacao === 'receita' ? 'bg-green-500/20 text-green-500' : 'bg-red-500/20 text-red-500'}>
                               {lanc.tipo_transacao === 'receita' ? 'Receita' : 'Despesa'}
@@ -1549,10 +1856,231 @@ export default function Financas() {
                       ))}
                       {lancamentosFiltrados.length === 0 && (
                         <TableRow>
-                          <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                          <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
                             {filtroTipoLancamento === 'todos' 
                               ? 'Nenhum lançamento neste mês'
                               : `Nenhuma ${filtroTipoLancamento === 'receita' ? 'receita' : 'despesa'} neste mês`}
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            {/* METAS FINANCEIRAS TAB */}
+            <TabsContent value="metas" className="space-y-6">
+              <div className="flex justify-between items-center">
+                <div>
+                  <h2 className="text-xl font-semibold">Metas Financeiras</h2>
+                  <p className="text-sm text-muted-foreground">
+                    Defina e acompanhe suas metas de receitas, despesas, reservas e investimentos
+                  </p>
+                </div>
+                <Dialog open={metaDialog} onOpenChange={setMetaDialog}>
+                  <DialogTrigger asChild>
+                    <Button onClick={() => resetMetaForm()}>
+                      <Plus className="h-4 w-4 mr-2" />
+                      Nova Meta
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>{editingMeta ? "Editar" : "Nova"} Meta Financeira</DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-4">
+                      <div>
+                        <Label>Tipo de Meta</Label>
+                        <Select value={metaTipo} onValueChange={(v: 'receita' | 'despesa' | 'reserva' | 'investimento') => setMetaTipo(v)}>
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {TIPOS_META.map((tipo) => (
+                              <SelectItem key={tipo.value} value={tipo.value}>
+                                <div className="flex items-center gap-2">
+                                  <tipo.icon className={`h-4 w-4 ${tipo.color}`} />
+                                  {tipo.label}
+                                </div>
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div>
+                        <Label>Nome da Meta</Label>
+                        <Input
+                          value={metaNome}
+                          onChange={(e) => setMetaNome(e.target.value)}
+                          placeholder="Ex: Reserva de emergência"
+                        />
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <Label>Valor Alvo (R$)</Label>
+                          <Input
+                            type="number"
+                            step="0.01"
+                            value={metaValorAlvo}
+                            onChange={(e) => setMetaValorAlvo(Number(e.target.value))}
+                          />
+                        </div>
+                        <div>
+                          <Label>Valor Atual (R$)</Label>
+                          <Input
+                            type="number"
+                            step="0.01"
+                            value={metaValorAtual}
+                            onChange={(e) => setMetaValorAtual(Number(e.target.value))}
+                          />
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <Label>Data Início</Label>
+                          <Input
+                            type="date"
+                            value={metaDataInicio}
+                            onChange={(e) => setMetaDataInicio(e.target.value)}
+                          />
+                        </div>
+                        <div>
+                          <Label>Data Fim (opcional)</Label>
+                          <Input
+                            type="date"
+                            value={metaDataFim}
+                            onChange={(e) => setMetaDataFim(e.target.value)}
+                          />
+                        </div>
+                      </div>
+                      <div>
+                        <Label>Descrição (opcional)</Label>
+                        <Input
+                          value={metaDescricao}
+                          onChange={(e) => setMetaDescricao(e.target.value)}
+                          placeholder="Ex: Acumular 6 meses de despesas"
+                        />
+                      </div>
+                      <div>
+                        <Label>Cor</Label>
+                        <div className="flex gap-2 items-center">
+                          <Input
+                            type="color"
+                            value={metaCor}
+                            onChange={(e) => setMetaCor(e.target.value)}
+                            className="w-16 h-10 p-1"
+                          />
+                          <Input
+                            value={metaCor}
+                            onChange={(e) => setMetaCor(e.target.value)}
+                            placeholder="#000000"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                    <DialogFooter>
+                      <Button variant="outline" onClick={resetMetaForm}>
+                        Cancelar
+                      </Button>
+                      <Button onClick={handleSaveMeta}>Salvar</Button>
+                    </DialogFooter>
+                  </DialogContent>
+                </Dialog>
+              </div>
+
+              {/* Cards de resumo por tipo */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                {TIPOS_META.map((tipo) => {
+                  const metasDoTipo = metasFinanceiras.filter(m => m.tipo === tipo.value && m.is_active);
+                  const totalAlvo = metasDoTipo.reduce((sum, m) => sum + m.valor_alvo, 0);
+                  const totalAtual = metasDoTipo.reduce((sum, m) => sum + m.valor_atual, 0);
+                  const progresso = totalAlvo > 0 ? (totalAtual / totalAlvo) * 100 : 0;
+                  
+                  return (
+                    <Card key={tipo.value} className="border-l-4" style={{ borderLeftColor: tipo.color.includes('green') ? '#22C55E' : tipo.color.includes('red') ? '#EF4444' : tipo.color.includes('blue') ? '#3B82F6' : '#A855F7' }}>
+                      <CardHeader className="pb-2">
+                        <CardTitle className={`text-sm flex items-center gap-2 ${tipo.color}`}>
+                          <tipo.icon className="h-4 w-4" />
+                          {tipo.label}
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="text-lg font-bold">
+                          {formatCurrency(totalAtual)} / {formatCurrency(totalAlvo)}
+                        </div>
+                        <Progress value={Math.min(progresso, 100)} className="mt-2" />
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {metasDoTipo.length} meta(s) - {progresso.toFixed(1)}%
+                        </p>
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+              </div>
+
+              {/* Lista de metas */}
+              <Card>
+                <CardContent className="p-0">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Tipo</TableHead>
+                        <TableHead>Nome</TableHead>
+                        <TableHead>Progresso</TableHead>
+                        <TableHead>Valor Atual</TableHead>
+                        <TableHead>Valor Alvo</TableHead>
+                        <TableHead>Prazo</TableHead>
+                        <TableHead className="text-right">Ações</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {metasFinanceiras.map((meta) => {
+                        const tipoInfo = TIPOS_META.find(t => t.value === meta.tipo);
+                        const progresso = meta.valor_alvo > 0 ? (meta.valor_atual / meta.valor_alvo) * 100 : 0;
+                        
+                        return (
+                          <TableRow key={meta.id}>
+                            <TableCell>
+                              <Badge variant="outline" className={tipoInfo?.color}>
+                                {tipoInfo?.label || meta.tipo}
+                              </Badge>
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex items-center gap-2">
+                                <div className="w-3 h-3 rounded" style={{ backgroundColor: meta.cor }} />
+                                <span className="font-medium">{meta.nome}</span>
+                              </div>
+                              {meta.descricao && (
+                                <p className="text-xs text-muted-foreground">{meta.descricao}</p>
+                              )}
+                            </TableCell>
+                            <TableCell>
+                              <div className="w-24">
+                                <Progress value={Math.min(progresso, 100)} />
+                                <p className="text-xs text-muted-foreground mt-1">{progresso.toFixed(1)}%</p>
+                              </div>
+                            </TableCell>
+                            <TableCell className="font-medium">{formatCurrency(meta.valor_atual)}</TableCell>
+                            <TableCell>{formatCurrency(meta.valor_alvo)}</TableCell>
+                            <TableCell>
+                              {meta.data_fim ? format(parseISO(meta.data_fim), "dd/MM/yyyy") : "Sem prazo"}
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <Button variant="ghost" size="icon" onClick={() => openEditMeta(meta)}>
+                                <Pencil className="h-4 w-4" />
+                              </Button>
+                              <Button variant="ghost" size="icon" onClick={() => handleDeleteMeta(meta.id)}>
+                                <Trash2 className="h-4 w-4 text-red-500" />
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                      {metasFinanceiras.length === 0 && (
+                        <TableRow>
+                          <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                            Nenhuma meta financeira cadastrada
                           </TableCell>
                         </TableRow>
                       )}
