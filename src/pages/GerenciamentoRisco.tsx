@@ -27,13 +27,14 @@ import {
   XAxis,
   YAxis,
   CartesianGrid,
-  Tooltip,
+  Tooltip as RechartsTooltip,
   Legend,
   ResponsiveContainer,
   Area,
   AreaChart,
 } from "recharts";
-import { ShieldCheck, TrendingUp, Target, DollarSign, Calendar, BarChart3, FileDown, FileSpreadsheet } from "lucide-react";
+import { ShieldCheck, TrendingUp, Target, DollarSign, Calendar, BarChart3, FileDown, FileSpreadsheet, Info } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import jsPDF from "jspdf";
@@ -426,69 +427,144 @@ const GerenciamentoRisco = () => {
               <CardTitle className="text-white text-lg">Resumo Operacional</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-                <Card className="bg-[#1e3a5f] border-cyan-500/50">
-                  <CardContent className="p-4">
-                    <div className="flex items-center gap-2 mb-2">
-                      <Target className="h-4 w-4 text-cyan-300" />
-                      <span className="text-xs text-cyan-200">Contratos Permitidos</span>
-                    </div>
-                    <p className="text-2xl font-bold text-white">{calc.contratos}</p>
-                  </CardContent>
-                </Card>
+              <TooltipProvider>
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+                  <Card className="bg-[#1e3a5f] border-cyan-500/50">
+                    <CardContent className="p-4">
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-2">
+                          <Target className="h-4 w-4 text-cyan-300" />
+                          <span className="text-xs text-cyan-200">Contratos Permitidos</span>
+                        </div>
+                        <Tooltip>
+                          <TooltipTrigger>
+                            <Info className="h-4 w-4 text-cyan-300/70 hover:text-cyan-300 cursor-help" />
+                          </TooltipTrigger>
+                          <TooltipContent className="max-w-xs bg-[#1a2332] border-cyan-500/50 text-white">
+                            <p className="font-semibold mb-1">Fórmula:</p>
+                            <p className="text-xs">(Stop Diário ÷ 3 ÷ Valor do Ponto) ÷ Stop em Pontos</p>
+                            <p className="text-xs mt-1 text-cyan-300">= ({formatCurrency(calc.stopDiario)} ÷ 3 ÷ R${calc.pointValue}) ÷ {stopPontos}</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </div>
+                      <p className="text-2xl font-bold text-white">{calc.contratos}</p>
+                    </CardContent>
+                  </Card>
 
-                <Card className="bg-[#4a1d1d] border-red-500/50">
-                  <CardContent className="p-4">
-                    <div className="flex items-center gap-2 mb-2">
-                      <DollarSign className="h-4 w-4 text-red-300" />
-                      <span className="text-xs text-red-200">Stop Diário</span>
-                    </div>
-                    <p className="text-2xl font-bold text-white">{formatCurrency(calc.stopDiario)}</p>
-                  </CardContent>
-                </Card>
+                  <Card className="bg-[#4a1d1d] border-red-500/50">
+                    <CardContent className="p-4">
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-2">
+                          <DollarSign className="h-4 w-4 text-red-300" />
+                          <span className="text-xs text-red-200">Stop Diário</span>
+                        </div>
+                        <Tooltip>
+                          <TooltipTrigger>
+                            <Info className="h-4 w-4 text-red-300/70 hover:text-red-300 cursor-help" />
+                          </TooltipTrigger>
+                          <TooltipContent className="max-w-xs bg-[#1a2332] border-red-500/50 text-white">
+                            <p className="font-semibold mb-1">Fórmula:</p>
+                            <p className="text-xs">Capital ÷ 20 dias úteis</p>
+                            <p className="text-xs mt-1 text-red-300">= {formatCurrency(capital)} ÷ 20</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </div>
+                      <p className="text-2xl font-bold text-white">{formatCurrency(calc.stopDiario)}</p>
+                    </CardContent>
+                  </Card>
 
-                <Card className="bg-[#4a2d1d] border-orange-500/50">
-                  <CardContent className="p-4">
-                    <div className="flex items-center gap-2 mb-2">
-                      <DollarSign className="h-4 w-4 text-orange-300" />
-                      <span className="text-xs text-orange-200">Stop por Operação</span>
-                    </div>
-                    <p className="text-2xl font-bold text-white">{formatCurrency(calc.stopPorOperacao)}</p>
-                  </CardContent>
-                </Card>
+                  <Card className="bg-[#4a2d1d] border-orange-500/50">
+                    <CardContent className="p-4">
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-2">
+                          <DollarSign className="h-4 w-4 text-orange-300" />
+                          <span className="text-xs text-orange-200">Stop por Operação</span>
+                        </div>
+                        <Tooltip>
+                          <TooltipTrigger>
+                            <Info className="h-4 w-4 text-orange-300/70 hover:text-orange-300 cursor-help" />
+                          </TooltipTrigger>
+                          <TooltipContent className="max-w-xs bg-[#1a2332] border-orange-500/50 text-white">
+                            <p className="font-semibold mb-1">Fórmula:</p>
+                            <p className="text-xs">Stop Diário ÷ 3 operações</p>
+                            <p className="text-xs mt-1 text-orange-300">= {formatCurrency(calc.stopDiario)} ÷ 3</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </div>
+                      <p className="text-2xl font-bold text-white">{formatCurrency(calc.stopPorOperacao)}</p>
+                    </CardContent>
+                  </Card>
 
-                <Card className="bg-[#1d4a2d] border-green-500/50">
-                  <CardContent className="p-4">
-                    <div className="flex items-center gap-2 mb-2">
-                      <TrendingUp className="h-4 w-4 text-green-300" />
-                      <span className="text-xs text-green-200">Meta Diária</span>
-                    </div>
-                    <p className="text-2xl font-bold text-white">{formatCurrency(calc.ganhoDiario)}</p>
-                  </CardContent>
-                </Card>
+                  <Card className="bg-[#1d4a2d] border-green-500/50">
+                    <CardContent className="p-4">
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-2">
+                          <TrendingUp className="h-4 w-4 text-green-300" />
+                          <span className="text-xs text-green-200">Meta Diária</span>
+                        </div>
+                        <Tooltip>
+                          <TooltipTrigger>
+                            <Info className="h-4 w-4 text-green-300/70 hover:text-green-300 cursor-help" />
+                          </TooltipTrigger>
+                          <TooltipContent className="max-w-xs bg-[#1a2332] border-green-500/50 text-white">
+                            <p className="font-semibold mb-1">Fórmula:</p>
+                            <p className="text-xs">(Dias Gain × Alvo) - (Dias Loss × Stop) ÷ 20</p>
+                            <p className="text-xs mt-1 text-green-300">= ({calc.gains} × {formatCurrency(calc.alvoOperacional * calc.contratos * calc.pointValue)} - {calc.loss} × {formatCurrency(stopPontos * calc.contratos * calc.pointValue)}) ÷ 20</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </div>
+                      <p className="text-2xl font-bold text-white">{formatCurrency(calc.ganhoDiario)}</p>
+                    </CardContent>
+                  </Card>
 
-                <Card className="bg-[#3d1d4a] border-purple-500/50">
-                  <CardContent className="p-4">
-                    <div className="flex items-center gap-2 mb-2">
-                      <Calendar className="h-4 w-4 text-purple-300" />
-                      <span className="text-xs text-purple-200">Ganho / Perda (dias)</span>
-                    </div>
-                    <p className="text-2xl font-bold text-white">{calc.gains} / {calc.loss}</p>
-                  </CardContent>
-                </Card>
+                  <Card className="bg-[#3d1d4a] border-purple-500/50">
+                    <CardContent className="p-4">
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-2">
+                          <Calendar className="h-4 w-4 text-purple-300" />
+                          <span className="text-xs text-purple-200">Ganho / Perda (dias)</span>
+                        </div>
+                        <Tooltip>
+                          <TooltipTrigger>
+                            <Info className="h-4 w-4 text-purple-300/70 hover:text-purple-300 cursor-help" />
+                          </TooltipTrigger>
+                          <TooltipContent className="max-w-xs bg-[#1a2332] border-purple-500/50 text-white">
+                            <p className="font-semibold mb-1">Fórmula:</p>
+                            <p className="text-xs">Dias Gain = Taxa de Acerto × 20 dias</p>
+                            <p className="text-xs">Dias Loss = 20 - Dias Gain</p>
+                            <p className="text-xs mt-1 text-purple-300">= {taxaAcerto}% × 20 = {calc.gains} gains | {calc.loss} loss</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </div>
+                      <p className="text-2xl font-bold text-white">{calc.gains} / {calc.loss}</p>
+                    </CardContent>
+                  </Card>
 
-                <Card className="bg-[#1d4a3d] border-emerald-500/50">
-                  <CardContent className="p-4">
-                    <div className="flex items-center gap-2 mb-2">
-                      <BarChart3 className="h-4 w-4 text-emerald-300" />
-                      <span className="text-xs text-emerald-200">Resultado Mensal Líquido</span>
-                    </div>
-                    <p className={`text-2xl font-bold ${calc.mensalLiquido >= 0 ? 'text-white' : 'text-red-400'}`}>
-                      {formatCurrency(calc.mensalLiquido)}
-                    </p>
-                  </CardContent>
-                </Card>
-              </div>
+                  <Card className="bg-[#1d4a3d] border-emerald-500/50">
+                    <CardContent className="p-4">
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-2">
+                          <BarChart3 className="h-4 w-4 text-emerald-300" />
+                          <span className="text-xs text-emerald-200">Resultado Mensal Líquido</span>
+                        </div>
+                        <Tooltip>
+                          <TooltipTrigger>
+                            <Info className="h-4 w-4 text-emerald-300/70 hover:text-emerald-300 cursor-help" />
+                          </TooltipTrigger>
+                          <TooltipContent className="max-w-xs bg-[#1a2332] border-emerald-500/50 text-white">
+                            <p className="font-semibold mb-1">Fórmula:</p>
+                            <p className="text-xs">Resultado Bruto - IR (20%)</p>
+                            <p className="text-xs mt-1 text-emerald-300">= {formatCurrency(calc.mensalBruto)} - {formatCurrency(calc.mensalIr)} = {formatCurrency(calc.mensalLiquido)}</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </div>
+                      <p className={`text-2xl font-bold ${calc.mensalLiquido >= 0 ? 'text-white' : 'text-red-400'}`}>
+                        {formatCurrency(calc.mensalLiquido)}
+                      </p>
+                    </CardContent>
+                  </Card>
+                </div>
+              </TooltipProvider>
             </CardContent>
           </Card>
 
@@ -517,7 +593,7 @@ const GerenciamentoRisco = () => {
                   <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
                   <XAxis dataKey="mes" stroke="#9ca3af" />
                   <YAxis stroke="#9ca3af" tickFormatter={(v) => `R$${v}`} />
-                  <Tooltip
+                  <RechartsTooltip
                     contentStyle={{ backgroundColor: "#1f2937", border: "1px solid #374151" }}
                     labelStyle={{ color: "#fff" }}
                     formatter={(value: number) => [formatCurrency(value), ""]}
