@@ -67,7 +67,7 @@ const GerenciamentoRisco = () => {
   const calc = useMemo(() => {
     const pointValue = ativo === "WIN" ? 0.20 : 10;
     const stopDiario = capital / 20;
-    const stopFinanceiro = stopPontos * pointValue;
+    const stopPorOperacao = stopDiario / 3;
     const contratos = Math.floor((stopDiario / 3 / pointValue) / stopPontos);
     const alvoOperacional = stopPontos * payoff;
     const gains = Math.round((taxaAcerto / 100) * 20);
@@ -96,7 +96,7 @@ const GerenciamentoRisco = () => {
     return {
       pointValue,
       stopDiario,
-      stopFinanceiro,
+      stopPorOperacao,
       contratos,
       alvoOperacional,
       gains,
@@ -291,7 +291,7 @@ const GerenciamentoRisco = () => {
         [],
         ["Contratos Permitidos", calc.contratos],
         ["Stop Diario", calc.stopDiario],
-        ["Stop Financeiro", calc.stopFinanceiro],
+        ["Stop por Operacao", calc.stopPorOperacao],
         ["Meta Diaria", calc.ganhoDiario],
         ["Dias Gain", calc.gains],
         ["Dias Loss", calc.loss],
@@ -451,9 +451,9 @@ const GerenciamentoRisco = () => {
                   <CardContent className="p-4">
                     <div className="flex items-center gap-2 mb-2">
                       <DollarSign className="h-4 w-4 text-orange-300" />
-                      <span className="text-xs text-orange-200">Stop Financeiro</span>
+                      <span className="text-xs text-orange-200">Stop por Operação</span>
                     </div>
-                    <p className="text-2xl font-bold text-white">{formatCurrency(calc.stopFinanceiro)}</p>
+                    <p className="text-2xl font-bold text-white">{formatCurrency(calc.stopPorOperacao)}</p>
                   </CardContent>
                 </Card>
 
