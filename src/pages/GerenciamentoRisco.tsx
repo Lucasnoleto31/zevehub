@@ -73,12 +73,20 @@ const GerenciamentoRisco = () => {
     const mensalIr = mensalBruto > 0 ? mensalBruto * 0.20 : 0;
     const mensalLiquido = mensalBruto - mensalIr;
 
-    const projecao = Array.from({ length: 6 }, (_, i) => ({
-      mes: `Mês ${i + 1}`,
-      bruto: mensalBruto,
-      ir: mensalIr,
-      liquido: mensalLiquido,
-    }));
+    let acumuladoBruto = 0;
+    let acumuladoLiquido = 0;
+    const projecao = Array.from({ length: 6 }, (_, i) => {
+      acumuladoBruto += mensalBruto;
+      acumuladoLiquido += mensalLiquido;
+      return {
+        mes: `Mês ${i + 1}`,
+        bruto: mensalBruto,
+        ir: mensalIr,
+        liquido: mensalLiquido,
+        acumuladoBruto,
+        acumuladoLiquido,
+      };
+    });
 
     return {
       pointValue,
@@ -185,69 +193,69 @@ const GerenciamentoRisco = () => {
           </Card>
 
           {/* Resumo Operacional */}
-          <Card className="mb-6 bg-[#111827] border-gray-800">
+          <Card className="mb-6 bg-[#1a2332] border-gray-700">
             <CardHeader>
               <CardTitle className="text-white text-lg">Resumo Operacional</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-                <Card className="bg-gradient-to-br from-cyan-900/50 to-cyan-950/50 border-cyan-800/50">
+                <Card className="bg-[#1e3a5f] border-cyan-500/50">
                   <CardContent className="p-4">
                     <div className="flex items-center gap-2 mb-2">
-                      <Target className="h-4 w-4 text-cyan-400" />
-                      <span className="text-xs text-gray-400">Contratos Permitidos</span>
+                      <Target className="h-4 w-4 text-cyan-300" />
+                      <span className="text-xs text-cyan-200">Contratos Permitidos</span>
                     </div>
-                    <p className="text-2xl font-bold text-cyan-400">{calc.contratos}</p>
+                    <p className="text-2xl font-bold text-white">{calc.contratos}</p>
                   </CardContent>
                 </Card>
 
-                <Card className="bg-gradient-to-br from-red-900/50 to-red-950/50 border-red-800/50">
+                <Card className="bg-[#4a1d1d] border-red-500/50">
                   <CardContent className="p-4">
                     <div className="flex items-center gap-2 mb-2">
-                      <DollarSign className="h-4 w-4 text-red-400" />
-                      <span className="text-xs text-gray-400">Stop Diário</span>
+                      <DollarSign className="h-4 w-4 text-red-300" />
+                      <span className="text-xs text-red-200">Stop Diário</span>
                     </div>
-                    <p className="text-2xl font-bold text-red-400">{formatCurrency(calc.stopDiario)}</p>
+                    <p className="text-2xl font-bold text-white">{formatCurrency(calc.stopDiario)}</p>
                   </CardContent>
                 </Card>
 
-                <Card className="bg-gradient-to-br from-orange-900/50 to-orange-950/50 border-orange-800/50">
+                <Card className="bg-[#4a2d1d] border-orange-500/50">
                   <CardContent className="p-4">
                     <div className="flex items-center gap-2 mb-2">
-                      <DollarSign className="h-4 w-4 text-orange-400" />
-                      <span className="text-xs text-gray-400">Stop Financeiro</span>
+                      <DollarSign className="h-4 w-4 text-orange-300" />
+                      <span className="text-xs text-orange-200">Stop Financeiro</span>
                     </div>
-                    <p className="text-2xl font-bold text-orange-400">{formatCurrency(calc.stopFinanceiro)}</p>
+                    <p className="text-2xl font-bold text-white">{formatCurrency(calc.stopFinanceiro)}</p>
                   </CardContent>
                 </Card>
 
-                <Card className="bg-gradient-to-br from-green-900/50 to-green-950/50 border-green-800/50">
+                <Card className="bg-[#1d4a2d] border-green-500/50">
                   <CardContent className="p-4">
                     <div className="flex items-center gap-2 mb-2">
-                      <TrendingUp className="h-4 w-4 text-green-400" />
-                      <span className="text-xs text-gray-400">Meta Diária</span>
+                      <TrendingUp className="h-4 w-4 text-green-300" />
+                      <span className="text-xs text-green-200">Meta Diária</span>
                     </div>
-                    <p className="text-2xl font-bold text-green-400">{formatCurrency(calc.ganhoDiario)}</p>
+                    <p className="text-2xl font-bold text-white">{formatCurrency(calc.ganhoDiario)}</p>
                   </CardContent>
                 </Card>
 
-                <Card className="bg-gradient-to-br from-purple-900/50 to-purple-950/50 border-purple-800/50">
+                <Card className="bg-[#3d1d4a] border-purple-500/50">
                   <CardContent className="p-4">
                     <div className="flex items-center gap-2 mb-2">
-                      <Calendar className="h-4 w-4 text-purple-400" />
-                      <span className="text-xs text-gray-400">Ganho / Perda (dias)</span>
+                      <Calendar className="h-4 w-4 text-purple-300" />
+                      <span className="text-xs text-purple-200">Ganho / Perda (dias)</span>
                     </div>
-                    <p className="text-2xl font-bold text-purple-400">{calc.gains} / {calc.loss}</p>
+                    <p className="text-2xl font-bold text-white">{calc.gains} / {calc.loss}</p>
                   </CardContent>
                 </Card>
 
-                <Card className="bg-gradient-to-br from-emerald-900/50 to-emerald-950/50 border-emerald-800/50">
+                <Card className="bg-[#1d4a3d] border-emerald-500/50">
                   <CardContent className="p-4">
                     <div className="flex items-center gap-2 mb-2">
-                      <BarChart3 className="h-4 w-4 text-emerald-400" />
-                      <span className="text-xs text-gray-400">Resultado Mensal Líquido</span>
+                      <BarChart3 className="h-4 w-4 text-emerald-300" />
+                      <span className="text-xs text-emerald-200">Resultado Mensal Líquido</span>
                     </div>
-                    <p className={`text-2xl font-bold ${calc.mensalLiquido >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                    <p className={`text-2xl font-bold ${calc.mensalLiquido >= 0 ? 'text-white' : 'text-red-400'}`}>
                       {formatCurrency(calc.mensalLiquido)}
                     </p>
                   </CardContent>
@@ -257,12 +265,12 @@ const GerenciamentoRisco = () => {
           </Card>
 
           {/* Projeção — Próximos 6 meses */}
-          <Card className="mb-6 bg-[#111827] border-gray-800">
+          <Card className="mb-6 bg-[#1a2332] border-gray-700">
             <CardHeader>
-              <CardTitle className="text-white text-lg">Projeção — Próximos 6 meses</CardTitle>
+              <CardTitle className="text-white text-lg">Projeção — Próximos 6 meses (com Acumulado)</CardTitle>
             </CardHeader>
             <CardContent>
-              <ResponsiveContainer width="100%" height={300}>
+              <ResponsiveContainer width="100%" height={350}>
                 <AreaChart data={calc.projecao}>
                   <defs>
                     <linearGradient id="colorBruto" x1="0" y1="0" x2="0" y2="1">
@@ -272,6 +280,10 @@ const GerenciamentoRisco = () => {
                     <linearGradient id="colorLiquido" x1="0" y1="0" x2="0" y2="1">
                       <stop offset="5%" stopColor="#10b981" stopOpacity={0.3} />
                       <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
+                    </linearGradient>
+                    <linearGradient id="colorAcumulado" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.3} />
+                      <stop offset="95%" stopColor="#f59e0b" stopOpacity={0} />
                     </linearGradient>
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
@@ -299,34 +311,48 @@ const GerenciamentoRisco = () => {
                     fill="url(#colorLiquido)"
                     strokeWidth={2}
                   />
+                  <Area
+                    type="monotone"
+                    dataKey="acumuladoLiquido"
+                    name="Acumulado Líquido (R$)"
+                    stroke="#f59e0b"
+                    fill="url(#colorAcumulado)"
+                    strokeWidth={2}
+                  />
                 </AreaChart>
               </ResponsiveContainer>
             </CardContent>
           </Card>
 
           {/* Dados Detalhados */}
-          <Card className="bg-[#111827] border-gray-800">
+          <Card className="bg-[#1a2332] border-gray-700">
             <CardHeader>
               <CardTitle className="text-white text-lg">Dados Detalhados</CardTitle>
             </CardHeader>
             <CardContent>
               <Table>
                 <TableHeader>
-                  <TableRow className="border-gray-700">
-                    <TableHead className="text-gray-300">Mês</TableHead>
-                    <TableHead className="text-gray-300">Bruto (R$)</TableHead>
-                    <TableHead className="text-gray-300">IR (R$)</TableHead>
-                    <TableHead className="text-gray-300">Líquido (R$)</TableHead>
+                  <TableRow className="border-gray-600">
+                    <TableHead className="text-gray-200">Mês</TableHead>
+                    <TableHead className="text-gray-200">Bruto (R$)</TableHead>
+                    <TableHead className="text-gray-200">IR (R$)</TableHead>
+                    <TableHead className="text-gray-200">Líquido (R$)</TableHead>
+                    <TableHead className="text-gray-200">Acumulado Bruto (R$)</TableHead>
+                    <TableHead className="text-gray-200">Acumulado Líquido (R$)</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {calc.projecao.map((row, idx) => (
-                    <TableRow key={idx} className="border-gray-700">
-                      <TableCell className="text-white">{row.mes}</TableCell>
-                      <TableCell className="text-cyan-400">{formatCurrency(row.bruto)}</TableCell>
-                      <TableCell className="text-orange-400">{formatCurrency(row.ir)}</TableCell>
-                      <TableCell className={row.liquido >= 0 ? "text-green-400" : "text-red-400"}>
+                    <TableRow key={idx} className="border-gray-600">
+                      <TableCell className="text-white font-medium">{row.mes}</TableCell>
+                      <TableCell className="text-cyan-300">{formatCurrency(row.bruto)}</TableCell>
+                      <TableCell className="text-orange-300">{formatCurrency(row.ir)}</TableCell>
+                      <TableCell className={row.liquido >= 0 ? "text-green-300" : "text-red-400"}>
                         {formatCurrency(row.liquido)}
+                      </TableCell>
+                      <TableCell className="text-cyan-400 font-medium">{formatCurrency(row.acumuladoBruto)}</TableCell>
+                      <TableCell className={row.acumuladoLiquido >= 0 ? "text-amber-400 font-medium" : "text-red-400 font-medium"}>
+                        {formatCurrency(row.acumuladoLiquido)}
                       </TableCell>
                     </TableRow>
                   ))}
