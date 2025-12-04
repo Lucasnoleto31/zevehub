@@ -7,7 +7,6 @@ import {
   Shield,
   Users,
   Wallet,
-  ShieldCheck,
 } from "lucide-react";
 
 import {
@@ -44,12 +43,6 @@ const menuItems = [
     url: "/financas",
     icon: Wallet,
     color: "text-yellow-500",
-  },
-  {
-    title: "Gerenciamento de Risco",
-    url: "/risco",
-    icon: ShieldCheck,
-    color: "text-cyan-500",
   },
   {
     title: "Comunidade",
