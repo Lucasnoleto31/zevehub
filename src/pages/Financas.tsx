@@ -312,6 +312,27 @@ export default function Financas() {
     return (metricas?.valor_diario_meta || 0) - totalGastoHoje;
   }, [metricas, totalGastoHoje]);
 
+  // Meta diária calculada a partir das metas financeiras ativas
+  const metaDiariaCalculada = useMemo(() => {
+    const hoje = new Date();
+    let totalDiario = 0;
+
+    metasFinanceiras
+      .filter(meta => meta.is_active && meta.data_fim)
+      .forEach(meta => {
+        const valorRestante = meta.valor_alvo - meta.valor_atual;
+        if (valorRestante > 0 && meta.data_fim) {
+          const dataFim = parseISO(meta.data_fim);
+          const diasRestantes = differenceInDays(dataFim, hoje);
+          if (diasRestantes > 0) {
+            totalDiario += valorRestante / diasRestantes;
+          }
+        }
+      });
+
+    return totalDiario;
+  }, [metasFinanceiras]);
+
   const gastosPorCategoria = useMemo(() => {
     const gastos: Record<string, { nome: string; valor: number; cor: string }> = {};
     // Apenas despesas no gráfico de gastos por categoria
@@ -1159,11 +1180,14 @@ export default function Financas() {
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 <Card className="border-l-4 border-l-cyan-500">
                   <CardHeader className="pb-2">
-                    <CardTitle className="text-sm text-muted-foreground">Meta Diária</CardTitle>
+                    <CardTitle className="text-sm text-muted-foreground">Meta Diária (Metas)</CardTitle>
+                    <CardDescription className="text-xs">
+                      Valor a guardar por dia para suas metas
+                    </CardDescription>
                   </CardHeader>
                   <CardContent>
                     <div className="text-2xl font-bold text-cyan-500">
-                      {formatCurrency(metricas?.valor_diario_meta || 0)}
+                      {formatCurrency(metaDiariaCalculada)}
                     </div>
                   </CardContent>
                 </Card>
