@@ -20,7 +20,6 @@ import Explore from "./pages/Explore";
 import PublicProfile from "./pages/PublicProfile";
 import HashtagPage from "./pages/HashtagPage";
 import Onboarding from "./pages/Onboarding";
-import Aprenda from "./pages/Aprenda";
 import NotFound from "./pages/NotFound";
 import { useEffect } from "react";
 import { registerServiceWorker } from "@/lib/register-sw";
@@ -57,7 +56,6 @@ const App = () => {
                 <Route path="/comunidade" element={<Community />} />
                 <Route path="/explorar" element={<Explore />} />
                 <Route path="/hashtag/:hashtag" element={<HashtagPage />} />
-                <Route path="/aulas-estudos" element={<Aprenda />} />
                 {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                 <Route path="*" element={<NotFound />} />
               </Routes>
