@@ -86,78 +86,78 @@ All colors MUST be HSL.
   }
 
   .dark {
-    /* Zeve Design System v1.0 - Dark Mode (Pure Black) */
-    --background: 0 0% 0%;
-    --foreground: 0 0% 100%;
+    /* Zeve Design System v2.0 - Dark Mode (Enhanced Contrast & Glow) */
+    --background: 220 15% 3%;
+    --foreground: 0 0% 98%;
 
-    --card: 0 0% 5%;
-    --card-foreground: 0 0% 100%;
+    --card: 220 15% 6%;
+    --card-foreground: 0 0% 98%;
 
-    --popover: 0 0% 5%;
-    --popover-foreground: 0 0% 100%;
+    --popover: 220 15% 6%;
+    --popover-foreground: 0 0% 98%;
 
-    /* Primary: Vibrant Blue accent */
+    /* Primary: Vibrant Blue accent with enhanced glow */
     --primary: 217 91% 60%;
     --primary-foreground: 0 0% 100%;
-    --primary-hover: 217 91% 55%;
-    --primary-glow: 217 91% 75%;
+    --primary-hover: 217 91% 65%;
+    --primary-glow: 217 91% 80%;
 
-    /* Secondary: Dark Gray */
-    --secondary: 0 0% 10%;
-    --secondary-foreground: 0 0% 100%;
+    /* Secondary: Enhanced contrast */
+    --secondary: 220 15% 12%;
+    --secondary-foreground: 0 0% 98%;
 
-    /* Accent: Blue */
-    --accent: 217 91% 60%;
+    /* Accent: Vibrant Blue */
+    --accent: 217 91% 55%;
     --accent-foreground: 0 0% 100%;
 
-    /* Success */
-    --success: 145 63% 49%;
+    /* Success - More vibrant */
+    --success: 145 70% 50%;
     --success-foreground: 0 0% 100%;
 
-    /* Warning */
-    --warning: 45 100% 70%;
-    --warning-foreground: 0 0% 0%;
+    /* Warning - Brighter */
+    --warning: 45 100% 65%;
+    --warning-foreground: 220 15% 10%;
 
-    /* Error */
-    --error: 0 100% 69%;
+    /* Error - More vivid */
+    --error: 0 85% 60%;
     --error-foreground: 0 0% 100%;
 
-    --muted: 0 0% 15%;
-    --muted-foreground: 0 0% 70%;
+    --muted: 220 15% 18%;
+    --muted-foreground: 220 10% 65%;
 
-    --destructive: 0 100% 69%;
+    --destructive: 0 85% 60%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 0 0% 100% / 0.1;
-    --input: 0 0% 100% / 0.15;
+    --border: 220 15% 18%;
+    --input: 220 15% 15%;
     --ring: 217 91% 60%;
 
-    /* Premium Dark Mode Gradients */
-    --gradient-primary: linear-gradient(135deg, hsl(217 91% 60%) 0%, hsl(217 91% 50%) 100%);
-    --gradient-card: linear-gradient(145deg, hsl(0 0% 0%) 0%, hsl(0 0% 8%) 100%);
-    --gradient-soft: linear-gradient(180deg, hsl(0 0% 0%) 0%, hsl(0 0% 5%) 100%);
+    /* Enhanced Dark Mode Gradients with more depth */
+    --gradient-primary: linear-gradient(135deg, hsl(217 91% 60%) 0%, hsl(217 91% 45%) 100%);
+    --gradient-card: linear-gradient(145deg, hsl(220 15% 8%) 0%, hsl(220 15% 4%) 100%);
+    --gradient-soft: linear-gradient(180deg, hsl(220 15% 6%) 0%, hsl(220 15% 3%) 100%);
 
-    /* Premium Dark Shadows with Glow */
-    --shadow-soft: 0 4px 24px rgba(0, 0, 0, 0.8);
-    --shadow-elegant: 0 10px 40px -10px rgba(31, 113, 229, 0.3);
-    --shadow-glow: 0 0 80px rgba(31, 113, 229, 0.2);
-    --glass-bg: hsla(0, 0%, 5%, 0.9);
-    --glass-border: hsla(0, 0%, 100%, 0.1);
+    /* Premium Dark Shadows with Enhanced Glow */
+    --shadow-soft: 0 4px 24px rgba(0, 0, 0, 0.9);
+    --shadow-elegant: 0 10px 40px -10px rgba(31, 113, 229, 0.4);
+    --shadow-glow: 0 0 100px rgba(31, 113, 229, 0.25);
+    --glass-bg: hsla(220, 15%, 6%, 0.95);
+    --glass-border: hsla(217, 91%, 60%, 0.15);
 
-    /* Enhanced Dark Shadows */
-    --shadow-sm: 0 2px 8px 0 rgb(0 0 0 / 0.6);
-    --shadow-md: 0 4px 12px -2px rgb(0 0 0 / 0.7);
-    --shadow-lg: 0 12px 24px -4px rgb(0 0 0 / 0.8);
-    --shadow-xl: 0 24px 48px -8px rgb(0 0 0 / 0.9);
+    /* Enhanced Dark Shadows with glow */
+    --shadow-sm: 0 2px 8px 0 rgb(0 0 0 / 0.7), 0 0 4px rgba(31, 113, 229, 0.05);
+    --shadow-md: 0 4px 12px -2px rgb(0 0 0 / 0.8), 0 0 8px rgba(31, 113, 229, 0.08);
+    --shadow-lg: 0 12px 24px -4px rgb(0 0 0 / 0.9), 0 0 16px rgba(31, 113, 229, 0.1);
+    --shadow-xl: 0 24px 48px -8px rgb(0 0 0 / 0.95), 0 0 32px rgba(31, 113, 229, 0.12);
 
-    /* Sidebar - Pure Black */
-    --sidebar-background: 0 0% 0%;
-    --sidebar-foreground: 0 0% 100%;
+    /* Sidebar - Dark with subtle blue tint */
+    --sidebar-background: 220 15% 4%;
+    --sidebar-foreground: 0 0% 98%;
     --sidebar-primary: 217 91% 60%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 0 0% 10%;
-    --sidebar-accent-foreground: 0 0% 100%;
-    --sidebar-border: 0 0% 100% / 0.1;
+    --sidebar-accent: 220 15% 12%;
+    --sidebar-accent-foreground: 0 0% 98%;
+    --sidebar-border: 220 15% 15%;
     --sidebar-ring: 217 91% 60%;
   }
 }

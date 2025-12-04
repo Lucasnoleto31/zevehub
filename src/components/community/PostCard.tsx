@@ -187,30 +187,30 @@ export function PostCard({ post }: PostCardProps) {
   });
 
   return (
-    <Card className="p-6 space-y-4 hover:shadow-lg transition-shadow">
+    <Card className="p-6 space-y-4 bg-card/80 backdrop-blur-sm border-border/50 hover:border-primary/30 hover:shadow-xl hover:shadow-primary/5 transition-all duration-300 rounded-2xl group">
       {/* Header do post */}
       <div className="flex items-start justify-between">
         <div 
           className="flex items-center gap-3 flex-1 cursor-pointer hover:opacity-80 transition-opacity"
           onClick={() => navigate(`/perfil/${post.user_id}`)}
         >
-          <Avatar>
+          <Avatar className="h-12 w-12 ring-2 ring-border/50 group-hover:ring-primary/30 transition-all">
             <AvatarImage src={post.profiles?.avatar_url} />
-            <AvatarFallback>
+            <AvatarFallback className="bg-gradient-to-br from-primary/20 to-primary/5 text-primary font-semibold">
               {post.profiles?.full_name?.charAt(0) || "U"}
             </AvatarFallback>
           </Avatar>
           <div>
             <div className="flex items-center gap-2 flex-wrap">
               <p className="font-semibold">{post.profiles?.full_name || "Usuário"}</p>
-              <Badge variant="secondary" className="text-xs">
+              <Badge variant="secondary" className="text-xs bg-primary/10 text-primary border-0">
                 Nível {post.profiles?.level || 1}
               </Badge>
               {userTitles?.map((title: any, index: number) => (
                 <Badge 
                   key={index}
                   style={{ backgroundColor: title.color }}
-                  className="text-white text-xs hover:animate-glow transition-all cursor-default"
+                  className="text-white text-xs hover:animate-glow transition-all cursor-default shadow-sm"
                 >
                   {title.icon} {title.name}
                 </Badge>
@@ -225,7 +225,7 @@ export function PostCard({ post }: PostCardProps) {
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <Badge variant="outline">{post.category}</Badge>
+          <Badge variant="outline" className="bg-card/50 border-border/50">{post.category}</Badge>
           
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -362,51 +362,51 @@ export function PostCard({ post }: PostCardProps) {
       </div>
 
       {/* Reações */}
-      <div className="flex items-center gap-4 pt-2 border-t">
+      <div className="flex items-center gap-2 sm:gap-4 pt-4 border-t border-border/50 flex-wrap">
         <Button
           variant="ghost"
           size="sm"
           onClick={() => reactionMutation.mutate('love')}
-          className={`gap-2 ${userReaction?.reaction_type === 'love' ? 'text-red-500' : ''}`}
+          className={`gap-2 rounded-full hover:bg-destructive/10 transition-all ${userReaction?.reaction_type === 'love' ? 'text-red-500 bg-red-500/10' : ''}`}
         >
           <Heart
             className={`h-4 w-4 ${userReaction?.reaction_type === 'love' ? 'fill-red-500' : ''}`}
           />
           <span>{reactionCounts?.love_count || 0}</span>
-          <span className="text-xs">Amei</span>
+          <span className="text-xs hidden sm:inline">Amei</span>
         </Button>
         
         <Button
           variant="ghost"
           size="sm"
           onClick={() => reactionMutation.mutate('like')}
-          className={`gap-2 ${userReaction?.reaction_type === 'like' ? 'text-primary' : ''}`}
+          className={`gap-2 rounded-full hover:bg-primary/10 transition-all ${userReaction?.reaction_type === 'like' ? 'text-primary bg-primary/10' : ''}`}
         >
           <ThumbsUp
             className={`h-4 w-4 ${userReaction?.reaction_type === 'like' ? 'fill-primary' : ''}`}
           />
           <span>{reactionCounts?.like_count || 0}</span>
-          <span className="text-xs">Joinha</span>
+          <span className="text-xs hidden sm:inline">Joinha</span>
         </Button>
         
         <Button
           variant="ghost"
           size="sm"
           onClick={() => reactionMutation.mutate('dislike')}
-          className={`gap-2 ${userReaction?.reaction_type === 'dislike' ? 'text-muted-foreground' : ''}`}
+          className={`gap-2 rounded-full hover:bg-muted transition-all ${userReaction?.reaction_type === 'dislike' ? 'text-muted-foreground bg-muted' : ''}`}
         >
           <ThumbsDown
             className={`h-4 w-4 ${userReaction?.reaction_type === 'dislike' ? 'fill-muted-foreground' : ''}`}
           />
           <span>{reactionCounts?.dislike_count || 0}</span>
-          <span className="text-xs">Deslike</span>
+          <span className="text-xs hidden sm:inline">Deslike</span>
         </Button>
 
         <Button
           variant="ghost"
           size="sm"
           onClick={() => setShowComments(!showComments)}
-          className="gap-2"
+          className={`gap-2 rounded-full hover:bg-primary/10 transition-all ${showComments ? 'bg-primary/10 text-primary' : ''}`}
         >
           <MessageCircle className="h-4 w-4" />
           <span>{commentsCount}</span>
@@ -415,7 +415,7 @@ export function PostCard({ post }: PostCardProps) {
         <Button 
           variant="ghost" 
           size="sm" 
-          className="gap-2"
+          className="gap-2 rounded-full hover:bg-primary/10 transition-all"
           onClick={() => {
             const postUrl = `${window.location.origin}/comunidade`;
             const shareText = `Confira este post na comunidade: ${post.content.substring(0, 100)}...`;
