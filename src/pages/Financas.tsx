@@ -1183,17 +1183,6 @@ export default function Financas() {
                   </CardContent>
                 </Card>
 
-                <Card className={`border-l-4 ${sobraParaGastarHoje < 0 ? "border-l-red-500" : "border-l-green-500"}`}>
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm text-muted-foreground">Sobra Hoje</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className={`text-2xl font-bold ${sobraParaGastarHoje < 0 ? "text-red-500" : "text-green-500"}`}>
-                      {formatCurrency(sobraParaGastarHoje)}
-                    </div>
-                  </CardContent>
-                </Card>
-
                 <Card className="border-l-4 border-l-yellow-500">
                   <CardHeader className="pb-2">
                     <CardTitle className="text-sm text-muted-foreground">Média 7 dias</CardTitle>
@@ -1207,7 +1196,7 @@ export default function Financas() {
               </div>
 
               {/* Cards de Receitas e Despesas por Mês */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <Card className="border-l-4 border-l-green-500">
                   <CardHeader className="pb-2">
                     <CardTitle className="text-sm text-muted-foreground flex items-center gap-2">
@@ -1237,40 +1226,6 @@ export default function Financas() {
                   <CardContent>
                     <div className="text-2xl font-bold text-red-500">
                       -{formatCurrency(totalDespesasPeriodo)}
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card className="border-l-4 border-l-orange-500">
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm text-muted-foreground flex items-center gap-2">
-                      <Calendar className="h-4 w-4 text-orange-500" />
-                      Previsão Despesas (Mês)
-                    </CardTitle>
-                    <CardDescription className="text-xs">
-                      Com base na média diária
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold text-orange-500">
-                      {formatCurrency(previsaoFimMes)}
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card className={`border-l-4 ${saldoPrevisto >= 0 ? "border-l-emerald-500" : "border-l-red-500"}`}>
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm text-muted-foreground flex items-center gap-2">
-                      <PiggyBank className={`h-4 w-4 ${saldoPrevisto >= 0 ? "text-emerald-500" : "text-red-500"}`} />
-                      Saldo Previsto
-                    </CardTitle>
-                    <CardDescription className="text-xs">
-                      Receitas - Previsão despesas
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className={`text-2xl font-bold ${saldoPrevisto >= 0 ? "text-emerald-500" : "text-red-500"}`}>
-                      {formatCurrency(saldoPrevisto)}
                     </div>
                   </CardContent>
                 </Card>
