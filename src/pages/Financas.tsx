@@ -41,6 +41,7 @@ interface Categoria {
 interface Lancamento {
   id: string;
   data: string;
+  data_vencimento: string | null;
   valor: number;
   categoria_id: string;
   descricao: string;
@@ -133,6 +134,7 @@ export default function Financas() {
   const [lancamentoRecorrente, setLancamentoRecorrente] = useState(false);
   const [lancamentoTipoTransacao, setLancamentoTipoTransacao] = useState<'receita' | 'despesa'>('despesa');
   const [lancamentoFrequencia, setLancamentoFrequencia] = useState<'semanal' | 'quinzenal' | 'mensal' | 'anual' | ''>('');
+  const [lancamentoVencimento, setLancamentoVencimento] = useState<string>('');
 
   // Form fields - Meta Financeira
   const [metaNome, setMetaNome] = useState("");
@@ -366,10 +368,14 @@ export default function Financas() {
     return lancamentosDashboard
       .filter(l => {
         if (l.tipo_transacao !== 'despesa' || l.pago) return false;
-        const dataLancamento = parseISO(l.data);
-        return dataLancamento >= hoje && dataLancamento <= tresDiasFrente;
+        const dataVenc = l.data_vencimento ? parseISO(l.data_vencimento) : parseISO(l.data);
+        return dataVenc >= hoje && dataVenc <= tresDiasFrente;
       })
-      .sort((a, b) => parseISO(a.data).getTime() - parseISO(b.data).getTime());
+      .sort((a, b) => {
+        const dataA = a.data_vencimento ? parseISO(a.data_vencimento) : parseISO(a.data);
+        const dataB = b.data_vencimento ? parseISO(b.data_vencimento) : parseISO(b.data);
+        return dataA.getTime() - dataB.getTime();
+      });
   }, [lancamentosDashboard]);
 
   const gastosDiarios = useMemo(() => {
@@ -576,6 +582,7 @@ export default function Financas() {
 
     const lancamentoPayload = {
       data: lancamentoData,
+      data_vencimento: lancamentoVencimento || null,
       valor: lancamentoValor,
       categoria_id: lancamentoCategoriaId,
       descricao: lancamentoDescricao,
@@ -810,53 +817,153 @@ export default function Financas() {
   const handleExportPDF = () => {
     const doc = new jsPDF();
     const mesAtual = format(new Date(), "MMMM yyyy", { locale: ptBR });
+    const pageWidth = doc.internal.pageSize.width;
+    const pageHeight = doc.internal.pageSize.height;
 
-    // Header
-    doc.setFontSize(20);
-    doc.setTextColor(30, 58, 138);
-    doc.text("Relatório Financeiro - Zeve Hub", 14, 20);
+    // Background gradient header
+    doc.setFillColor(15, 23, 42); // slate-900
+    doc.rect(0, 0, pageWidth, 50, 'F');
+    
+    // Decorative accent line
+    doc.setFillColor(6, 182, 212); // cyan-500
+    doc.rect(0, 50, pageWidth, 3, 'F');
+
+    // Logo/Title
+    doc.setFontSize(28);
+    doc.setTextColor(255, 255, 255);
+    doc.text("ZEVE HUB", 14, 25);
     doc.setFontSize(12);
-    doc.setTextColor(100);
-    doc.text(`Período: ${mesAtual}`, 14, 28);
+    doc.setTextColor(148, 163, 184); // slate-400
+    doc.text("Relatório Financeiro", 14, 35);
+    doc.text(mesAtual.charAt(0).toUpperCase() + mesAtual.slice(1), 14, 43);
 
-    // Resumo
+    // Date badge on right
+    doc.setFillColor(6, 182, 212);
+    doc.roundedRect(pageWidth - 55, 15, 45, 20, 3, 3, 'F');
+    doc.setFontSize(9);
+    doc.setTextColor(255, 255, 255);
+    doc.text(format(new Date(), "dd/MM/yyyy"), pageWidth - 50, 27);
+
+    // Summary Cards Section
+    let yPos = 65;
     doc.setFontSize(14);
-    doc.setTextColor(0);
-    doc.text("Resumo do Mês", 14, 40);
-    doc.setFontSize(10);
-    doc.text(`Total Gasto: R$ ${totalDespesas.toFixed(2)}`, 14, 48);
-    doc.text(`Média Diária: R$ ${(metricas?.media_7_dias || 0).toFixed(2)}`, 14, 54);
-    doc.text(`Previsão Fim de Mês: R$ ${(metricas?.previsao_fim_mes || 0).toFixed(2)}`, 14, 60);
-    doc.text(`Saldo Previsto: R$ ${((metricas?.sobra_calculada || 0) - (metricas?.previsao_fim_mes || 0)).toFixed(2)}`, 14, 66);
+    doc.setTextColor(30, 41, 59); // slate-800
+    doc.text("Resumo Financeiro", 14, yPos);
+    yPos += 10;
 
-    // Tabela
+    // Card boxes for summary
+    const cardWidth = (pageWidth - 38) / 4;
+    const cards = [
+      { label: "Total Receitas", value: totalReceitas, color: [34, 197, 94] }, // green-500
+      { label: "Total Despesas", value: totalDespesas, color: [239, 68, 68] }, // red-500
+      { label: "Saldo Atual", value: totalReceitas - totalDespesas, color: totalReceitas - totalDespesas >= 0 ? [16, 185, 129] : [239, 68, 68] },
+      { label: "Despesas Abertas", value: despesasEmAberto, color: [245, 158, 11] } // amber-500
+    ];
+
+    cards.forEach((card, i) => {
+      const x = 14 + (i * (cardWidth + 4));
+      // Card background
+      doc.setFillColor(248, 250, 252); // slate-50
+      doc.roundedRect(x, yPos, cardWidth, 28, 2, 2, 'F');
+      // Card border
+      doc.setDrawColor(card.color[0], card.color[1], card.color[2]);
+      doc.setLineWidth(0.5);
+      doc.roundedRect(x, yPos, cardWidth, 28, 2, 2, 'S');
+      // Label
+      doc.setFontSize(8);
+      doc.setTextColor(100, 116, 139); // slate-500
+      doc.text(card.label, x + 4, yPos + 8);
+      // Value
+      doc.setFontSize(12);
+      doc.setTextColor(card.color[0], card.color[1], card.color[2]);
+      doc.text(`R$ ${card.value.toFixed(2)}`, x + 4, yPos + 20);
+    });
+
+    yPos += 40;
+
+    // Divider
+    doc.setDrawColor(226, 232, 240); // slate-200
+    doc.setLineWidth(0.3);
+    doc.line(14, yPos, pageWidth - 14, yPos);
+    yPos += 10;
+
+    // Transactions Table
+    doc.setFontSize(14);
+    doc.setTextColor(30, 41, 59);
+    doc.text("Lançamentos", 14, yPos);
+    yPos += 5;
+
     autoTable(doc, {
-      startY: 75,
-      head: [["Tipo", "Data", "Categoria", "Descrição", "Valor", "Recorrência"]],
+      startY: yPos,
+      head: [["Tipo", "Data", "Vencimento", "Categoria", "Descrição", "Valor", "Status"]],
       body: lancamentos.map((l) => [
         l.tipo_transacao === 'receita' ? 'Receita' : 'Despesa',
         format(parseISO(l.data), "dd/MM/yyyy"),
+        l.data_vencimento ? format(parseISO(l.data_vencimento), "dd/MM/yyyy") : "-",
         l.categoria?.nome || "",
-        l.descricao || "",
+        l.descricao || "-",
         `${l.tipo_transacao === 'receita' ? '+' : '-'}R$ ${l.valor.toFixed(2)}`,
-        l.recorrente ? (l.frequencia_recorrencia || "Sim") : "-",
+        l.pago ? "Pago" : "Em aberto"
       ]),
-      theme: "striped",
-      headStyles: { fillColor: [30, 58, 138] },
+      theme: "plain",
+      headStyles: { 
+        fillColor: [15, 23, 42], 
+        textColor: [255, 255, 255],
+        fontStyle: 'bold',
+        fontSize: 9
+      },
+      bodyStyles: {
+        fontSize: 8,
+        textColor: [51, 65, 85]
+      },
+      alternateRowStyles: {
+        fillColor: [248, 250, 252]
+      },
+      columnStyles: {
+        0: { cellWidth: 18 },
+        4: { cellWidth: 40 },
+        5: { halign: 'right' },
+        6: { cellWidth: 20 }
+      },
+      margin: { left: 14, right: 14 },
+      didParseCell: (data) => {
+        if (data.section === 'body' && data.column.index === 6) {
+          if (data.cell.raw === "Em aberto") {
+            data.cell.styles.textColor = [245, 158, 11]; // amber
+          } else {
+            data.cell.styles.textColor = [34, 197, 94]; // green
+          }
+        }
+        if (data.section === 'body' && data.column.index === 5) {
+          const val = data.cell.raw as string;
+          if (val.startsWith('+')) {
+            data.cell.styles.textColor = [34, 197, 94];
+          } else {
+            data.cell.styles.textColor = [239, 68, 68];
+          }
+        }
+      }
     });
 
-    // Footer
+    // Footer on all pages
     const pageCount = doc.getNumberOfPages();
     for (let i = 1; i <= pageCount; i++) {
       doc.setPage(i);
+      
+      // Footer background
+      doc.setFillColor(248, 250, 252);
+      doc.rect(0, pageHeight - 18, pageWidth, 18, 'F');
+      doc.setDrawColor(226, 232, 240);
+      doc.line(0, pageHeight - 18, pageWidth, pageHeight - 18);
+      
       doc.setFontSize(8);
-      doc.setTextColor(150);
-      doc.text(`Gerado por Zeve Hub - ${format(new Date(), "dd/MM/yyyy HH:mm")}`, 14, doc.internal.pageSize.height - 10);
-      doc.text(`Página ${i}/${pageCount}`, doc.internal.pageSize.width - 30, doc.internal.pageSize.height - 10);
+      doc.setTextColor(100, 116, 139);
+      doc.text(`Gerado automaticamente por Zeve Hub em ${format(new Date(), "dd/MM/yyyy 'às' HH:mm")}`, 14, pageHeight - 8);
+      doc.text(`Página ${i} de ${pageCount}`, pageWidth - 35, pageHeight - 8);
     }
 
-    doc.save(`relatorio_${format(new Date(), "yyyy-MM")}.pdf`);
-    toast({ title: "PDF exportado" });
+    doc.save(`zeve-relatorio-financeiro-${format(new Date(), "yyyy-MM")}.pdf`);
+    toast({ title: "Relatório PDF gerado com sucesso!" });
   };
 
   const handleDownloadTemplate = () => {
@@ -1027,6 +1134,7 @@ export default function Financas() {
     setLancamentoRecorrente(false);
     setLancamentoTipoTransacao('despesa');
     setLancamentoFrequencia('');
+    setLancamentoVencimento('');
   };
 
   const resetMetaForm = () => {
@@ -1071,6 +1179,7 @@ export default function Financas() {
     setLancamentoDescricao(lanc.descricao || "");
     setLancamentoRecorrente(lanc.recorrente);
     setLancamentoFrequencia(lanc.frequencia_recorrencia || '');
+    setLancamentoVencimento(lanc.data_vencimento || '');
     setLancamentoDialog(true);
   };
 
@@ -1720,13 +1829,24 @@ export default function Financas() {
                             </SelectContent>
                           </Select>
                         </div>
-                        <div>
-                          <Label>Data</Label>
-                          <Input
-                            type="date"
-                            value={lancamentoData}
-                            onChange={(e) => setLancamentoData(e.target.value)}
-                          />
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <Label>Data</Label>
+                            <Input
+                              type="date"
+                              value={lancamentoData}
+                              onChange={(e) => setLancamentoData(e.target.value)}
+                            />
+                          </div>
+                          <div>
+                            <Label>Vencimento</Label>
+                            <Input
+                              type="date"
+                              value={lancamentoVencimento}
+                              onChange={(e) => setLancamentoVencimento(e.target.value)}
+                              placeholder="Opcional"
+                            />
+                          </div>
                         </div>
                         <div>
                           <Label>Valor (R$)</Label>
@@ -1940,10 +2060,10 @@ export default function Financas() {
                         </TableHead>
                         <TableHead>Tipo</TableHead>
                         <TableHead>Data</TableHead>
+                        <TableHead>Vencimento</TableHead>
                         <TableHead>Categoria</TableHead>
                         <TableHead>Descrição</TableHead>
                         <TableHead>Valor</TableHead>
-                        <TableHead>Recorrência</TableHead>
                         <TableHead>Pago</TableHead>
                         <TableHead className="text-right">Ações</TableHead>
                       </TableRow>
@@ -1964,6 +2084,15 @@ export default function Financas() {
                           </TableCell>
                           <TableCell>{format(parseISO(lanc.data), "dd/MM/yyyy")}</TableCell>
                           <TableCell>
+                            {lanc.data_vencimento ? (
+                              <span className={!lanc.pago && parseISO(lanc.data_vencimento) < new Date() ? "text-red-500 font-medium" : ""}>
+                                {format(parseISO(lanc.data_vencimento), "dd/MM/yyyy")}
+                              </span>
+                            ) : (
+                              <span className="text-muted-foreground">-</span>
+                            )}
+                          </TableCell>
+                          <TableCell>
                             <div className="flex items-center gap-2">
                               <div
                                 className="w-3 h-3 rounded"
@@ -1975,17 +2104,6 @@ export default function Financas() {
                           <TableCell>{lanc.descricao || "-"}</TableCell>
                           <TableCell className={`font-medium ${lanc.tipo_transacao === 'receita' ? 'text-green-500' : ''}`}>
                             {lanc.tipo_transacao === 'receita' ? '+' : '-'}{formatCurrency(lanc.valor)}
-                          </TableCell>
-                          <TableCell>
-                            {lanc.recorrente ? (
-                              <Badge variant="outline">
-                                {lanc.frequencia_recorrencia 
-                                  ? lanc.frequencia_recorrencia.charAt(0).toUpperCase() + lanc.frequencia_recorrencia.slice(1)
-                                  : 'Sim'}
-                              </Badge>
-                            ) : (
-                              <span className="text-muted-foreground">-</span>
-                            )}
                           </TableCell>
                           <TableCell>
                             <Button
@@ -2290,79 +2408,70 @@ export default function Financas() {
 
             {/* EXPORTAR TAB */}
             <TabsContent value="exportar" className="space-y-6">
-              <h2 className="text-xl font-semibold">Importar e Exportar Dados</h2>
+              <div className="text-center mb-8">
+                <h2 className="text-2xl font-bold mb-2">Exportar Relatórios</h2>
+                <p className="text-muted-foreground">Gere relatórios profissionais dos seus dados financeiros</p>
+              </div>
 
-              {/* Import Section */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Upload className="h-5 w-5" />
-                    Importar Planilha
-                  </CardTitle>
-                  <CardDescription>
-                    Importe lançamentos de receitas e despesas através de uma planilha Excel ou CSV
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="flex gap-2">
-                    <Button variant="outline" onClick={handleDownloadTemplate}>
-                      <FileSpreadsheet className="h-4 w-4 mr-2" />
-                      Baixar Modelo
-                    </Button>
-                    <div className="relative">
-                      <Input
-                        type="file"
-                        accept=".xlsx,.xls,.csv"
-                        onChange={handleFileUpload}
-                        className="absolute inset-0 opacity-0 cursor-pointer"
-                      />
-                      <Button>
-                        <Upload className="h-4 w-4 mr-2" />
-                        Selecionar Arquivo
-                      </Button>
-                    </div>
-                  </div>
-                  <Alert>
-                    <AlertCircle className="h-4 w-4" />
-                    <AlertTitle>Formato da Planilha</AlertTitle>
-                    <AlertDescription>
-                      Use as colunas: Data, Valor, Tipo (receita/despesa), Categoria, Descricao, Recorrente (Sim/Não), Frequencia (semanal/quinzenal/mensal/anual)
-                    </AlertDescription>
-                  </Alert>
-                </CardContent>
-              </Card>
-
-              {/* Export Section */}
+              {/* Cards de Exportação */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <Download className="h-5 w-5" />
-                      Exportar CSV
-                    </CardTitle>
+                <Card className="border-2 hover:border-primary/50 transition-all hover:shadow-lg">
+                  <CardHeader className="text-center pb-2">
+                    <div className="mx-auto w-16 h-16 rounded-full bg-green-500/10 flex items-center justify-center mb-4">
+                      <FileSpreadsheet className="h-8 w-8 text-green-500" />
+                    </div>
+                    <CardTitle className="text-xl">Planilha CSV</CardTitle>
                     <CardDescription>
-                      Baixe seus lançamentos em formato CSV para análise em planilhas
+                      Exporte todos os lançamentos em formato CSV para análise em Excel ou Google Sheets
                     </CardDescription>
                   </CardHeader>
-                  <CardContent>
-                    <Button onClick={handleExportCSV} className="w-full">
+                  <CardContent className="pt-4">
+                    <div className="space-y-3 text-sm text-muted-foreground mb-4">
+                      <div className="flex items-center gap-2">
+                        <CheckCircle2 className="h-4 w-4 text-green-500" />
+                        <span>Todos os lançamentos do período</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <CheckCircle2 className="h-4 w-4 text-green-500" />
+                        <span>Compatível com Excel e Google Sheets</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <CheckCircle2 className="h-4 w-4 text-green-500" />
+                        <span>Ideal para análises customizadas</span>
+                      </div>
+                    </div>
+                    <Button onClick={handleExportCSV} className="w-full" variant="outline">
                       <Download className="h-4 w-4 mr-2" />
                       Baixar CSV
                     </Button>
                   </CardContent>
                 </Card>
 
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <FileText className="h-5 w-5" />
-                      Exportar PDF
-                    </CardTitle>
+                <Card className="border-2 border-primary/30 hover:border-primary transition-all hover:shadow-lg bg-gradient-to-br from-primary/5 to-transparent">
+                  <CardHeader className="text-center pb-2">
+                    <div className="mx-auto w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-4">
+                      <FileText className="h-8 w-8 text-primary" />
+                    </div>
+                    <CardTitle className="text-xl">Relatório PDF</CardTitle>
                     <CardDescription>
-                      Gere um relatório PDF elegante com gráficos e resumo financeiro
+                      Gere um relatório visual profissional com resumos e gráficos
                     </CardDescription>
                   </CardHeader>
-                  <CardContent>
+                  <CardContent className="pt-4">
+                    <div className="space-y-3 text-sm text-muted-foreground mb-4">
+                      <div className="flex items-center gap-2">
+                        <CheckCircle2 className="h-4 w-4 text-primary" />
+                        <span>Design moderno e profissional</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <CheckCircle2 className="h-4 w-4 text-primary" />
+                        <span>Resumo financeiro completo</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <CheckCircle2 className="h-4 w-4 text-primary" />
+                        <span>Tabela detalhada de transações</span>
+                      </div>
+                    </div>
                     <Button onClick={handleExportPDF} className="w-full">
                       <FileText className="h-4 w-4 mr-2" />
                       Gerar Relatório PDF
@@ -2371,64 +2480,31 @@ export default function Financas() {
                 </Card>
               </div>
 
-              {/* Import Dialog */}
-              <Dialog open={importDialog} onOpenChange={setImportDialog}>
-                <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
-                  <DialogHeader>
-                    <DialogTitle>Confirmar Importação</DialogTitle>
-                    <DialogDescription>
-                      Verifique os dados antes de importar. {importData.filter(d => d.valid).length} de {importData.length} registros válidos.
-                    </DialogDescription>
-                  </DialogHeader>
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Data</TableHead>
-                        <TableHead>Valor</TableHead>
-                        <TableHead>Tipo</TableHead>
-                        <TableHead>Categoria</TableHead>
-                        <TableHead>Descrição</TableHead>
-                        <TableHead>Status</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {importData.slice(0, 50).map((item) => (
-                        <TableRow key={item.index} className={!item.valid ? "bg-destructive/10" : ""}>
-                          <TableCell>{item.data}</TableCell>
-                          <TableCell>{formatCurrency(item.valor)}</TableCell>
-                          <TableCell>
-                            <Badge variant={item.tipo === "receita" ? "default" : "secondary"}>
-                              {item.tipo}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>{item.categoria}</TableCell>
-                          <TableCell className="max-w-[200px] truncate">{item.descricao}</TableCell>
-                          <TableCell>
-                            {item.valid ? (
-                              <CheckCircle2 className="h-4 w-4 text-green-500" />
-                            ) : (
-                              <AlertCircle className="h-4 w-4 text-destructive" />
-                            )}
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                  {importData.length > 50 && (
-                    <p className="text-sm text-muted-foreground text-center">
-                      Mostrando 50 de {importData.length} registros
-                    </p>
-                  )}
-                  <DialogFooter>
-                    <Button variant="outline" onClick={() => setImportDialog(false)}>
-                      Cancelar
-                    </Button>
-                    <Button onClick={handleConfirmImport} disabled={importLoading || importData.filter(d => d.valid).length === 0}>
-                      {importLoading ? "Importando..." : `Importar ${importData.filter(d => d.valid).length} Registros`}
-                    </Button>
-                  </DialogFooter>
-                </DialogContent>
-              </Dialog>
+              {/* Preview Info */}
+              <Card className="bg-muted/30">
+                <CardContent className="pt-6">
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
+                    <div>
+                      <p className="text-2xl font-bold text-primary">{lancamentos.length}</p>
+                      <p className="text-sm text-muted-foreground">Lançamentos</p>
+                    </div>
+                    <div>
+                      <p className="text-2xl font-bold text-green-500">{formatCurrency(totalReceitas)}</p>
+                      <p className="text-sm text-muted-foreground">Total Receitas</p>
+                    </div>
+                    <div>
+                      <p className="text-2xl font-bold text-red-500">{formatCurrency(totalDespesas)}</p>
+                      <p className="text-sm text-muted-foreground">Total Despesas</p>
+                    </div>
+                    <div>
+                      <p className={`text-2xl font-bold ${(totalReceitas - totalDespesas) >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+                        {formatCurrency(totalReceitas - totalDespesas)}
+                      </p>
+                      <p className="text-sm text-muted-foreground">Saldo</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
             </TabsContent>
           </Tabs>
         </main>
