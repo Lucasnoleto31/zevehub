@@ -1701,9 +1701,9 @@ export default function Financas() {
                             </SelectTrigger>
                             <SelectContent>
                               {categoriasParaLancamento.length === 0 ? (
-                                <SelectItem value="" disabled>
+                                <div className="px-2 py-4 text-center text-sm text-muted-foreground">
                                   Nenhuma categoria de {lancamentoTipoTransacao} cadastrada
-                                </SelectItem>
+                                </div>
                               ) : (
                                 categoriasParaLancamento.map((cat) => (
                                   <SelectItem key={cat.id} value={cat.id}>
