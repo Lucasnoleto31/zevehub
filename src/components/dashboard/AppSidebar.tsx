@@ -8,6 +8,7 @@ import {
   Users,
   Wallet,
   ShieldCheck,
+  TrendingUp,
 } from "lucide-react";
 
 import {
@@ -32,6 +33,12 @@ const menuItems = [
     url: "/dashboard",
     icon: Home,
     color: "text-blue-500",
+  },
+  {
+    title: "Oportunidades",
+    url: "/oportunidades",
+    icon: TrendingUp,
+    color: "text-emerald-500",
   },
   {
     title: "Robôs",
