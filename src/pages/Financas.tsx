@@ -146,8 +146,8 @@ export default function Financas() {
   const [salarioMensal, setSalarioMensal] = useState(0);
   const [modeloOrcamento, setModeloOrcamento] = useState("50/30/20");
 
-  // Dashboard period filter
-  const [dashboardPeriodo, setDashboardPeriodo] = useState<'7dias' | '14dias' | 'mensal'>('mensal');
+  // Dashboard month filter (formato: "2024-01")
+  const [dashboardMes, setDashboardMes] = useState<string>(format(new Date(), "yyyy-MM"));
 
   // Filter states
   const [filtroTipoLancamento, setFiltroTipoLancamento] = useState<'todos' | 'receita' | 'despesa'>('todos');
@@ -211,16 +211,16 @@ export default function Financas() {
       setCategorias(categoriasData as any);
     }
 
-    // Load lancamentos do mês atual
-    const inicioMes = format(startOfMonth(new Date()), "yyyy-MM-dd");
-    const fimMes = format(endOfMonth(new Date()), "yyyy-MM-dd");
+    // Load lancamentos do ano atual (para permitir filtro por mês)
+    const inicioAno = format(new Date(new Date().getFullYear(), 0, 1), "yyyy-MM-dd");
+    const fimAno = format(new Date(new Date().getFullYear(), 11, 31), "yyyy-MM-dd");
 
     const { data: lancamentosData } = await supabase
       .from("lancamentos_financas")
       .select("*")
       .eq("user_id", user.id)
-      .gte("data", inicioMes)
-      .lte("data", fimMes)
+      .gte("data", inicioAno)
+      .lte("data", fimAno)
       .order("data", { ascending: false });
 
     if (lancamentosData && categoriasData) {
@@ -275,27 +275,24 @@ export default function Financas() {
     }
   };
 
-  // Cálculos baseados no período selecionado do Dashboard
+  // Nome do mês selecionado para exibição
+  const nomeMesSelecionado = useMemo(() => {
+    const [ano, mes] = dashboardMes.split('-');
+    const data = new Date(parseInt(ano), parseInt(mes) - 1, 1);
+    return format(data, "MMMM yyyy", { locale: ptBR });
+  }, [dashboardMes]);
+
+  // Cálculos baseados no mês selecionado do Dashboard
   const lancamentosDashboard = useMemo(() => {
-    const hoje = new Date();
-    let dataInicio: Date;
-    
-    switch (dashboardPeriodo) {
-      case '7dias':
-        dataInicio = subDays(hoje, 7);
-        break;
-      case '14dias':
-        dataInicio = subDays(hoje, 14);
-        break;
-      case 'mensal':
-      default:
-        dataInicio = startOfMonth(hoje);
-        break;
-    }
+    const [ano, mes] = dashboardMes.split('-');
+    const dataInicio = new Date(parseInt(ano), parseInt(mes) - 1, 1);
+    const dataFim = endOfMonth(dataInicio);
     
     const dataInicioStr = format(dataInicio, "yyyy-MM-dd");
-    return lancamentos.filter(l => l.data >= dataInicioStr);
-  }, [lancamentos, dashboardPeriodo]);
+    const dataFimStr = format(dataFim, "yyyy-MM-dd");
+    
+    return lancamentos.filter(l => l.data >= dataInicioStr && l.data <= dataFimStr);
+  }, [lancamentos, dashboardMes]);
 
   // Cálculos - APENAS DESPESAS para gastos
   const totalGastoHoje = useMemo(() => {
@@ -333,26 +330,16 @@ export default function Financas() {
   }, [lancamentosDashboard]);
 
   const gastosDiarios = useMemo(() => {
+    const [ano, mes] = dashboardMes.split('-');
+    const dataInicio = new Date(parseInt(ano), parseInt(mes) - 1, 1);
+    const dataFim = endOfMonth(dataInicio);
     const hoje = new Date();
-    let dataInicio: Date;
-    
-    switch (dashboardPeriodo) {
-      case '7dias':
-        dataInicio = subDays(hoje, 6);
-        break;
-      case '14dias':
-        dataInicio = subDays(hoje, 13);
-        break;
-      case 'mensal':
-      default:
-        dataInicio = startOfMonth(hoje);
-        break;
-    }
+    const dataLimite = dataFim > hoje ? hoje : dataFim;
     
     const gastos: Record<string, { receitas: number; despesas: number }> = {};
     
     let currentDate = dataInicio;
-    while (currentDate <= hoje) {
+    while (currentDate <= dataLimite) {
       const dia = format(currentDate, "yyyy-MM-dd");
       gastos[dia] = { receitas: 0, despesas: 0 };
       currentDate = new Date(currentDate.getTime() + 24 * 60 * 60 * 1000);
@@ -369,22 +356,21 @@ export default function Financas() {
     });
 
     return Object.entries(gastos).map(([data, valores]) => ({
-      data: format(parseISO(data), "dd/MM"),
+      data: format(parseISO(data), "dd"),
       receitas: valores.receitas,
       despesas: valores.despesas,
     }));
-  }, [lancamentosDashboard, dashboardPeriodo]);
+  }, [lancamentosDashboard, dashboardMes]);
 
-  // Totais separados por tipo no período (receitas inclui salário mensal se mensal)
+  // Totais separados por tipo no período (receitas inclui salário mensal)
   const totalReceitasPeriodo = useMemo(() => {
     const receitasLancamentos = lancamentosDashboard
       .filter(l => l.tipo_transacao === 'receita')
       .reduce((sum, l) => sum + l.valor, 0);
     
-    // Adiciona salário mensal automaticamente se for visualização mensal
-    const salarioAdicional = dashboardPeriodo === 'mensal' ? salarioMensal : 0;
-    return receitasLancamentos + salarioAdicional;
-  }, [lancamentosDashboard, salarioMensal, dashboardPeriodo]);
+    // Adiciona salário mensal automaticamente
+    return receitasLancamentos + salarioMensal;
+  }, [lancamentosDashboard, salarioMensal]);
 
   const totalDespesasPeriodo = useMemo(() => {
     return lancamentosDashboard.filter(l => l.tipo_transacao === 'despesa').reduce((sum, l) => sum + l.valor, 0);
@@ -1123,34 +1109,31 @@ export default function Financas() {
 
             {/* DASHBOARD TAB */}
             <TabsContent value="dashboard" className="space-y-6">
-              {/* Filtro de Período */}
+              {/* Filtro de Mês */}
               <Card>
                 <CardContent className="pt-4">
                   <div className="flex items-center gap-4 flex-wrap">
-                    <Label className="text-muted-foreground">Período:</Label>
-                    <div className="flex gap-2">
-                      <Button
-                        variant={dashboardPeriodo === '7dias' ? 'default' : 'outline'}
-                        size="sm"
-                        onClick={() => setDashboardPeriodo('7dias')}
-                      >
-                        Últimos 7 dias
-                      </Button>
-                      <Button
-                        variant={dashboardPeriodo === '14dias' ? 'default' : 'outline'}
-                        size="sm"
-                        onClick={() => setDashboardPeriodo('14dias')}
-                      >
-                        Últimos 14 dias
-                      </Button>
-                      <Button
-                        variant={dashboardPeriodo === 'mensal' ? 'default' : 'outline'}
-                        size="sm"
-                        onClick={() => setDashboardPeriodo('mensal')}
-                      >
-                        Mês Atual
-                      </Button>
-                    </div>
+                    <Label className="text-muted-foreground">Mês:</Label>
+                    <Select value={dashboardMes} onValueChange={setDashboardMes}>
+                      <SelectTrigger className="w-[200px]">
+                        <SelectValue placeholder="Selecione o mês" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {Array.from({ length: 12 }, (_, i) => {
+                          const ano = new Date().getFullYear();
+                          const mes = format(new Date(ano, i, 1), "yyyy-MM");
+                          const nomeMes = format(new Date(ano, i, 1), "MMMM", { locale: ptBR });
+                          return (
+                            <SelectItem key={mes} value={mes}>
+                              {nomeMes.charAt(0).toUpperCase() + nomeMes.slice(1)} {ano}
+                            </SelectItem>
+                          );
+                        })}
+                      </SelectContent>
+                    </Select>
+                    <Badge variant="secondary" className="capitalize">
+                      {nomeMesSelecionado}
+                    </Badge>
                   </div>
                 </CardContent>
               </Card>
@@ -1223,15 +1206,15 @@ export default function Financas() {
                 </Card>
               </div>
 
-              {/* Cards de Receitas e Despesas por Período */}
+              {/* Cards de Receitas e Despesas por Mês */}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 <Card className="border-l-4 border-l-green-500">
                   <CardHeader className="pb-2">
                     <CardTitle className="text-sm text-muted-foreground flex items-center gap-2">
                       <TrendingUp className="h-4 w-4 text-green-500" />
-                      Receitas ({dashboardPeriodo === '7dias' ? '7 dias' : dashboardPeriodo === '14dias' ? '14 dias' : 'Mês'})
+                      Receitas
                     </CardTitle>
-                    {dashboardPeriodo === 'mensal' && salarioMensal > 0 && (
+                    {salarioMensal > 0 && (
                       <CardDescription className="text-xs">
                         Inclui salário de {formatCurrency(salarioMensal)}
                       </CardDescription>
@@ -1248,7 +1231,7 @@ export default function Financas() {
                   <CardHeader className="pb-2">
                     <CardTitle className="text-sm text-muted-foreground flex items-center gap-2">
                       <TrendingDown className="h-4 w-4 text-red-500" />
-                      Despesas ({dashboardPeriodo === '7dias' ? '7 dias' : dashboardPeriodo === '14dias' ? '14 dias' : 'Mês'})
+                      Despesas
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
@@ -1295,8 +1278,8 @@ export default function Financas() {
 
               <Card>
                 <CardHeader className="pb-2">
-                  <CardTitle className="text-sm text-muted-foreground">
-                    Saldo do Período ({dashboardPeriodo === '7dias' ? '7 dias' : dashboardPeriodo === '14dias' ? '14 dias' : 'Mês'})
+                  <CardTitle className="text-sm text-muted-foreground capitalize">
+                    Saldo de {nomeMesSelecionado}
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
@@ -1328,7 +1311,7 @@ export default function Financas() {
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <Card>
                   <CardHeader>
-                    <CardTitle>Gastos por Categoria ({dashboardPeriodo === '7dias' ? '7 dias' : dashboardPeriodo === '14dias' ? '14 dias' : 'Mês'})</CardTitle>
+                    <CardTitle className="capitalize">Gastos por Categoria - {nomeMesSelecionado}</CardTitle>
                   </CardHeader>
                   <CardContent>
                     <div className="h-[300px]">
@@ -1357,7 +1340,7 @@ export default function Financas() {
 
                 <Card>
                   <CardHeader>
-                    <CardTitle>Receitas vs Despesas ({dashboardPeriodo === '7dias' ? '7 dias' : dashboardPeriodo === '14dias' ? '14 dias' : 'Mês'})</CardTitle>
+                    <CardTitle className="capitalize">Receitas vs Despesas - {nomeMesSelecionado}</CardTitle>
                   </CardHeader>
                   <CardContent>
                     <div className="h-[300px]">
