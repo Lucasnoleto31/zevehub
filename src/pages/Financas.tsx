@@ -93,6 +93,7 @@ export default function Financas() {
   // Form fields
   const [categoriaNome, setCategoriaNome] = useState("");
   const [categoriaTipo, setCategoriaTipo] = useState("essencial");
+  const [categoriaTipoCustom, setCategoriaTipoCustom] = useState("");
   const [categoriaCor, setCategoriaCor] = useState("#06B6D4");
   const [categoriaPercentual, setCategoriaPercentual] = useState(0);
   const [categoriaMetaValor, setCategoriaMetaValor] = useState(0);
@@ -329,13 +330,34 @@ export default function Financas() {
     return lancamentos.filter(l => l.recorrente && l.data === hoje);
   }, [lancamentos]);
 
+  // Lista dinâmica de tipos (padrão + customizados do usuário)
+  const tiposCategoria = useMemo(() => {
+    const tiposCustomizados = categorias
+      .map(c => c.tipo)
+      .filter(tipo => !TIPOS_CATEGORIA_PADRAO.some(t => t.value === tipo))
+      .filter((tipo, index, self) => self.indexOf(tipo) === index);
+    
+    const listaPadrao = [...TIPOS_CATEGORIA_PADRAO];
+    tiposCustomizados.forEach(tipo => {
+      listaPadrao.push({ value: tipo, label: tipo });
+    });
+    
+    return listaPadrao;
+  }, [categorias]);
+
   // Funções CRUD
   const handleSaveCategoria = async () => {
     if (!user || !categoriaNome) return;
 
+    const tipoFinal = categoriaTipo === "custom" ? categoriaTipoCustom.trim() : categoriaTipo;
+    if (!tipoFinal) {
+      toast({ title: "Digite o nome do tipo", variant: "destructive" });
+      return;
+    }
+
     const categoriaData = {
       nome: categoriaNome,
-      tipo: categoriaTipo,
+      tipo: tipoFinal,
       cor: categoriaCor,
       percentual_meta: categoriaPercentual,
       meta_valor: categoriaMetaValor,
@@ -728,6 +750,7 @@ export default function Financas() {
     setEditingCategoria(null);
     setCategoriaNome("");
     setCategoriaTipo("essencial");
+    setCategoriaTipoCustom("");
     setCategoriaCor("#06B6D4");
     setCategoriaPercentual(0);
     setCategoriaMetaValor(0);
@@ -748,7 +771,16 @@ export default function Financas() {
   const openEditCategoria = (cat: Categoria) => {
     setEditingCategoria(cat);
     setCategoriaNome(cat.nome);
-    setCategoriaTipo(cat.tipo || "essencial");
+    
+    const isPredefinedType = TIPOS_CATEGORIA_PADRAO.some(t => t.value === cat.tipo);
+    if (isPredefinedType) {
+      setCategoriaTipo(cat.tipo);
+      setCategoriaTipoCustom("");
+    } else {
+      setCategoriaTipo(cat.tipo);
+      setCategoriaTipoCustom("");
+    }
+    
     setCategoriaCor(cat.cor);
     setCategoriaPercentual(cat.percentual_meta);
     setCategoriaMetaValor(cat.meta_valor);
@@ -1110,13 +1142,21 @@ export default function Financas() {
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
-                            {TIPOS_CATEGORIA_PADRAO.map((t) => (
+                            {tiposCategoria.map((t) => (
                               <SelectItem key={t.value} value={t.value}>
                                 {t.label}
                               </SelectItem>
                             ))}
+                            <SelectItem value="custom">+ Criar novo tipo</SelectItem>
                           </SelectContent>
                         </Select>
+                        {categoriaTipo === "custom" && (
+                          <Input
+                            value={categoriaTipoCustom}
+                            onChange={(e) => setCategoriaTipoCustom(e.target.value)}
+                            placeholder="Digite o nome do novo tipo"
+                          />
+                        )}
                       </div>
                       <div>
                         <Label>Cor</Label>
@@ -1180,7 +1220,7 @@ export default function Financas() {
                           <TableCell className="font-medium">{cat.nome}</TableCell>
                           <TableCell>
                             <Badge variant="outline">
-                              {TIPOS_CATEGORIA_PADRAO.find((t) => t.value === cat.tipo)?.label || cat.tipo}
+                              {tiposCategoria.find((t) => t.value === cat.tipo)?.label || cat.tipo}
                             </Badge>
                           </TableCell>
                           <TableCell>
