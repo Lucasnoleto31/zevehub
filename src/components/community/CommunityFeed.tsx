@@ -126,15 +126,15 @@ export function CommunityFeed() {
   const posts = data?.pages.flatMap((page) => page.posts) || [];
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <div className="flex flex-col sm:flex-row gap-4 items-center justify-between">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <div className="relative flex-1 w-full">
+          <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder="Buscar posts..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10"
+            className="pl-11 bg-card/80 backdrop-blur-sm border-border/50 focus:border-primary/50 focus:ring-primary/20 transition-all rounded-xl h-11"
           />
         </div>
       </div>
@@ -151,6 +151,11 @@ export function CommunityFeed() {
             variant={showFollowingOnly ? "default" : "outline"}
             onClick={() => setShowFollowingOnly(!showFollowingOnly)}
             size="sm"
+            className={`rounded-full transition-all ${
+              showFollowingOnly 
+                ? "bg-gradient-to-r from-primary to-primary/80 shadow-lg shadow-primary/25 hover:shadow-primary/40" 
+                : "bg-card/80 border-border/50 hover:border-primary/50"
+            }`}
           >
             {showFollowingOnly ? "Mostrando: Seguindo" : "Mostrar apenas seguindo"}
           </Button>
@@ -161,35 +166,45 @@ export function CommunityFeed() {
         {isLoading ? (
           <>
             {[1, 2, 3].map((i) => (
-              <div key={i} className="border rounded-lg p-6 space-y-4">
+              <div key={i} className="border border-border/50 rounded-2xl p-6 space-y-4 bg-card/50 backdrop-blur-sm">
                 <div className="flex items-center gap-3">
-                  <Skeleton className="h-10 w-10 rounded-full" />
+                  <Skeleton className="h-12 w-12 rounded-full" />
                   <div className="space-y-2">
                     <Skeleton className="h-4 w-32" />
                     <Skeleton className="h-3 w-24" />
                   </div>
                 </div>
-                <Skeleton className="h-20 w-full" />
+                <Skeleton className="h-20 w-full rounded-xl" />
               </div>
             ))}
           </>
         ) : posts && posts.length > 0 ? (
           <>
-            {posts.map((post) => (
-              <PostCard key={post.id} post={post} />
+            {posts.map((post, index) => (
+              <div 
+                key={post.id} 
+                className="animate-fade-in"
+                style={{ animationDelay: `${index * 50}ms` }}
+              >
+                <PostCard post={post} />
+              </div>
             ))}
-            <div ref={observerTarget} className="flex justify-center py-4">
+            <div ref={observerTarget} className="flex justify-center py-6">
               {isFetchingNextPage && (
-                <div className="flex items-center gap-2 text-muted-foreground">
-                  <Loader2 className="h-5 w-5 animate-spin" />
+                <div className="flex items-center gap-3 text-muted-foreground bg-card/80 backdrop-blur-sm px-6 py-3 rounded-full border border-border/50">
+                  <Loader2 className="h-5 w-5 animate-spin text-primary" />
                   <span>Carregando mais posts...</span>
                 </div>
               )}
             </div>
           </>
         ) : (
-          <div className="text-center py-12 border rounded-lg">
-            <p className="text-muted-foreground">Nenhum post encontrado</p>
+          <div className="text-center py-16 border border-border/50 rounded-2xl bg-card/50 backdrop-blur-sm">
+            <div className="p-4 rounded-full bg-muted/50 w-fit mx-auto mb-4">
+              <Search className="h-8 w-8 text-muted-foreground" />
+            </div>
+            <p className="text-muted-foreground text-lg">Nenhum post encontrado</p>
+            <p className="text-muted-foreground/60 text-sm mt-1">Seja o primeiro a compartilhar!</p>
           </div>
         )}
       </div>
