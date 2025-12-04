@@ -1010,6 +1010,42 @@ export type Database = {
           },
         ]
       }
+      risk_management_settings: {
+        Row: {
+          ativo: string
+          capital: number
+          created_at: string
+          id: string
+          payoff: number
+          stop_pontos: number
+          taxa_acerto: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          ativo?: string
+          capital?: number
+          created_at?: string
+          id?: string
+          payoff?: number
+          stop_pontos?: number
+          taxa_acerto?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          ativo?: string
+          capital?: number
+          created_at?: string
+          id?: string
+          payoff?: number
+          stop_pontos?: number
+          taxa_acerto?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       strategies: {
         Row: {
           created_at: string

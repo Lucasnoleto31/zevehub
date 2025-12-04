@@ -33,7 +33,7 @@ import {
   Area,
   AreaChart,
 } from "recharts";
-import { ShieldCheck, TrendingUp, Target, DollarSign, Calendar, BarChart3, FileDown, FileSpreadsheet, Info } from "lucide-react";
+import { ShieldCheck, TrendingUp, Target, DollarSign, Calendar, BarChart3, FileDown, FileSpreadsheet, Info, Loader2, Check } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -48,22 +48,79 @@ const GerenciamentoRisco = () => {
   const [taxaAcerto, setTaxaAcerto] = useState(30);
   const [ativo, setAtivo] = useState<"WIN" | "WDO">("WIN");
   const [isAdmin, setIsAdmin] = useState(false);
+  const [userId, setUserId] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
 
+  // Carregar configurações do banco
   useEffect(() => {
-    const checkAdmin = async () => {
+    const loadSettings = async () => {
       const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        const { data } = await supabase
-          .from("user_roles")
-          .select("role")
-          .eq("user_id", user.id)
-          .eq("role", "admin")
-          .maybeSingle();
-        setIsAdmin(!!data);
+      if (!user) {
+        setIsLoading(false);
+        return;
       }
+      
+      setUserId(user.id);
+
+      // Check admin status
+      const { data: roleData } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", user.id)
+        .eq("role", "admin")
+        .maybeSingle();
+      setIsAdmin(!!roleData);
+
+      // Load saved settings
+      const { data: settings } = await supabase
+        .from("risk_management_settings")
+        .select("*")
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+      if (settings) {
+        setCapital(Number(settings.capital));
+        setPayoff(Number(settings.payoff));
+        setStopPontos(Number(settings.stop_pontos));
+        setTaxaAcerto(Number(settings.taxa_acerto));
+        setAtivo(settings.ativo as "WIN" | "WDO");
+      }
+      
+      setIsLoading(false);
     };
-    checkAdmin();
+    
+    loadSettings();
   }, []);
+
+  // Salvar configurações automaticamente
+  useEffect(() => {
+    if (!userId || isLoading) return;
+
+    const saveSettings = async () => {
+      setIsSaving(true);
+      
+      const { error } = await supabase
+        .from("risk_management_settings")
+        .upsert({
+          user_id: userId,
+          capital,
+          payoff,
+          stop_pontos: stopPontos,
+          taxa_acerto: taxaAcerto,
+          ativo,
+        }, { onConflict: "user_id" });
+
+      if (error) {
+        console.error("Erro ao salvar configurações:", error);
+      }
+      
+      setIsSaving(false);
+    };
+
+    const debounceTimer = setTimeout(saveSettings, 500);
+    return () => clearTimeout(debounceTimer);
+  }, [userId, capital, payoff, stopPontos, taxaAcerto, ativo, isLoading]);
 
   const calc = useMemo(() => {
     const pointValue = ativo === "WIN" ? 0.20 : 10;
@@ -343,17 +400,34 @@ const GerenciamentoRisco = () => {
       <div className="min-h-screen flex w-full bg-[#0b1220]">
         <AppSidebar isAdmin={isAdmin} />
         <main className="flex-1 p-6 overflow-auto">
-          <div className="flex items-center gap-4 mb-6">
-            <SidebarTrigger />
-            <div>
-              <h1 className="text-2xl font-bold text-white flex items-center gap-2">
-                <ShieldCheck className="h-6 w-6 text-cyan-400" />
-                Gerenciamento de Risco
-              </h1>
-              <p className="text-gray-400 text-sm">
-                Calcule mão adequada, risco diário e projeção mensal
-              </p>
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-4">
+              <SidebarTrigger />
+              <div>
+                <h1 className="text-2xl font-bold text-white flex items-center gap-2">
+                  <ShieldCheck className="h-6 w-6 text-cyan-400" />
+                  Gerenciamento de Risco
+                </h1>
+                <p className="text-gray-400 text-sm">
+                  Calcule mão adequada, risco diário e projeção mensal
+                </p>
+              </div>
             </div>
+            {!isLoading && (
+              <div className="flex items-center gap-2 text-sm">
+                {isSaving ? (
+                  <>
+                    <Loader2 className="h-4 w-4 text-cyan-400 animate-spin" />
+                    <span className="text-gray-400">Salvando...</span>
+                  </>
+                ) : (
+                  <>
+                    <Check className="h-4 w-4 text-emerald-400" />
+                    <span className="text-gray-400">Salvo automaticamente</span>
+                  </>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Parâmetros do Operacional */}
