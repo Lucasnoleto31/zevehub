@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from "react";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/dashboard/AppSidebar";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
@@ -33,13 +33,14 @@ import {
   Area,
   AreaChart,
 } from "recharts";
-import { ShieldCheck, TrendingUp, Target, DollarSign, Calendar, BarChart3, FileDown, FileSpreadsheet, Info, Loader2, Check } from "lucide-react";
+import { ShieldCheck, TrendingUp, Target, DollarSign, Calendar, BarChart3, FileDown, FileSpreadsheet, Info, Loader2, Check, Percent, Zap, Crosshair, Wallet } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import * as XLSX from "xlsx";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 const GerenciamentoRisco = () => {
   const [capital, setCapital] = useState(5000);
@@ -52,7 +53,6 @@ const GerenciamentoRisco = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
 
-  // Carregar configurações do banco
   useEffect(() => {
     const loadSettings = async () => {
       const { data: { user } } = await supabase.auth.getUser();
@@ -63,7 +63,6 @@ const GerenciamentoRisco = () => {
       
       setUserId(user.id);
 
-      // Check admin status
       const { data: roleData } = await supabase
         .from("user_roles")
         .select("role")
@@ -72,7 +71,6 @@ const GerenciamentoRisco = () => {
         .maybeSingle();
       setIsAdmin(!!roleData);
 
-      // Load saved settings
       const { data: settings } = await supabase
         .from("risk_management_settings")
         .select("*")
@@ -93,7 +91,6 @@ const GerenciamentoRisco = () => {
     loadSettings();
   }, []);
 
-  // Salvar configurações automaticamente
   useEffect(() => {
     if (!userId || isLoading) return;
 
@@ -182,36 +179,30 @@ const GerenciamentoRisco = () => {
       const pageWidth = doc.internal.pageSize.getWidth();
       const today = new Date().toLocaleDateString("pt-BR");
 
-      // Header gradient background
       doc.setFillColor(11, 18, 32);
       doc.rect(0, 0, pageWidth, 50, "F");
 
-      // Cyan accent line
-      doc.setFillColor(0, 188, 212);
+      doc.setFillColor(59, 130, 246);
       doc.rect(0, 50, pageWidth, 3, "F");
 
-      // Title
       doc.setFont("helvetica", "bold");
       doc.setFontSize(24);
-      doc.setTextColor(0, 188, 212);
+      doc.setTextColor(59, 130, 246);
       doc.text("GERENCIAMENTO DE RISCO", pageWidth / 2, 25, { align: "center" });
 
-      // Subtitle
       doc.setFontSize(12);
       doc.setTextColor(255, 255, 255);
       doc.text("Relatorio de Projecao Financeira", pageWidth / 2, 35, { align: "center" });
 
-      // Date
       doc.setFontSize(10);
       doc.setTextColor(150, 150, 150);
       doc.text(`Gerado em: ${today}`, pageWidth / 2, 45, { align: "center" });
 
-      // Parameters Section
       doc.setFillColor(26, 35, 50);
       doc.roundedRect(14, 60, pageWidth - 28, 45, 3, 3, "F");
 
       doc.setFontSize(14);
-      doc.setTextColor(0, 188, 212);
+      doc.setTextColor(59, 130, 246);
       doc.text("PARAMETROS DO OPERACIONAL", 20, 72);
 
       doc.setFontSize(10);
@@ -234,12 +225,11 @@ const GerenciamentoRisco = () => {
         doc.text(param[1], xPos + 35, yPos);
       });
 
-      // Operational Summary Section
       doc.setFillColor(26, 35, 50);
       doc.roundedRect(14, 112, pageWidth - 28, 35, 3, 3, "F");
 
       doc.setFontSize(14);
-      doc.setTextColor(0, 188, 212);
+      doc.setTextColor(59, 130, 246);
       doc.text("RESUMO OPERACIONAL", 20, 124);
 
       doc.setFontSize(10);
@@ -260,9 +250,8 @@ const GerenciamentoRisco = () => {
         doc.text(row[3], 140, summaryY + idx * 8);
       });
 
-      // Projection Table
       doc.setFontSize(14);
-      doc.setTextColor(0, 188, 212);
+      doc.setTextColor(59, 130, 246);
       doc.text("PROJECAO 6 MESES", 20, 160);
 
       const tableData = calc.projecao.map((row) => [
@@ -286,7 +275,7 @@ const GerenciamentoRisco = () => {
           cellPadding: 4,
         },
         headStyles: {
-          fillColor: [0, 100, 120],
+          fillColor: [59, 130, 246],
           textColor: [255, 255, 255],
           fontStyle: "bold",
           fontSize: 9,
@@ -304,7 +293,6 @@ const GerenciamentoRisco = () => {
         },
       });
 
-      // Final result highlight
       const finalY = (doc as any).lastAutoTable.finalY + 10;
       doc.setFillColor(16, 185, 129);
       doc.roundedRect(14, finalY, pageWidth - 28, 25, 3, 3, "F");
@@ -318,7 +306,6 @@ const GerenciamentoRisco = () => {
       const finalLiquido = calc.projecao[calc.projecao.length - 1].acumuladoLiquido;
       doc.text(`R$ ${formatCurrencyPDF(finalLiquido)}`, pageWidth - 20, finalY + 15, { align: "right" });
 
-      // Footer
       doc.setFontSize(8);
       doc.setTextColor(100, 100, 100);
       doc.text("Zeve Hub - Gerenciamento de Risco | Este documento e apenas uma projecao e nao garante resultados futuros.", pageWidth / 2, 285, { align: "center" });
@@ -335,7 +322,6 @@ const GerenciamentoRisco = () => {
     try {
       const today = new Date().toLocaleDateString("pt-BR");
       
-      // Parameters sheet data
       const parametros = [
         ["GERENCIAMENTO DE RISCO - PARAMETROS"],
         [],
@@ -357,7 +343,6 @@ const GerenciamentoRisco = () => {
         ["Resultado Mensal Liquido", calc.mensalLiquido],
       ];
 
-      // Projection sheet data
       const projecaoData = [
         ["Mes", "Bruto (R$)", "IR (R$)", "Liquido (R$)", "Acumulado Bruto (R$)", "Acumulado Liquido (R$)"],
         ...calc.projecao.map((row) => [
@@ -395,370 +380,400 @@ const GerenciamentoRisco = () => {
     }
   };
 
+  const StatCard = ({ 
+    icon: Icon, 
+    label, 
+    value, 
+    tooltip,
+    variant = "default"
+  }: { 
+    icon: any; 
+    label: string; 
+    value: string; 
+    tooltip?: string;
+    variant?: "default" | "success" | "warning"
+  }) => (
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Card className={`relative overflow-hidden transition-all duration-300 hover:shadow-lg hover:-translate-y-1 border-border/50 ${
+            variant === "success" ? "bg-success/5 border-success/20" : 
+            variant === "warning" ? "bg-warning/5 border-warning/20" : 
+            "bg-card"
+          }`}>
+            <div className={`absolute top-0 left-0 w-1 h-full ${
+              variant === "success" ? "bg-success" : 
+              variant === "warning" ? "bg-warning" : 
+              "bg-primary"
+            }`} />
+            <CardContent className="p-5">
+              <div className="flex items-start justify-between">
+                <div className="space-y-2">
+                  <p className="text-sm text-muted-foreground font-medium">{label}</p>
+                  <p className={`text-2xl font-bold ${
+                    variant === "success" ? "text-success" : 
+                    variant === "warning" ? "text-warning" : 
+                    "text-foreground"
+                  }`}>
+                    {value}
+                  </p>
+                </div>
+                <div className={`p-2.5 rounded-xl ${
+                  variant === "success" ? "bg-success/10" : 
+                  variant === "warning" ? "bg-warning/10" : 
+                  "bg-primary/10"
+                }`}>
+                  <Icon className={`w-5 h-5 ${
+                    variant === "success" ? "text-success" : 
+                    variant === "warning" ? "text-warning" : 
+                    "text-primary"
+                  }`} />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </TooltipTrigger>
+        {tooltip && (
+          <TooltipContent side="bottom" className="max-w-xs">
+            <p className="text-sm">{tooltip}</p>
+          </TooltipContent>
+        )}
+      </Tooltip>
+    </TooltipProvider>
+  );
+
   return (
     <SidebarProvider>
-      <div className="min-h-screen flex w-full bg-[#0b1220]">
+      <div className="min-h-screen flex w-full bg-gradient-to-br from-background via-accent/5 to-background relative overflow-hidden">
+        {/* Background Effects */}
+        <div className="fixed inset-0 pointer-events-none overflow-hidden">
+          <div className="particle particle-1" />
+          <div className="particle particle-2" />
+          <div className="particle particle-3" />
+          <div className="glow-orb glow-orb-1" />
+          <div className="glow-orb glow-orb-2" />
+        </div>
+
         <AppSidebar isAdmin={isAdmin} />
-        <main className="flex-1 p-6 overflow-auto">
-          <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center gap-4">
-              <SidebarTrigger />
-              <div>
-                <h1 className="text-2xl font-bold text-white flex items-center gap-2">
-                  <ShieldCheck className="h-6 w-6 text-cyan-400" />
-                  Gerenciamento de Risco
-                </h1>
-                <p className="text-gray-400 text-sm">
-                  Calcule mão adequada, risco diário e projeção mensal
-                </p>
+        
+        <div className="flex-1 flex flex-col">
+          {/* Header */}
+          <header className="border-b bg-card/50 backdrop-blur-md sticky top-0 z-50">
+            <div className="px-6 py-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <SidebarTrigger />
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center shadow-lg">
+                      <ShieldCheck className="w-5 h-5 text-primary-foreground" />
+                    </div>
+                    <div>
+                      <h1 className="text-xl font-bold text-foreground">Gerenciamento de Risco</h1>
+                      <p className="text-sm text-muted-foreground">Calcule mão adequada e projeção mensal</p>
+                    </div>
+                  </div>
+                </div>
+                <div className="flex items-center gap-4">
+                  {!isLoading && (
+                    <div className="flex items-center gap-2 text-sm px-3 py-1.5 rounded-full bg-muted/50">
+                      {isSaving ? (
+                        <>
+                          <Loader2 className="h-4 w-4 text-primary animate-spin" />
+                          <span className="text-muted-foreground">Salvando...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Check className="h-4 w-4 text-success" />
+                          <span className="text-muted-foreground">Salvo</span>
+                        </>
+                      )}
+                    </div>
+                  )}
+                  <ThemeToggle />
+                </div>
               </div>
             </div>
-            {!isLoading && (
-              <div className="flex items-center gap-2 text-sm">
-                {isSaving ? (
-                  <>
-                    <Loader2 className="h-4 w-4 text-cyan-400 animate-spin" />
-                    <span className="text-gray-400">Salvando...</span>
-                  </>
-                ) : (
-                  <>
-                    <Check className="h-4 w-4 text-emerald-400" />
-                    <span className="text-gray-400">Salvo automaticamente</span>
-                  </>
-                )}
-              </div>
-            )}
-          </div>
+          </header>
 
-          {/* Parâmetros do Operacional */}
-          <Card className="mb-6 bg-[#111827] border-gray-800">
-            <CardHeader>
-              <CardTitle className="text-white text-lg">Parâmetros do Operacional</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-                <div className="space-y-2">
-                  <Label className="text-gray-300">Ativo</Label>
-                  <Select value={ativo} onValueChange={(v) => setAtivo(v as "WIN" | "WDO")}>
-                    <SelectTrigger className="bg-[#1f2937] border-gray-700 text-white">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent className="bg-[#1f2937] border-gray-700">
-                      <SelectItem value="WIN" className="text-white">Mini Índice (WIN) – R$0,20/ponto</SelectItem>
-                      <SelectItem value="WDO" className="text-white">Mini Dólar (WDO) – R$10,00/ponto</SelectItem>
-                    </SelectContent>
-                  </Select>
+          <main className="flex-1 p-6 overflow-auto">
+            {/* Parâmetros */}
+            <Card className="mb-6 border-border/50 bg-card/80 backdrop-blur-sm animate-fade-in">
+              <CardHeader className="pb-4">
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <Zap className="w-5 h-5 text-primary" />
+                  Parâmetros do Operacional
+                </CardTitle>
+                <CardDescription>Configure os parâmetros para calcular seu gerenciamento de risco</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium">Ativo</Label>
+                    <Select value={ativo} onValueChange={(v) => setAtivo(v as "WIN" | "WDO")}>
+                      <SelectTrigger className="h-11 bg-background/50 border-border/50 focus:border-primary">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="WIN">Mini Índice (WIN) – R$0,20/pt</SelectItem>
+                        <SelectItem value="WDO">Mini Dólar (WDO) – R$10,00/pt</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium">Capital (R$)</Label>
+                    <Input
+                      type="number"
+                      value={capital}
+                      onChange={(e) => setCapital(Number(e.target.value))}
+                      className="h-11 bg-background/50 border-border/50 focus:border-primary"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium">Payoff (R:R)</Label>
+                    <Input
+                      type="number"
+                      value={payoff}
+                      onChange={(e) => setPayoff(Number(e.target.value))}
+                      className="h-11 bg-background/50 border-border/50 focus:border-primary"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium">Stop (pontos)</Label>
+                    <Input
+                      type="number"
+                      value={stopPontos}
+                      onChange={(e) => setStopPontos(Number(e.target.value))}
+                      className="h-11 bg-background/50 border-border/50 focus:border-primary"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium">Taxa de Acerto: {taxaAcerto}%</Label>
+                    <div className="pt-2">
+                      <Slider
+                        value={[taxaAcerto]}
+                        onValueChange={(v) => setTaxaAcerto(v[0])}
+                        min={10}
+                        max={99}
+                        step={1}
+                        className="[&_[role=slider]]:h-4 [&_[role=slider]]:w-4"
+                      />
+                    </div>
+                  </div>
                 </div>
+              </CardContent>
+            </Card>
 
-                <div className="space-y-2">
-                  <Label className="text-gray-300">Capital (R$)</Label>
-                  <Input
-                    type="number"
-                    value={capital}
-                    onChange={(e) => setCapital(Number(e.target.value))}
-                    className="bg-[#1f2937] border-gray-700 text-white"
-                  />
-                </div>
+            {/* Resumo Operacional */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+              <StatCard
+                icon={BarChart3}
+                label="Contratos Permitidos"
+                value={calc.contratos.toString()}
+                tooltip={`Fórmula: floor((Stop Diário / 3 / ${calc.pointValue.toFixed(2)}) / ${stopPontos})`}
+                variant="default"
+              />
+              <StatCard
+                icon={Crosshair}
+                label="Stop Diário"
+                value={formatCurrency(calc.stopDiario)}
+                tooltip="Fórmula: Capital / 20 dias úteis"
+                variant="warning"
+              />
+              <StatCard
+                icon={Target}
+                label="Stop por Operação"
+                value={formatCurrency(calc.stopPorOperacao)}
+                tooltip="Fórmula: Stop Diário / 3 oportunidades"
+                variant="warning"
+              />
+              <StatCard
+                icon={TrendingUp}
+                label="Meta Diária"
+                value={formatCurrency(calc.ganhoDiario)}
+                tooltip="Fórmula: Payoff × Stop Diário"
+                variant="success"
+              />
+            </div>
 
-                <div className="space-y-2">
-                  <Label className="text-gray-300">Payoff (R:R)</Label>
-                  <Input
-                    type="number"
-                    value={payoff}
-                    onChange={(e) => setPayoff(Number(e.target.value))}
-                    className="bg-[#1f2937] border-gray-700 text-white"
-                  />
-                </div>
+            {/* Resultado Mensal */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
+              <Card className="border-border/50 bg-card/80 backdrop-blur-sm">
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between mb-4">
+                    <p className="text-sm text-muted-foreground font-medium">Dias de Gain/Loss</p>
+                    <Calendar className="w-5 h-5 text-primary" />
+                  </div>
+                  <div className="flex items-center gap-4">
+                    <div className="flex-1 text-center p-3 rounded-lg bg-success/10 border border-success/20">
+                      <p className="text-2xl font-bold text-success">{calc.gains}</p>
+                      <p className="text-xs text-muted-foreground">Gains</p>
+                    </div>
+                    <div className="flex-1 text-center p-3 rounded-lg bg-destructive/10 border border-destructive/20">
+                      <p className="text-2xl font-bold text-destructive">{calc.loss}</p>
+                      <p className="text-xs text-muted-foreground">Loss</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
 
-                <div className="space-y-2">
-                  <Label className="text-gray-300">Stop (pontos)</Label>
-                  <Input
-                    type="number"
-                    value={stopPontos}
-                    onChange={(e) => setStopPontos(Number(e.target.value))}
-                    className="bg-[#1f2937] border-gray-700 text-white"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label className="text-gray-300">Taxa de Acerto: {taxaAcerto}%</Label>
-                  <Slider
-                    value={[taxaAcerto]}
-                    onValueChange={(v) => setTaxaAcerto(v[0])}
-                    min={10}
-                    max={99}
-                    step={1}
-                    className="mt-3"
-                  />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Resumo Operacional */}
-          <Card className="mb-6 bg-[#1a2332] border-gray-700">
-            <CardHeader>
-              <CardTitle className="text-white text-lg">Resumo Operacional</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <TooltipProvider>
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-                  <Card className="bg-[#1e3a5f] border-cyan-500/50">
-                    <CardContent className="p-4">
-                      <div className="flex items-center justify-between mb-2">
-                        <div className="flex items-center gap-2">
-                          <Target className="h-4 w-4 text-cyan-300" />
-                          <span className="text-xs text-cyan-200">Contratos Permitidos</span>
-                        </div>
-                        <Tooltip>
-                          <TooltipTrigger>
-                            <Info className="h-4 w-4 text-cyan-300/70 hover:text-cyan-300 cursor-help" />
-                          </TooltipTrigger>
-                          <TooltipContent className="max-w-xs bg-[#1a2332] border-cyan-500/50 text-white">
-                            <p className="font-semibold mb-1">Fórmula:</p>
-                            <p className="text-xs">(Stop Diário ÷ 3 ÷ Valor do Ponto) ÷ Stop em Pontos</p>
-                            <p className="text-xs mt-1 text-cyan-300">= ({formatCurrency(calc.stopDiario)} ÷ 3 ÷ R${calc.pointValue}) ÷ {stopPontos}</p>
-                          </TooltipContent>
-                        </Tooltip>
-                      </div>
-                      <p className="text-2xl font-bold text-white">{calc.contratos}</p>
-                    </CardContent>
-                  </Card>
-
-                  <Card className="bg-[#4a1d1d] border-red-500/50">
-                    <CardContent className="p-4">
-                      <div className="flex items-center justify-between mb-2">
-                        <div className="flex items-center gap-2">
-                          <DollarSign className="h-4 w-4 text-red-300" />
-                          <span className="text-xs text-red-200">Stop Diário</span>
-                        </div>
-                        <Tooltip>
-                          <TooltipTrigger>
-                            <Info className="h-4 w-4 text-red-300/70 hover:text-red-300 cursor-help" />
-                          </TooltipTrigger>
-                          <TooltipContent className="max-w-xs bg-[#1a2332] border-red-500/50 text-white">
-                            <p className="font-semibold mb-1">Fórmula:</p>
-                            <p className="text-xs">Capital ÷ 20 dias úteis</p>
-                            <p className="text-xs mt-1 text-red-300">= {formatCurrency(capital)} ÷ 20</p>
-                          </TooltipContent>
-                        </Tooltip>
-                      </div>
-                      <p className="text-2xl font-bold text-white">{formatCurrency(calc.stopDiario)}</p>
-                    </CardContent>
-                  </Card>
-
-                  <Card className="bg-[#4a2d1d] border-orange-500/50">
-                    <CardContent className="p-4">
-                      <div className="flex items-center justify-between mb-2">
-                        <div className="flex items-center gap-2">
-                          <DollarSign className="h-4 w-4 text-orange-300" />
-                          <span className="text-xs text-orange-200">Stop por Operação</span>
-                        </div>
-                        <Tooltip>
-                          <TooltipTrigger>
-                            <Info className="h-4 w-4 text-orange-300/70 hover:text-orange-300 cursor-help" />
-                          </TooltipTrigger>
-                          <TooltipContent className="max-w-xs bg-[#1a2332] border-orange-500/50 text-white">
-                            <p className="font-semibold mb-1">Fórmula:</p>
-                            <p className="text-xs">Stop Diário ÷ 3 operações</p>
-                            <p className="text-xs mt-1 text-orange-300">= {formatCurrency(calc.stopDiario)} ÷ 3</p>
-                          </TooltipContent>
-                        </Tooltip>
-                      </div>
-                      <p className="text-2xl font-bold text-white">{formatCurrency(calc.stopPorOperacao)}</p>
-                    </CardContent>
-                  </Card>
-
-                  <Card className="bg-[#1d4a2d] border-green-500/50">
-                    <CardContent className="p-4">
-                      <div className="flex items-center justify-between mb-2">
-                        <div className="flex items-center gap-2">
-                          <TrendingUp className="h-4 w-4 text-green-300" />
-                          <span className="text-xs text-green-200">Meta Diária</span>
-                        </div>
-                        <Tooltip>
-                          <TooltipTrigger>
-                            <Info className="h-4 w-4 text-green-300/70 hover:text-green-300 cursor-help" />
-                          </TooltipTrigger>
-                          <TooltipContent className="max-w-xs bg-[#1a2332] border-green-500/50 text-white">
-                            <p className="font-semibold mb-1">Fórmula:</p>
-                            <p className="text-xs">(Dias Gain × Alvo) - (Dias Loss × Stop) ÷ 20</p>
-                            <p className="text-xs mt-1 text-green-300">= ({calc.gains} × {formatCurrency(calc.alvoOperacional * calc.contratos * calc.pointValue)} - {calc.loss} × {formatCurrency(stopPontos * calc.contratos * calc.pointValue)}) ÷ 20</p>
-                          </TooltipContent>
-                        </Tooltip>
-                      </div>
-                      <p className="text-2xl font-bold text-white">{formatCurrency(calc.ganhoDiario)}</p>
-                    </CardContent>
-                  </Card>
-
-                  <Card className="bg-[#3d1d4a] border-purple-500/50">
-                    <CardContent className="p-4">
-                      <div className="flex items-center justify-between mb-2">
-                        <div className="flex items-center gap-2">
-                          <Calendar className="h-4 w-4 text-purple-300" />
-                          <span className="text-xs text-purple-200">Ganho / Perda (dias)</span>
-                        </div>
-                        <Tooltip>
-                          <TooltipTrigger>
-                            <Info className="h-4 w-4 text-purple-300/70 hover:text-purple-300 cursor-help" />
-                          </TooltipTrigger>
-                          <TooltipContent className="max-w-xs bg-[#1a2332] border-purple-500/50 text-white">
-                            <p className="font-semibold mb-1">Fórmula:</p>
-                            <p className="text-xs">Dias Gain = Taxa de Acerto × 20 dias</p>
-                            <p className="text-xs">Dias Loss = 20 - Dias Gain</p>
-                            <p className="text-xs mt-1 text-purple-300">= {taxaAcerto}% × 20 = {calc.gains} gains | {calc.loss} loss</p>
-                          </TooltipContent>
-                        </Tooltip>
-                      </div>
-                      <p className="text-2xl font-bold text-white">{calc.gains} / {calc.loss}</p>
-                    </CardContent>
-                  </Card>
-
-                  <Card className="bg-[#1d4a3d] border-emerald-500/50">
-                    <CardContent className="p-4">
-                      <div className="flex items-center justify-between mb-2">
-                        <div className="flex items-center gap-2">
-                          <BarChart3 className="h-4 w-4 text-emerald-300" />
-                          <span className="text-xs text-emerald-200">Resultado Mensal Líquido</span>
-                        </div>
-                        <Tooltip>
-                          <TooltipTrigger>
-                            <Info className="h-4 w-4 text-emerald-300/70 hover:text-emerald-300 cursor-help" />
-                          </TooltipTrigger>
-                          <TooltipContent className="max-w-xs bg-[#1a2332] border-emerald-500/50 text-white">
-                            <p className="font-semibold mb-1">Fórmula:</p>
-                            <p className="text-xs">Resultado Bruto - IR (20%)</p>
-                            <p className="text-xs mt-1 text-emerald-300">= {formatCurrency(calc.mensalBruto)} - {formatCurrency(calc.mensalIr)} = {formatCurrency(calc.mensalLiquido)}</p>
-                          </TooltipContent>
-                        </Tooltip>
-                      </div>
-                      <p className={`text-2xl font-bold ${calc.mensalLiquido >= 0 ? 'text-white' : 'text-red-400'}`}>
+              <Card className="border-border/50 bg-card/80 backdrop-blur-sm">
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between mb-4">
+                    <p className="text-sm text-muted-foreground font-medium">Resultado Mensal</p>
+                    <DollarSign className="w-5 h-5 text-primary" />
+                  </div>
+                  <div className="space-y-2">
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-muted-foreground">Bruto</span>
+                      <span className={`font-semibold ${calc.mensalBruto >= 0 ? 'text-success' : 'text-destructive'}`}>
+                        {formatCurrency(calc.mensalBruto)}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-muted-foreground">IR (20%)</span>
+                      <span className="font-semibold text-warning">{formatCurrency(calc.mensalIr)}</span>
+                    </div>
+                    <div className="h-px bg-border my-2" />
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm font-medium">Líquido</span>
+                      <span className={`text-lg font-bold ${calc.mensalLiquido >= 0 ? 'text-success' : 'text-destructive'}`}>
                         {formatCurrency(calc.mensalLiquido)}
-                      </p>
-                    </CardContent>
-                  </Card>
+                      </span>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="border-success/30 bg-gradient-to-br from-success/5 to-success/10">
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between mb-4">
+                    <p className="text-sm text-muted-foreground font-medium">Resultado 6 Meses</p>
+                    <Wallet className="w-5 h-5 text-success" />
+                  </div>
+                  <p className={`text-3xl font-bold ${calc.projecao[5].acumuladoLiquido >= 0 ? 'text-success' : 'text-destructive'}`}>
+                    {formatCurrency(calc.projecao[5].acumuladoLiquido)}
+                  </p>
+                  <p className="text-sm text-muted-foreground mt-2">Líquido acumulado</p>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Gráfico de Projeção */}
+            <Card className="mb-6 border-border/50 bg-card/80 backdrop-blur-sm">
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className="text-lg">Projeção 6 Meses</CardTitle>
+                    <CardDescription>Evolução do capital ao longo dos próximos meses</CardDescription>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button variant="outline" size="sm" onClick={exportToPDF} className="gap-2">
+                      <FileDown className="w-4 h-4" />
+                      PDF
+                    </Button>
+                    <Button variant="outline" size="sm" onClick={exportToExcel} className="gap-2">
+                      <FileSpreadsheet className="w-4 h-4" />
+                      Excel
+                    </Button>
+                  </div>
                 </div>
-              </TooltipProvider>
-            </CardContent>
-          </Card>
+              </CardHeader>
+              <CardContent>
+                <div className="h-[350px]">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart data={calc.projecao}>
+                      <defs>
+                        <linearGradient id="colorBruto" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.3}/>
+                          <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0}/>
+                        </linearGradient>
+                        <linearGradient id="colorLiquido" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="hsl(var(--success))" stopOpacity={0.3}/>
+                          <stop offset="95%" stopColor="hsl(var(--success))" stopOpacity={0}/>
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.3} />
+                      <XAxis dataKey="mes" stroke="hsl(var(--muted-foreground))" fontSize={12} />
+                      <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} tickFormatter={(v) => `R$${(v/1000).toFixed(0)}k`} />
+                      <RechartsTooltip
+                        formatter={(value: number) => formatCurrency(value)}
+                        contentStyle={{
+                          backgroundColor: "hsl(var(--card))",
+                          border: "1px solid hsl(var(--border))",
+                          borderRadius: "8px",
+                        }}
+                      />
+                      <Legend />
+                      <Area 
+                        type="monotone" 
+                        dataKey="acumuladoBruto" 
+                        stroke="hsl(var(--primary))" 
+                        fill="url(#colorBruto)" 
+                        name="Acum. Bruto" 
+                        strokeWidth={2}
+                      />
+                      <Area 
+                        type="monotone" 
+                        dataKey="acumuladoLiquido" 
+                        stroke="hsl(var(--success))" 
+                        fill="url(#colorLiquido)" 
+                        name="Acum. Líquido" 
+                        strokeWidth={2}
+                      />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </div>
+              </CardContent>
+            </Card>
 
-          {/* Projeção — Próximos 6 meses */}
-          <Card className="mb-6 bg-[#1a2332] border-gray-700">
-            <CardHeader>
-              <CardTitle className="text-white text-lg">Projeção — Próximos 6 meses (com Acumulado)</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <ResponsiveContainer width="100%" height={350}>
-                <AreaChart data={calc.projecao}>
-                  <defs>
-                    <linearGradient id="colorBruto" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#00bcd4" stopOpacity={0.3} />
-                      <stop offset="95%" stopColor="#00bcd4" stopOpacity={0} />
-                    </linearGradient>
-                    <linearGradient id="colorLiquido" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#10b981" stopOpacity={0.3} />
-                      <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
-                    </linearGradient>
-                    <linearGradient id="colorAcumulado" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.3} />
-                      <stop offset="95%" stopColor="#f59e0b" stopOpacity={0} />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-                  <XAxis dataKey="mes" stroke="#9ca3af" />
-                  <YAxis stroke="#9ca3af" tickFormatter={(v) => `R$${v}`} />
-                  <RechartsTooltip
-                    contentStyle={{ backgroundColor: "#1f2937", border: "1px solid #374151" }}
-                    labelStyle={{ color: "#fff" }}
-                    formatter={(value: number) => [formatCurrency(value), ""]}
-                  />
-                  <Legend />
-                  <Area
-                    type="monotone"
-                    dataKey="bruto"
-                    name="Bruto (R$)"
-                    stroke="#00bcd4"
-                    fill="url(#colorBruto)"
-                    strokeWidth={2}
-                  />
-                  <Area
-                    type="monotone"
-                    dataKey="liquido"
-                    name="Líquido (R$)"
-                    stroke="#10b981"
-                    fill="url(#colorLiquido)"
-                    strokeWidth={2}
-                  />
-                  <Area
-                    type="monotone"
-                    dataKey="acumuladoLiquido"
-                    name="Acumulado Líquido (R$)"
-                    stroke="#f59e0b"
-                    fill="url(#colorAcumulado)"
-                    strokeWidth={2}
-                  />
-                </AreaChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
-
-          {/* Dados Detalhados */}
-          <Card className="bg-[#1a2332] border-gray-700">
-            <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle className="text-white text-lg">Dados Detalhados</CardTitle>
-              <div className="flex gap-2">
-                <Button
-                  onClick={exportToPDF}
-                  variant="outline"
-                  size="sm"
-                  className="bg-red-600/20 border-red-500/50 text-red-300 hover:bg-red-600/30 hover:text-white"
-                >
-                  <FileDown className="h-4 w-4 mr-2" />
-                  Exportar PDF
-                </Button>
-                <Button
-                  onClick={exportToExcel}
-                  variant="outline"
-                  size="sm"
-                  className="bg-green-600/20 border-green-500/50 text-green-300 hover:bg-green-600/30 hover:text-white"
-                >
-                  <FileSpreadsheet className="h-4 w-4 mr-2" />
-                  Exportar Excel
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow className="border-gray-600">
-                    <TableHead className="text-gray-200">Mês</TableHead>
-                    <TableHead className="text-gray-200">Bruto (R$)</TableHead>
-                    <TableHead className="text-gray-200">IR (R$)</TableHead>
-                    <TableHead className="text-gray-200">Líquido (R$)</TableHead>
-                    <TableHead className="text-gray-200">Acumulado Bruto (R$)</TableHead>
-                    <TableHead className="text-gray-200">Acumulado Líquido (R$)</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {calc.projecao.map((row, idx) => (
-                    <TableRow key={idx} className="border-gray-600">
-                      <TableCell className="text-white font-medium">{row.mes}</TableCell>
-                      <TableCell className="text-cyan-300">{formatCurrency(row.bruto)}</TableCell>
-                      <TableCell className="text-orange-300">{formatCurrency(row.ir)}</TableCell>
-                      <TableCell className={row.liquido >= 0 ? "text-green-300" : "text-red-400"}>
-                        {formatCurrency(row.liquido)}
-                      </TableCell>
-                      <TableCell className="text-cyan-400 font-medium">{formatCurrency(row.acumuladoBruto)}</TableCell>
-                      <TableCell className={row.acumuladoLiquido >= 0 ? "text-amber-400 font-medium" : "text-red-400 font-medium"}>
-                        {formatCurrency(row.acumuladoLiquido)}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
-        </main>
+            {/* Tabela de Projeção */}
+            <Card className="border-border/50 bg-card/80 backdrop-blur-sm">
+              <CardHeader>
+                <CardTitle className="text-lg">Detalhamento Mensal</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="rounded-lg border border-border/50 overflow-hidden">
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="bg-muted/30 hover:bg-muted/30">
+                        <TableHead className="font-semibold">Mês</TableHead>
+                        <TableHead className="text-right font-semibold">Bruto</TableHead>
+                        <TableHead className="text-right font-semibold">IR (20%)</TableHead>
+                        <TableHead className="text-right font-semibold">Líquido</TableHead>
+                        <TableHead className="text-right font-semibold">Acum. Bruto</TableHead>
+                        <TableHead className="text-right font-semibold">Acum. Líquido</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {calc.projecao.map((row, idx) => (
+                        <TableRow key={idx} className="hover:bg-muted/20 transition-colors">
+                          <TableCell className="font-medium">{row.mes}</TableCell>
+                          <TableCell className={`text-right ${row.bruto >= 0 ? 'text-success' : 'text-destructive'}`}>
+                            {formatCurrency(row.bruto)}
+                          </TableCell>
+                          <TableCell className="text-right text-warning">{formatCurrency(row.ir)}</TableCell>
+                          <TableCell className={`text-right font-medium ${row.liquido >= 0 ? 'text-success' : 'text-destructive'}`}>
+                            {formatCurrency(row.liquido)}
+                          </TableCell>
+                          <TableCell className={`text-right ${row.acumuladoBruto >= 0 ? 'text-success' : 'text-destructive'}`}>
+                            {formatCurrency(row.acumuladoBruto)}
+                          </TableCell>
+                          <TableCell className={`text-right font-bold ${row.acumuladoLiquido >= 0 ? 'text-success' : 'text-destructive'}`}>
+                            {formatCurrency(row.acumuladoLiquido)}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </CardContent>
+            </Card>
+          </main>
+        </div>
       </div>
     </SidebarProvider>
   );

@@ -245,7 +245,16 @@ const Profile = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-accent/20 to-background">
+    <div className="min-h-screen bg-gradient-to-br from-background via-accent/5 to-background relative overflow-hidden">
+      {/* Background Effects */}
+      <div className="fixed inset-0 pointer-events-none overflow-hidden">
+        <div className="particle particle-1" />
+        <div className="particle particle-2" />
+        <div className="particle particle-3" />
+        <div className="glow-orb glow-orb-1" />
+        <div className="glow-orb glow-orb-2" />
+      </div>
+
       {/* Header */}
       <header className="border-b bg-card/50 backdrop-blur-md sticky top-0 z-50">
         <div className="container mx-auto px-4 py-4">
@@ -255,36 +264,47 @@ const Profile = () => {
                 variant="ghost"
                 size="sm"
                 onClick={() => navigate("/dashboard")}
-                className="gap-2"
+                className="gap-2 hover:bg-primary/10"
               >
                 <ArrowLeft className="w-4 h-4" />
                 Voltar
               </Button>
-              <h1 className="text-xl font-bold text-foreground">Meu Perfil</h1>
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center shadow-lg">
+                  <UserIcon className="w-5 h-5 text-primary-foreground" />
+                </div>
+                <div>
+                  <h1 className="text-xl font-bold text-foreground">Meu Perfil</h1>
+                  <p className="text-sm text-muted-foreground">Configurações da conta</p>
+                </div>
+              </div>
             </div>
             <ThemeToggle />
           </div>
         </div>
       </header>
 
-      <main className="container mx-auto px-4 py-8 max-w-4xl">
-        <div className="space-y-6">
+      <main className="container mx-auto px-4 py-8 max-w-4xl relative z-10">
+        <div className="space-y-6 animate-fade-in">
           {/* Avatar Section */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Foto de Perfil</CardTitle>
+          <Card className="border-border/50 bg-card/80 backdrop-blur-sm overflow-hidden">
+            <CardHeader className="bg-gradient-to-r from-primary/10 to-primary/5 border-b border-border/50">
+              <CardTitle className="flex items-center gap-2">
+                <Camera className="w-5 h-5 text-primary" />
+                Foto de Perfil
+              </CardTitle>
             </CardHeader>
-            <CardContent className="flex flex-col items-center gap-4">
+            <CardContent className="flex flex-col items-center gap-4 pt-6">
               <div className="relative">
-                <Avatar className="w-32 h-32 border-4 border-primary/20">
+                <Avatar className="w-32 h-32 border-4 border-primary/20 ring-4 ring-primary/10 shadow-xl">
                   <AvatarImage src={formData.avatar_url} alt="Avatar" />
-                  <AvatarFallback className="bg-gradient-primary text-primary-foreground text-3xl">
+                  <AvatarFallback className="bg-gradient-to-br from-primary to-primary/80 text-primary-foreground text-3xl">
                     {formData.full_name?.charAt(0) || "U"}
                   </AvatarFallback>
                 </Avatar>
                 <label
                   htmlFor="avatar-upload"
-                  className="absolute bottom-0 right-0 w-10 h-10 rounded-full bg-primary hover:bg-primary-hover cursor-pointer flex items-center justify-center transition-colors"
+                  className="absolute bottom-0 right-0 w-10 h-10 rounded-full bg-primary hover:bg-primary/90 cursor-pointer flex items-center justify-center transition-all duration-300 shadow-lg hover:scale-110"
                 >
                   <Camera className="w-5 h-5 text-primary-foreground" />
                   <input
@@ -298,40 +318,43 @@ const Profile = () => {
                 </label>
               </div>
               {uploading && (
-                <p className="text-sm text-muted-foreground">Fazendo upload...</p>
+                <p className="text-sm text-muted-foreground animate-pulse">Fazendo upload...</p>
               )}
             </CardContent>
           </Card>
 
           {/* Personal Information */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Informações Pessoais</CardTitle>
+          <Card className="border-border/50 bg-card/80 backdrop-blur-sm">
+            <CardHeader className="border-b border-border/50">
+              <CardTitle className="flex items-center gap-2">
+                <UserIcon className="w-5 h-5 text-primary" />
+                Informações Pessoais
+              </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-4 pt-6">
               <div className="space-y-2">
-                <Label htmlFor="full_name">Nome Completo</Label>
+                <Label htmlFor="full_name" className="font-medium">Nome Completo</Label>
                 <div className="relative">
                   <UserIcon className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                   <Input
                     id="full_name"
                     value={formData.full_name}
                     onChange={(e) => setFormData(prev => ({ ...prev, full_name: e.target.value }))}
-                    className="pl-10"
+                    className="pl-10 h-11 bg-background/50 border-border/50 focus:border-primary"
                     placeholder="Seu nome completo"
                   />
                 </div>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="email">E-mail</Label>
+                <Label htmlFor="email" className="font-medium">E-mail</Label>
                 <div className="relative">
                   <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                   <Input
                     id="email"
                     value={formData.email}
                     disabled
-                    className="pl-10 bg-muted"
+                    className="pl-10 h-11 bg-muted/50 border-border/50"
                     placeholder="seu@email.com"
                   />
                 </div>
@@ -341,14 +364,14 @@ const Profile = () => {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="phone">Telefone</Label>
+                <Label htmlFor="phone" className="font-medium">Telefone</Label>
                 <div className="relative">
                   <Phone className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                   <Input
                     id="phone"
                     value={formData.phone}
                     onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
-                    className="pl-10"
+                    className="pl-10 h-11 bg-background/50 border-border/50 focus:border-primary"
                     placeholder="(00) 00000-0000"
                   />
                 </div>
@@ -357,14 +380,17 @@ const Profile = () => {
           </Card>
 
           {/* Notifications */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Notificações</CardTitle>
+          <Card className="border-border/50 bg-card/80 backdrop-blur-sm">
+            <CardHeader className="border-b border-border/50">
+              <CardTitle className="flex items-center gap-2">
+                <Mail className="w-5 h-5 text-primary" />
+                Notificações
+              </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center justify-between">
+            <CardContent className="space-y-4 pt-6">
+              <div className="flex items-center justify-between p-4 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors">
                 <div className="space-y-0.5">
-                  <Label>Notificações por E-mail</Label>
+                  <Label className="font-medium">Notificações por E-mail</Label>
                   <p className="text-sm text-muted-foreground">
                     Receba atualizações por e-mail
                   </p>
@@ -377,9 +403,9 @@ const Profile = () => {
                 />
               </div>
 
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between p-4 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors">
                 <div className="space-y-0.5">
-                  <Label>Notificações Push</Label>
+                  <Label className="font-medium">Notificações Push</Label>
                   <p className="text-sm text-muted-foreground">
                     Receba notificações no navegador
                   </p>
@@ -409,16 +435,16 @@ const Profile = () => {
           {user && <ActiveSessions userId={user.id} />}
 
           {/* Security Section */}
-          <Card>
-            <CardHeader>
+          <Card className="border-border/50 bg-card/80 backdrop-blur-sm">
+            <CardHeader className="border-b border-border/50">
               <CardTitle className="flex items-center gap-2">
-                <Shield className="w-5 h-5" />
+                <Shield className="w-5 h-5 text-primary" />
                 Segurança
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-4 pt-6">
               <div className="space-y-2">
-                <Label htmlFor="new_password">Nova Senha</Label>
+                <Label htmlFor="new_password" className="font-medium">Nova Senha</Label>
                 <div className="relative">
                   <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                   <Input
@@ -426,14 +452,14 @@ const Profile = () => {
                     type="password"
                     value={passwordData.new_password}
                     onChange={(e) => setPasswordData(prev => ({ ...prev, new_password: e.target.value }))}
-                    className="pl-10"
+                    className="pl-10 h-11 bg-background/50 border-border/50 focus:border-primary"
                     placeholder="Digite sua nova senha"
                   />
                 </div>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="confirm_password">Confirmar Nova Senha</Label>
+                <Label htmlFor="confirm_password" className="font-medium">Confirmar Nova Senha</Label>
                 <div className="relative">
                   <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                   <Input
@@ -441,7 +467,7 @@ const Profile = () => {
                     type="password"
                     value={passwordData.confirm_password}
                     onChange={(e) => setPasswordData(prev => ({ ...prev, confirm_password: e.target.value }))}
-                    className="pl-10"
+                    className="pl-10 h-11 bg-background/50 border-border/50 focus:border-primary"
                     placeholder="Confirme sua nova senha"
                   />
                 </div>
@@ -450,24 +476,25 @@ const Profile = () => {
               <Button
                 onClick={handleChangePassword}
                 variant="outline"
-                className="w-full"
+                className="w-full h-11 hover:bg-primary hover:text-primary-foreground transition-colors"
               >
+                <Lock className="w-4 h-4 mr-2" />
                 Alterar Senha
               </Button>
             </CardContent>
           </Card>
 
           {/* Danger Zone */}
-          <Card className="border-error/50">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-error">
+          <Card className="border-destructive/50 bg-gradient-to-br from-destructive/5 to-destructive/10">
+            <CardHeader className="border-b border-destructive/30">
+              <CardTitle className="flex items-center gap-2 text-destructive">
                 <Trash2 className="w-5 h-5" />
                 Zona Perigosa
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-4 pt-6">
               <div className="space-y-2">
-                <Label>Deletar Conta Permanentemente</Label>
+                <Label className="font-medium">Deletar Conta Permanentemente</Label>
                 <p className="text-sm text-muted-foreground">
                   Esta ação não pode ser desfeita. Todos os seus dados serão permanentemente removidos.
                 </p>
