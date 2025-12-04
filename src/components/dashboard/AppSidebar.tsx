@@ -8,6 +8,7 @@ import {
   Users,
   Wallet,
   ShieldCheck,
+  GraduationCap,
 } from "lucide-react";
 
 import {
@@ -56,6 +57,12 @@ const menuItems = [
     url: "/comunidade",
     icon: Users,
     color: "text-pink-500",
+  },
+  {
+    title: "Aprenda",
+    url: "/aulas-estudos",
+    icon: GraduationCap,
+    color: "text-purple-500",
   },
   {
     title: "Perfil",
