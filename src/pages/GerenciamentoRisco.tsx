@@ -3,60 +3,135 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
-import { AlertCircle, TrendingDown, BarChart3, Target, Trophy, Crosshair } from "lucide-react";
-import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend } from "recharts";
+import { AlertCircle, Target, Crosshair, TrendingUp, Calculator, DollarSign } from "lucide-react";
+import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 
 export default function GerenciamentoRisco() {
   const [capital, setCapital] = useState(5000);
   const [payoff, setPayoff] = useState(3);
   const [stopPontos, setStopPontos] = useState(200);
-  const [taxaAcerto, setTaxaAcerto] = useState(50);
+  const [taxaAcerto, setTaxaAcerto] = useState(30);
 
+  // Cálculos base
   const stopDiario = useMemo(() => capital / 20, [capital]);
-  const stopFinanceiroWIN = useMemo(() => stopPontos * 0.20, [stopPontos]);
-  const stopFinanceiroWDO = useMemo(() => stopPontos * 0.50, [stopPontos]);
-  const stopsPossiveisWIN = useMemo(() => stopDiario / stopFinanceiroWIN, [stopDiario, stopFinanceiroWIN]);
-  const stopsPossiveisWDO = useMemo(() => stopDiario / stopFinanceiroWDO, [stopDiario, stopFinanceiroWDO]);
-  const contratosWIN = useMemo(() => Math.floor(stopsPossiveisWIN), [stopsPossiveisWIN]);
-  const contratosWDO = useMemo(() => Math.floor(stopsPossiveisWDO), [stopsPossiveisWDO]);
-  const metaDiaria = useMemo(() => payoff * stopDiario, [payoff, stopDiario]);
+  const contratosWIN = useMemo(() => Math.floor(stopDiario / (stopPontos * 0.20)), [stopDiario, stopPontos]);
+  const contratosWDO = useMemo(() => Math.floor(stopDiario / (stopPontos * 0.50)), [stopDiario, stopPontos]);
   const alvoOperacional = useMemo(() => stopPontos * payoff, [stopPontos, payoff]);
 
-  const gerarProjecaoMensal = (valorPonto: number) => {
-    const dias = 20;
+  // Projeção mensal
+  const diasGain = useMemo(() => Math.round(20 * (taxaAcerto / 100)), [taxaAcerto]);
+  const diasLoss = useMemo(() => 20 - diasGain, [diasGain]);
+  
+  const resultadoGain_WIN = useMemo(() => 
+    payoff * (stopPontos * 0.20) * contratosWIN, 
+    [payoff, stopPontos, contratosWIN]
+  );
+  
+  const resultadoLoss_WIN = useMemo(() => 
+    (stopPontos * 0.20) * contratosWIN, 
+    [stopPontos, contratosWIN]
+  );
+  
+  const resultadoBrutoMes_WIN = useMemo(() => 
+    (diasGain * resultadoGain_WIN) - (diasLoss * resultadoLoss_WIN), 
+    [diasGain, diasLoss, resultadoGain_WIN, resultadoLoss_WIN]
+  );
+  
+  const ir_WIN = useMemo(() => 
+    resultadoBrutoMes_WIN > 0 ? resultadoBrutoMes_WIN * 0.20 : 0, 
+    [resultadoBrutoMes_WIN]
+  );
+  
+  const resultadoLiquido_WIN = useMemo(() => 
+    resultadoBrutoMes_WIN - ir_WIN, 
+    [resultadoBrutoMes_WIN, ir_WIN]
+  );
+
+  // Gráfico de projeção mensal
+  const gerarGraficoMensal = useMemo(() => {
     const data = [];
     let saldoAcumulado = 0;
-    const ganhoOp = stopPontos * payoff * valorPonto * (valorPonto === 0.20 ? contratosWIN : contratosWDO);
-    const perdaOp = stopPontos * valorPonto * (valorPonto === 0.20 ? contratosWIN : contratosWDO);
-
-    for (let i = 1; i <= dias; i++) {
-      const acertou = Math.random() * 100 < taxaAcerto;
-      saldoAcumulado += acertou ? ganhoOp : -perdaOp;
+    const totalDias = 20;
+    
+    for (let i = 1; i <= totalDias; i++) {
+      const probabilidadeAcerto = taxaAcerto / 100;
+      const isGain = i <= diasGain;
+      
+      if (isGain) {
+        saldoAcumulado += resultadoGain_WIN;
+      } else {
+        saldoAcumulado -= resultadoLoss_WIN;
+      }
+      
       data.push({
         dia: `Dia ${i}`,
         saldo: saldoAcumulado,
       });
     }
     return data;
-  };
-
-  const projecaoWIN = useMemo(() => gerarProjecaoMensal(0.20), [capital, payoff, stopPontos, taxaAcerto, contratosWIN]);
-  const projecaoWDO = useMemo(() => gerarProjecaoMensal(0.50), [capital, payoff, stopPontos, taxaAcerto, contratosWDO]);
+  }, [taxaAcerto, diasGain, resultadoGain_WIN, resultadoLoss_WIN]);
 
   const formatCurrency = (value: number) => {
     return value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
   };
 
-  const cards = [
-    { id: "stopDiario", title: "Stop Diário", icon: AlertCircle, value: formatCurrency(stopDiario), description: "Capital dividido por 20 pregões", color: "text-red-400" },
-    { id: "stopFinanceiroWIN", title: "Stop Financeiro (WIN)", icon: TrendingDown, value: formatCurrency(stopFinanceiroWIN), description: "Stop em pontos x R$0,20", color: "text-orange-400" },
-    { id: "stopFinanceiroWDO", title: "Stop Financeiro (WDO)", icon: TrendingDown, value: formatCurrency(stopFinanceiroWDO), description: "Stop em pontos x R$0,50", color: "text-orange-400" },
-    { id: "stopsPossiveisWIN", title: "Stops Possíveis (WIN)", icon: BarChart3, value: stopsPossiveisWIN.toFixed(2), description: "Baseado no stop diário", color: "text-blue-400" },
-    { id: "stopsPossiveisWDO", title: "Stops Possíveis (WDO)", icon: BarChart3, value: stopsPossiveisWDO.toFixed(2), description: "Baseado no stop diário", color: "text-blue-400" },
-    { id: "contratosWIN", title: "Contratos (WIN)", icon: Target, value: contratosWIN.toString(), description: "Quantidade por operação", color: "text-cyan-400" },
-    { id: "contratosWDO", title: "Contratos (WDO)", icon: Target, value: contratosWDO.toString(), description: "Quantidade por operação", color: "text-cyan-400" },
-    { id: "metaDiaria", title: "Meta Diária", icon: Trophy, value: formatCurrency(metaDiaria), description: "Payoff x stop diário", color: "text-green-400" },
-    { id: "alvoOperacional", title: "Alvo Operacional", icon: Crosshair, value: `${alvoOperacional} pts`, description: "Stop x payoff", color: "text-purple-400" },
+  const cardsResumo = [
+    { 
+      id: "stopDiario", 
+      title: "Stop Diário", 
+      icon: AlertCircle, 
+      value: formatCurrency(stopDiario), 
+      description: "Capital dividido por 20 pregões", 
+      color: "text-red-400" 
+    },
+    { 
+      id: "contratosWIN", 
+      title: "Contratos WIN", 
+      icon: Target, 
+      value: contratosWIN.toString(), 
+      description: "Tamanho de mão Mini Índice", 
+      color: "text-cyan-400" 
+    },
+    { 
+      id: "contratosWDO", 
+      title: "Contratos WDO", 
+      icon: Target, 
+      value: contratosWDO.toString(), 
+      description: "Tamanho de mão Mini Dólar", 
+      color: "text-amber-400" 
+    },
+    { 
+      id: "alvoOperacional", 
+      title: "Alvo Operacional (pts)", 
+      icon: Crosshair, 
+      value: `${alvoOperacional} pts`, 
+      description: "Stop multiplicado pelo payoff", 
+      color: "text-purple-400" 
+    },
+  ];
+
+  const cardsProjecao = [
+    { 
+      id: "brutoWIN", 
+      title: "Resultado Bruto WIN", 
+      icon: TrendingUp, 
+      value: formatCurrency(resultadoBrutoMes_WIN), 
+      color: resultadoBrutoMes_WIN >= 0 ? "text-green-400" : "text-red-400" 
+    },
+    { 
+      id: "irWIN", 
+      title: "IR (20%)", 
+      icon: Calculator, 
+      value: formatCurrency(ir_WIN), 
+      color: "text-orange-400" 
+    },
+    { 
+      id: "liquidoWIN", 
+      title: "Resultado Líquido", 
+      icon: DollarSign, 
+      value: formatCurrency(resultadoLiquido_WIN), 
+      color: resultadoLiquido_WIN >= 0 ? "text-emerald-400" : "text-red-400" 
+    },
   ];
 
   return (
@@ -68,7 +143,7 @@ export default function GerenciamentoRisco() {
             Gerenciamento de Risco
           </h1>
           <p className="text-muted-foreground">
-            Simule estratégias, contratos possíveis e projeções mensais
+            Calcule mão adequada, risco diário e projeção mensal
           </p>
         </div>
 
@@ -127,11 +202,11 @@ export default function GerenciamentoRisco() {
           </CardContent>
         </Card>
 
-        {/* Results Section */}
+        {/* Resumo Operacional */}
         <div>
-          <h2 className="text-xl font-semibold text-cyan-400 mb-4">Resultados do Gerenciamento</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {cards.map((card) => (
+          <h2 className="text-xl font-semibold text-cyan-400 mb-4">Resumo Operacional</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {cardsResumo.map((card) => (
               <Card key={card.id} className="bg-[#111827]/80 border-cyan-500/20 backdrop-blur-sm hover:border-cyan-500/40 transition-colors">
                 <CardContent className="p-4">
                   <div className="flex items-start justify-between">
@@ -148,60 +223,56 @@ export default function GerenciamentoRisco() {
           </div>
         </div>
 
-        {/* Charts Section */}
-        <div className="space-y-6">
+        {/* Projeção Mensal */}
+        <div>
+          <h2 className="text-xl font-semibold text-cyan-400 mb-2">Projeção Mensal Realista</h2>
+          <p className="text-sm text-muted-foreground mb-4">
+            Baseado em {diasGain} dias de gain e {diasLoss} dias de loss ({taxaAcerto}% de acerto)
+          </p>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            {cardsProjecao.map((card) => (
+              <Card key={card.id} className="bg-[#111827]/80 border-cyan-500/20 backdrop-blur-sm hover:border-cyan-500/40 transition-colors">
+                <CardContent className="p-4">
+                  <div className="flex items-start justify-between">
+                    <div className="space-y-1">
+                      <p className="text-sm text-muted-foreground">{card.title}</p>
+                      <p className={`text-2xl font-bold ${card.color}`}>{card.value}</p>
+                    </div>
+                    <card.icon className={`h-6 w-6 ${card.color} opacity-60`} />
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+
+        {/* Chart Section */}
+        <div className="space-y-4">
           <div>
-            <h2 className="text-xl font-semibold text-cyan-400 mb-2">Projeção de Resultado Mensal</h2>
-            <p className="text-sm text-muted-foreground mb-4">
-              Com base na taxa de acerto, payoff e risco da estratégia
-            </p>
+            <h2 className="text-xl font-semibold text-cyan-400 mb-2">Evolução do Mês (20 pregões)</h2>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <Card className="bg-[#111827]/80 border-cyan-500/20 backdrop-blur-sm">
-              <CardHeader>
-                <CardTitle className="text-lg text-cyan-400">Projeção Mini Índice (WIN)</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="h-64">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={projecaoWIN}>
-                      <XAxis dataKey="dia" tick={{ fill: '#94a3b8', fontSize: 10 }} />
-                      <YAxis tick={{ fill: '#94a3b8', fontSize: 10 }} tickFormatter={(v) => `R$${v}`} />
-                      <Tooltip
-                        contentStyle={{ backgroundColor: '#1e293b', border: '1px solid #0ea5e9' }}
-                        labelStyle={{ color: '#fff' }}
-                        formatter={(value: number) => [formatCurrency(value), 'Saldo']}
-                      />
-                      <Line type="monotone" dataKey="saldo" stroke="#00C6FF" strokeWidth={2} dot={false} />
-                    </LineChart>
-                  </ResponsiveContainer>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="bg-[#111827]/80 border-cyan-500/20 backdrop-blur-sm">
-              <CardHeader>
-                <CardTitle className="text-lg text-cyan-400">Projeção Mini Dólar (WDO)</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="h-64">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={projecaoWDO}>
-                      <XAxis dataKey="dia" tick={{ fill: '#94a3b8', fontSize: 10 }} />
-                      <YAxis tick={{ fill: '#94a3b8', fontSize: 10 }} tickFormatter={(v) => `R$${v}`} />
-                      <Tooltip
-                        contentStyle={{ backgroundColor: '#1e293b', border: '1px solid #f59e0b' }}
-                        labelStyle={{ color: '#fff' }}
-                        formatter={(value: number) => [formatCurrency(value), 'Saldo']}
-                      />
-                      <Line type="monotone" dataKey="saldo" stroke="#f59e0b" strokeWidth={2} dot={false} />
-                    </LineChart>
-                  </ResponsiveContainer>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
+          <Card className="bg-[#111827]/80 border-cyan-500/20 backdrop-blur-sm">
+            <CardHeader>
+              <CardTitle className="text-lg text-cyan-400">Projeção Mini Índice (WIN)</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="h-72">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={gerarGraficoMensal}>
+                    <XAxis dataKey="dia" tick={{ fill: '#94a3b8', fontSize: 10 }} />
+                    <YAxis tick={{ fill: '#94a3b8', fontSize: 10 }} tickFormatter={(v) => `R$${v}`} />
+                    <Tooltip
+                      contentStyle={{ backgroundColor: '#1e293b', border: '1px solid #0ea5e9' }}
+                      labelStyle={{ color: '#fff' }}
+                      formatter={(value: number) => [formatCurrency(value), 'Saldo']}
+                    />
+                    <Line type="monotone" dataKey="saldo" stroke="#00E0FF" strokeWidth={2} dot={false} />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+            </CardContent>
+          </Card>
         </div>
 
         {/* Footer */}
