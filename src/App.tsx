@@ -19,6 +19,7 @@ import Aprenda from "./pages/Aprenda";
 import TrilhaDetail from "./pages/TrilhaDetail";
 import LessonView from "./pages/LessonView";
 import QuizView from "./pages/QuizView";
+import AdminEducacional from "./pages/AdminEducacional";
 import Community from "./pages/Community";
 import Explore from "./pages/Explore";
 import PublicProfile from "./pages/PublicProfile";
@@ -57,6 +58,7 @@ const App = () => {
                 <Route path="/financas" element={<Financas />} />
                 <Route path="/risco" element={<GerenciamentoRisco />} />
                 <Route path="/aprenda" element={<Aprenda />} />
+                <Route path="/aprenda/admin" element={<AdminEducacional />} />
                 <Route path="/aprenda/trilha/:slug" element={<TrilhaDetail />} />
                 <Route path="/aprenda/aula/:lessonId" element={<LessonView />} />
                 <Route path="/aprenda/quiz/:quizId" element={<QuizView />} />
