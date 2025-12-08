@@ -34,6 +34,7 @@ import {
   Zap,
   TrendingUp,
   MessageCircle,
+  Settings,
 } from "lucide-react";
 
 const Aprenda = () => {
@@ -252,10 +253,18 @@ const Aprenda = () => {
                   </p>
                 </div>
               </div>
-              <Button className="bg-gradient-to-r from-primary to-purple-600 hover:from-primary/90 hover:to-purple-600/90">
-                <Sparkles className="w-4 h-4 mr-2" />
-                Começar Agora
-              </Button>
+              <div className="flex gap-2">
+                {isAdmin && (
+                  <Button variant="outline" onClick={() => navigate("/aprenda/admin")}>
+                    <Settings className="w-4 h-4 mr-2" />
+                    Gerenciar Conteúdo
+                  </Button>
+                )}
+                <Button className="bg-gradient-to-r from-primary to-purple-600 hover:from-primary/90 hover:to-purple-600/90">
+                  <Sparkles className="w-4 h-4 mr-2" />
+                  Começar Agora
+                </Button>
+              </div>
             </div>
 
             {/* Hero Banner */}
