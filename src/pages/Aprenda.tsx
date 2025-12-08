@@ -41,6 +41,8 @@ const Aprenda = () => {
   const navigate = useNavigate();
   const [isAdmin, setIsAdmin] = useState(false);
   const [activeFilter, setActiveFilter] = useState("Todos");
+  const [lessonsFromDb, setLessonsFromDb] = useState<any[]>([]);
+  const [loadingLessons, setLoadingLessons] = useState(true);
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -58,7 +60,29 @@ const Aprenda = () => {
       setIsAdmin(roles?.some((r) => r.role === "admin") || false);
     };
 
+    const loadLessons = async () => {
+      setLoadingLessons(true);
+      const { data: lessons } = await supabase
+        .from("learning_lessons")
+        .select(`
+          *,
+          learning_modules!inner(
+            name,
+            learning_tracks!inner(name, slug)
+          )
+        `)
+        .not("video_url", "is", null)
+        .eq("is_active", true)
+        .order("created_at", { ascending: false });
+
+      if (lessons) {
+        setLessonsFromDb(lessons);
+      }
+      setLoadingLessons(false);
+    };
+
     checkAuth();
+    loadLessons();
   }, [navigate]);
 
   const progressCards = [
@@ -107,56 +131,30 @@ const Aprenda = () => {
     },
   ];
 
-  const videos = [
-    {
-      id: "vid001",
-      title: "Introdução ao Day Trade",
-      length: "12:41",
-      difficulty: "Iniciante",
-      category: "Day Trade",
-      thumbnail: "https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?w=400",
-    },
-    {
-      id: "vid002",
-      title: "Como funciona o Banco Central",
-      length: "19:10",
-      difficulty: "Intermediário",
-      category: "Macro",
-      thumbnail: "https://images.unsplash.com/photo-1526304640581-d334cdbbf45e?w=400",
-    },
-    {
-      id: "vid003",
-      title: "Bitcoin para Iniciantes",
-      length: "17:22",
-      difficulty: "Iniciante",
-      category: "Cripto",
-      thumbnail: "https://images.unsplash.com/photo-1518546305927-5a555bb7020d?w=400",
-    },
-    {
-      id: "vid004",
-      title: "Organizando suas Finanças",
-      length: "14:35",
-      difficulty: "Iniciante",
-      category: "Finanças",
-      thumbnail: "https://images.unsplash.com/photo-1554224155-6726b3ff858f?w=400",
-    },
-    {
-      id: "vid005",
-      title: "Análise Técnica Avançada",
-      length: "25:18",
-      difficulty: "Avançado",
-      category: "Day Trade",
-      thumbnail: "https://images.unsplash.com/photo-1642790106117-e829e14a795f?w=400",
-    },
-    {
-      id: "vid006",
-      title: "DeFi: O Futuro das Finanças",
-      length: "21:45",
-      difficulty: "Avançado",
-      category: "Cripto",
-      thumbnail: "https://images.unsplash.com/photo-1639762681485-074b7f938ba0?w=400",
-    },
-  ];
+  // Map lessons from database to video format
+  const videos = lessonsFromDb.map(lesson => {
+    const trackName = lesson.learning_modules?.learning_tracks?.name || "Outros";
+    let category = "Outros";
+    if (trackName.toLowerCase().includes("day") || trackName.toLowerCase().includes("trade")) {
+      category = "Day Trade";
+    } else if (trackName.toLowerCase().includes("cripto") || trackName.toLowerCase().includes("bitcoin")) {
+      category = "Cripto";
+    } else if (trackName.toLowerCase().includes("macro")) {
+      category = "Macro";
+    } else if (trackName.toLowerCase().includes("finan")) {
+      category = "Finanças";
+    }
+
+    return {
+      id: lesson.id,
+      title: lesson.title,
+      length: `${lesson.duration_minutes || 0} min`,
+      difficulty: lesson.learning_modules?.name || "Iniciante",
+      category,
+      thumbnail: lesson.thumbnail_url || "https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?w=400",
+      video_url: lesson.video_url,
+    };
+  });
 
   const quizzes = [
     {
@@ -388,34 +386,54 @@ const Aprenda = () => {
                 ))}
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {filteredVideos.map((video) => (
-                  <Card key={video.id} className="group bg-card/50 backdrop-blur-sm border-border/50 hover:border-primary/50 transition-all duration-300 overflow-hidden cursor-pointer">
-                    <div className="relative aspect-video overflow-hidden">
-                      <img 
-                        src={video.thumbnail} 
-                        alt={video.title}
-                        className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-                      />
-                      <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                        <div className="w-16 h-16 rounded-full bg-primary/90 flex items-center justify-center">
-                          <Play className="w-8 h-8 text-white ml-1" />
+              {loadingLessons ? (
+                <div className="col-span-3 flex items-center justify-center py-12">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                </div>
+              ) : filteredVideos.length === 0 ? (
+                <div className="col-span-3 text-center py-12">
+                  <Play className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                  <p className="text-muted-foreground">Nenhuma aula encontrada.</p>
+                  {isAdmin && (
+                    <Button variant="outline" className="mt-4" onClick={() => navigate("/aprenda/admin")}>
+                      Adicionar Aulas
+                    </Button>
+                  )}
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {filteredVideos.map((video) => (
+                    <Card 
+                      key={video.id} 
+                      className="group bg-card/50 backdrop-blur-sm border-border/50 hover:border-primary/50 transition-all duration-300 overflow-hidden cursor-pointer"
+                      onClick={() => navigate(`/aprenda/aula/${video.id}`)}
+                    >
+                      <div className="relative aspect-video overflow-hidden">
+                        <img 
+                          src={video.thumbnail} 
+                          alt={video.title}
+                          className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                        />
+                        <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                          <div className="w-16 h-16 rounded-full bg-primary/90 flex items-center justify-center">
+                            <Play className="w-8 h-8 text-white ml-1" />
+                          </div>
+                        </div>
+                        <div className="absolute bottom-2 right-2 bg-black/80 px-2 py-1 rounded text-xs font-medium">
+                          {video.length}
                         </div>
                       </div>
-                      <div className="absolute bottom-2 right-2 bg-black/80 px-2 py-1 rounded text-xs font-medium">
-                        {video.length}
-                      </div>
-                    </div>
-                    <CardContent className="p-4">
-                      <h3 className="font-semibold mb-2 line-clamp-2">{video.title}</h3>
-                      <div className="flex items-center gap-2">
-                        <Badge variant="secondary" className="text-xs">{video.category}</Badge>
-                        <Badge variant="outline" className="text-xs">{video.difficulty}</Badge>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
+                      <CardContent className="p-4">
+                        <h3 className="font-semibold mb-2 line-clamp-2">{video.title}</h3>
+                        <div className="flex items-center gap-2">
+                          <Badge variant="secondary" className="text-xs">{video.category}</Badge>
+                          <Badge variant="outline" className="text-xs">{video.difficulty}</Badge>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              )}
             </section>
 
             {/* Quizzes */}
