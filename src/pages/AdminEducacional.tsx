@@ -99,12 +99,13 @@ export default function AdminEducacional() {
   // Form states
   const [trackForm, setTrackForm] = useState({ name: "", slug: "", description: "", icon: "BookOpen", color: "from-blue-500 to-cyan-500", is_active: true });
   const [moduleForm, setModuleForm] = useState({ track_id: "", name: "", description: "", is_active: true });
-  const [lessonForm, setLessonForm] = useState({ module_id: "", title: "", description: "", content: "", video_url: "", duration_minutes: 0, points: 10, is_active: true });
+  const [lessonForm, setLessonForm] = useState({ module_id: "", title: "", description: "", content: "", video_url: "", thumbnail_url: "", duration_minutes: 0, points: 10, is_active: true });
   const [quizForm, setQuizForm] = useState({ module_id: "", lesson_id: "", title: "", description: "", points: 20, passing_score: 70, is_active: true });
 
   // Upload states
   const [uploading, setUploading] = useState(false);
   const [uploadingVideo, setUploadingVideo] = useState(false);
+  const [uploadingThumbnail, setUploadingThumbnail] = useState(false);
 
   useEffect(() => {
     checkAdminAndLoadData();
@@ -224,7 +225,7 @@ export default function AdminEducacional() {
     }
   };
 
-  // Lesson CRUD with video upload
+  // Lesson CRUD with video and thumbnail upload
   const handleVideoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -254,6 +255,34 @@ export default function AdminEducacional() {
     }
   };
 
+  const handleThumbnailUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    setUploadingThumbnail(true);
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `thumbnails/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from("educational-videos")
+        .upload(fileName, file);
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from("educational-videos")
+        .getPublicUrl(fileName);
+
+      setLessonForm(prev => ({ ...prev, thumbnail_url: publicUrl }));
+      toast.success("Thumbnail enviada com sucesso!");
+    } catch (error: any) {
+      toast.error("Erro ao enviar thumbnail: " + error.message);
+    } finally {
+      setUploadingThumbnail(false);
+    }
+  };
+
   const handleSaveLesson = async () => {
     try {
       if (editingLesson) {
@@ -273,7 +302,7 @@ export default function AdminEducacional() {
       }
       setLessonDialogOpen(false);
       setEditingLesson(null);
-      setLessonForm({ module_id: "", title: "", description: "", content: "", video_url: "", duration_minutes: 0, points: 10, is_active: true });
+      setLessonForm({ module_id: "", title: "", description: "", content: "", video_url: "", thumbnail_url: "", duration_minutes: 0, points: 10, is_active: true });
       loadAllData();
     } catch (error: any) {
       toast.error(error.message);
@@ -575,7 +604,7 @@ export default function AdminEducacional() {
                 <CardTitle>Aulas</CardTitle>
                 <Dialog open={lessonDialogOpen} onOpenChange={setLessonDialogOpen}>
                   <DialogTrigger asChild>
-                    <Button onClick={() => { setEditingLesson(null); setLessonForm({ module_id: modules[0]?.id || "", title: "", description: "", content: "", video_url: "", duration_minutes: 0, points: 10, is_active: true }); }}>
+                    <Button onClick={() => { setEditingLesson(null); setLessonForm({ module_id: modules[0]?.id || "", title: "", description: "", content: "", video_url: "", thumbnail_url: "", duration_minutes: 0, points: 10, is_active: true }); }}>
                       <Plus className="h-4 w-4 mr-2" />
                       Nova Aula
                     </Button>
@@ -623,6 +652,24 @@ export default function AdminEducacional() {
                         </div>
                         {lessonForm.video_url && (
                           <p className="text-sm text-muted-foreground truncate">Vídeo: {lessonForm.video_url}</p>
+                        )}
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Thumbnail da Aula</Label>
+                        <div className="flex gap-2">
+                          <Input value={lessonForm.thumbnail_url} onChange={e => setLessonForm(prev => ({ ...prev, thumbnail_url: e.target.value }))} placeholder="URL da thumbnail ou faça upload" className="flex-1" />
+                          <div className="relative">
+                            <input type="file" accept="image/*" onChange={handleThumbnailUpload} className="absolute inset-0 opacity-0 cursor-pointer" disabled={uploadingThumbnail} />
+                            <Button variant="outline" disabled={uploadingThumbnail}>
+                              {uploadingThumbnail ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+                            </Button>
+                          </div>
+                        </div>
+                        {lessonForm.thumbnail_url && (
+                          <div className="flex items-center gap-2">
+                            <img src={lessonForm.thumbnail_url} alt="Thumbnail" className="h-16 w-24 object-cover rounded" />
+                            <p className="text-sm text-muted-foreground truncate flex-1">{lessonForm.thumbnail_url}</p>
+                          </div>
                         )}
                       </div>
                       <div className="grid grid-cols-2 gap-4">
@@ -688,6 +735,7 @@ export default function AdminEducacional() {
                                 description: lesson.description || "", 
                                 content: lesson.content || "", 
                                 video_url: lesson.video_url || "", 
+                                thumbnail_url: lesson.thumbnail_url || "",
                                 duration_minutes: lesson.duration_minutes || 0, 
                                 points: lesson.points || 10, 
                                 is_active: lesson.is_active 
