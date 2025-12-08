@@ -64,12 +64,13 @@ const menuItems = [
     icon: User,
     color: "text-orange-500",
   },
-  {
-    title: "Aprenda",
-    url: "/aprenda",
-    icon: GraduationCap,
-    color: "text-purple-500",
-  },
+  // Aprenda - oculto temporariamente enquanto está em desenvolvimento
+  // {
+  //   title: "Aprenda",
+  //   url: "/aprenda",
+  //   icon: GraduationCap,
+  //   color: "text-purple-500",
+  // },
 ];
 
 export function AppSidebar({ isAdmin }: AppSidebarProps) {
