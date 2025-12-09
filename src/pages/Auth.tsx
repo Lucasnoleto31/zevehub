@@ -122,8 +122,9 @@ const Auth = () => {
       if (error) throw error;
 
       if (data.user) {
-        // Atualizar o perfil com os dados adicionais (CPF, conta Genial)
+        // Atualizar o perfil com os dados adicionais (telefone, CPF, conta Genial)
         await supabase.from("profiles").update({
+          phone: validatedData.phone,
           cpf: validatedData.cpf,
           has_genial_account: validatedData.hasGenialAccount,
           genial_id: validatedData.genialId || null,
