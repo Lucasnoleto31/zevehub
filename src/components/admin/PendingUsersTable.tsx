@@ -3,7 +3,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Check, X, Eye, MessageSquare } from "lucide-react";
+import { Check, X, Download } from "lucide-react";
+import * as XLSX from "xlsx";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -145,6 +146,19 @@ const PendingUsersTable = ({ onUpdate }: PendingUsersTableProps) => {
     setShowRejectDialog(true);
   };
 
+  const exportToExcel = () => {
+    const exportData = users.map(user => ({
+      Nome: user.full_name || "Sem nome",
+      Telefone: user.phone || "-"
+    }));
+
+    const worksheet = XLSX.utils.json_to_sheet(exportData);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Usuários Pendentes");
+    XLSX.writeFile(workbook, `usuarios_pendentes_${format(new Date(), "dd-MM-yyyy")}.xlsx`);
+    toast.success("Excel exportado com sucesso!");
+  };
+
   if (loading) {
     return <div className="text-center py-8 text-muted-foreground">Carregando...</div>;
   }
@@ -159,6 +173,13 @@ const PendingUsersTable = ({ onUpdate }: PendingUsersTableProps) => {
 
   return (
     <>
+      <div className="flex justify-end mb-4">
+        <Button onClick={exportToExcel} variant="outline" size="sm" className="gap-2">
+          <Download className="w-4 h-4" />
+          Exportar Excel
+        </Button>
+      </div>
+
       <Dialog open={showRejectDialog} onOpenChange={setShowRejectDialog}>
         <DialogContent>
           <DialogHeader>
