@@ -163,14 +163,22 @@ export default function Contratos() {
 
       const { data: { user } } = await supabase.auth.getUser();
       
-      // Processar e inserir contratos - suporta formato Genial e formato genérico
+      // Processar e inserir contratos - suporta formato Contratos.xlsx (CODIGO) e formato com CPF
       const contractsToInsert = jsonData.map((row: any) => {
-        // Normalizar CPF (remover caracteres especiais) - suporta múltiplos nomes de coluna
+        // CODIGO (usado para match com genial_id) ou CPF
+        const codigo = row.CODIGO || row.Codigo || row.codigo || "";
         const cpfRaw = row["CPF/CNPJ"] || row.cpf || row.CPF || row.Cpf || row["CPF CNPJ"] || "";
-        const cpf = String(cpfRaw).replace(/\D/g, "").padStart(11, "0");
+        
+        // Se tiver CODIGO, usar ele; senão, normalizar CPF
+        let identifier = "";
+        if (codigo) {
+          identifier = String(codigo).trim();
+        } else if (cpfRaw) {
+          identifier = String(cpfRaw).replace(/\D/g, "").padStart(11, "0");
+        }
         
         // Tentar parsear a data em diferentes formatos
-        let contractDate = row["DATA DE RECEITA"] || row.data || row.Data || row.DATE || row.date || new Date().toISOString().split("T")[0];
+        let contractDate = row.DATA || row.data || row.Data || row.DATE || row.date || row["DATA DE RECEITA"] || new Date().toISOString().split("T")[0];
         if (typeof contractDate === "number") {
           // Excel serial date (dias desde 1900-01-01)
           const excelDate = new Date((contractDate - 25569) * 86400 * 1000);
@@ -178,24 +186,38 @@ export default function Contratos() {
         } else if (typeof contractDate === "string" && contractDate.includes("/")) {
           const parts = contractDate.split("/");
           if (parts.length === 3) {
-            contractDate = `${parts[2]}-${parts[1].padStart(2, "0")}-${parts[0].padStart(2, "0")}`;
+            // Formato M/D/YY ou DD/MM/YYYY
+            const p0 = parseInt(parts[0]);
+            const p1 = parseInt(parts[1]);
+            let year = parts[2];
+            // Se ano tem 2 dígitos, assumir 2000s
+            if (year.length === 2) {
+              year = `20${year}`;
+            }
+            // Se primeiro número é maior que 12, é DD/MM/YYYY; senão M/D/YY
+            if (p0 > 12) {
+              contractDate = `${year}-${String(p1).padStart(2, "0")}-${String(p0).padStart(2, "0")}`;
+            } else {
+              // Formato M/D/YY (mês/dia/ano)
+              contractDate = `${year}-${String(p0).padStart(2, "0")}-${String(p1).padStart(2, "0")}`;
+            }
           }
         }
 
         // Nome do cliente - suporta múltiplos nomes de coluna
-        const clientName = row.CLIENTE || row.Cliente || row.nome || row.Nome || row.NOME || null;
+        const clientName = row.NOME || row.Nome || row.nome || row.CLIENTE || row.Cliente || null;
 
-        // Volume/Contratos - usar 1 se não tiver coluna de volume (representa 1 registro de atividade)
-        const volume = parseInt(row.volume || row.Volume || row.VOLUME || row.contratos || row.Contratos || 1);
+        // Volume/Contratos
+        const volume = parseInt(row.CONTRATOS || row.Contratos || row.contratos || row.volume || row.Volume || row.VOLUME || 1);
 
-        // Ativo - suporta múltiplos nomes de coluna
-        const asset = row.PRODUTO || row.produto || row.ativo || row.Ativo || row.ATIVO || row.ticker || row.Ticker || row["TIPO PRODUTO"] || null;
+        // Ativo
+        const asset = row.ATIVO || row.Ativo || row.ativo || row.PRODUTO || row.produto || row.ticker || row.Ticker || null;
 
         // Corretora/Plataforma
-        const broker = row.PLATAFORMA || row.plataforma || row.corretora || row.Corretora || row.CORRETORA || "Genial";
+        const broker = row.PLATAFORMA || row.Plataforma || row.plataforma || row.corretora || row.Corretora || row.CORRETORA || "Genial";
 
         return {
-          cpf,
+          cpf: identifier, // Armazena CODIGO ou CPF no campo cpf
           client_name: clientName,
           contract_date: contractDate,
           volume,
@@ -248,10 +270,10 @@ export default function Contratos() {
       const threeMonthsAgo = subMonths(new Date(), 3);
       const threeMonthsAgoStr = threeMonthsAgo.toISOString().split("T")[0];
 
-      // Buscar todos os perfis com CPF
+      // Buscar todos os perfis com CPF ou genial_id
       const { data: profiles, error: profilesError } = await supabase
         .from("profiles")
-        .select("id, cpf, access_status, full_name");
+        .select("id, cpf, genial_id, access_status, full_name");
 
       if (profilesError) throw profilesError;
 
@@ -263,15 +285,21 @@ export default function Contratos() {
 
       if (contractsError) throw contractsError;
 
-      // Criar set de CPFs ativos
-      const activeCpfs = new Set(recentContracts?.map(c => c.cpf) || []);
+      // Criar set de identificadores ativos (CPF ou CODIGO/genial_id)
+      const activeIdentifiers = new Set(recentContracts?.map(c => c.cpf) || []);
 
       // Processar cada perfil
       for (const profile of profiles || []) {
-        if (!profile.cpf) continue;
-
-        const normalizedCpf = profile.cpf.replace(/\D/g, "").padStart(11, "0");
-        const hasRecentActivity = activeCpfs.has(normalizedCpf);
+        // Tentar match por genial_id primeiro, depois por CPF
+        const normalizedCpf = profile.cpf ? profile.cpf.replace(/\D/g, "").padStart(11, "0") : null;
+        const genialId = profile.genial_id ? String(profile.genial_id).trim() : null;
+        
+        const hasRecentActivity = 
+          (genialId && activeIdentifiers.has(genialId)) || 
+          (normalizedCpf && activeIdentifiers.has(normalizedCpf));
+        // Pular perfis sem identificador
+        if (!normalizedCpf && !genialId) continue;
+        
         const currentStatus = profile.access_status;
 
         let newStatus: string | null = null;
@@ -307,16 +335,24 @@ export default function Contratos() {
             continue;
           }
 
-          // Atualizar matched_user_id nos contratos
-          await supabase
-            .from("contracts")
-            .update({ matched_user_id: profile.id })
-            .eq("cpf", normalizedCpf);
+          // Atualizar matched_user_id nos contratos (por genial_id ou cpf)
+          if (genialId) {
+            await supabase
+              .from("contracts")
+              .update({ matched_user_id: profile.id })
+              .eq("cpf", genialId);
+          }
+          if (normalizedCpf) {
+            await supabase
+              .from("contracts")
+              .update({ matched_user_id: profile.id })
+              .eq("cpf", normalizedCpf);
+          }
 
           // Registrar log
           await supabase.from("access_sync_logs").insert({
             user_id: profile.id,
-            cpf: normalizedCpf,
+            cpf: normalizedCpf || genialId,
             previous_status: currentStatus,
             new_status: newStatus,
             reason,
@@ -357,8 +393,8 @@ export default function Contratos() {
 
   const downloadTemplate = () => {
     const template = [
-      { "CPF/CNPJ": "014.933.476-16", "CLIENTE": "DIEGO AUGUSTO QUEIROZ DE LIMA", "DATA DE RECEITA": "01/12/2024", "PLATAFORMA": "Genial Cloud", "PRODUTO": "OUTROS" },
-      { "CPF/CNPJ": "216.810.358-55", "CLIENTE": "ALINE CRISTINA DE SOUZA ALMEIDA", "DATA DE RECEITA": "15/11/2024", "PLATAFORMA": "Profit One", "PRODUTO": "OUTROS" }
+      { CODIGO: "1027176", NOME: "ALDINEA OTZ MENDONCA", DATA: "1/2/25", CONTRATOS: 150, ATIVO: "WING25", PLATAFORMA: "METATRADER" },
+      { CODIGO: "126652", NOME: "ANDERSON ACYR DA SILVA SANTOS", DATA: "1/2/25", CONTRATOS: 8, ATIVO: "WING25", PLATAFORMA: "METATRADER" }
     ];
     
     const ws = XLSX.utils.json_to_sheet(template);
@@ -367,9 +403,13 @@ export default function Contratos() {
     XLSX.writeFile(wb, "template_contratos.xlsx");
   };
 
-  const formatCpf = (cpf: string) => {
-    if (!cpf || cpf.length !== 11) return cpf;
-    return `${cpf.slice(0, 3)}.${cpf.slice(3, 6)}.${cpf.slice(6, 9)}-${cpf.slice(9)}`;
+  const formatIdentifier = (identifier: string) => {
+    // Se tiver 11 dígitos, formatar como CPF
+    if (identifier && identifier.length === 11 && /^\d+$/.test(identifier)) {
+      return `${identifier.slice(0, 3)}.${identifier.slice(3, 6)}.${identifier.slice(6, 9)}-${identifier.slice(9)}`;
+    }
+    // Senão, retornar como está (CODIGO)
+    return identifier;
   };
 
   if (!isAdmin) {
@@ -544,7 +584,7 @@ export default function Contratos() {
             <ul className="text-sm text-muted-foreground space-y-1">
               <li>• Usuários com contratos nos últimos 3 meses: <span className="text-green-500">Acesso Aprovado</span></li>
               <li>• Usuários sem contratos nos últimos 3 meses: <span className="text-red-500">Acesso Bloqueado</span></li>
-              <li>• O cruzamento é feito pelo CPF cadastrado</li>
+              <li>• O cruzamento é feito pelo CODIGO (genial_id) ou CPF cadastrado</li>
             </ul>
           </div>
         </CardContent>
@@ -574,7 +614,7 @@ export default function Contratos() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>CPF</TableHead>
+                    <TableHead>Código</TableHead>
                     <TableHead>Nome</TableHead>
                     <TableHead>Data</TableHead>
                     <TableHead>Volume</TableHead>
@@ -587,7 +627,7 @@ export default function Contratos() {
                   {contracts.map((contract) => (
                     <TableRow key={contract.id}>
                       <TableCell className="font-mono text-sm">
-                        {formatCpf(contract.cpf)}
+                        {formatIdentifier(contract.cpf)}
                       </TableCell>
                       <TableCell>{contract.client_name || "-"}</TableCell>
                       <TableCell>
