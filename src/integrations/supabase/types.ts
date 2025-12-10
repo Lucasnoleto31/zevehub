@@ -1424,6 +1424,39 @@ export type Database = {
           },
         ]
       }
+      registered_clients: {
+        Row: {
+          cpf: string
+          created_at: string | null
+          email: string | null
+          id: string
+          imported_at: string | null
+          imported_by: string | null
+          name: string
+          phone: string | null
+        }
+        Insert: {
+          cpf: string
+          created_at?: string | null
+          email?: string | null
+          id?: string
+          imported_at?: string | null
+          imported_by?: string | null
+          name: string
+          phone?: string | null
+        }
+        Update: {
+          cpf?: string
+          created_at?: string | null
+          email?: string | null
+          id?: string
+          imported_at?: string | null
+          imported_by?: string | null
+          name?: string
+          phone?: string | null
+        }
+        Relationships: []
+      }
       risk_management_settings: {
         Row: {
           ativo: string
