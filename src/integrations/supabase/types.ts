@@ -44,6 +44,39 @@ export type Database = {
         }
         Relationships: []
       }
+      access_sync_logs: {
+        Row: {
+          cpf: string | null
+          id: string
+          new_status: string | null
+          previous_status: string | null
+          reason: string | null
+          synced_at: string
+          synced_by: string | null
+          user_id: string | null
+        }
+        Insert: {
+          cpf?: string | null
+          id?: string
+          new_status?: string | null
+          previous_status?: string | null
+          reason?: string | null
+          synced_at?: string
+          synced_by?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          cpf?: string | null
+          id?: string
+          new_status?: string | null
+          previous_status?: string | null
+          reason?: string | null
+          synced_at?: string
+          synced_by?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       account_transfers: {
         Row: {
           amount: number
@@ -469,6 +502,48 @@ export type Database = {
           name?: string
           priority?: number
           updated_at?: string
+        }
+        Relationships: []
+      }
+      contracts: {
+        Row: {
+          asset: string | null
+          broker: string | null
+          client_name: string | null
+          contract_date: string
+          cpf: string
+          created_at: string
+          id: string
+          imported_at: string
+          imported_by: string | null
+          matched_user_id: string | null
+          volume: number
+        }
+        Insert: {
+          asset?: string | null
+          broker?: string | null
+          client_name?: string | null
+          contract_date: string
+          cpf: string
+          created_at?: string
+          id?: string
+          imported_at?: string
+          imported_by?: string | null
+          matched_user_id?: string | null
+          volume?: number
+        }
+        Update: {
+          asset?: string | null
+          broker?: string | null
+          client_name?: string | null
+          contract_date?: string
+          cpf?: string
+          created_at?: string
+          id?: string
+          imported_at?: string
+          imported_by?: string | null
+          matched_user_id?: string | null
+          volume?: number
         }
         Relationships: []
       }
