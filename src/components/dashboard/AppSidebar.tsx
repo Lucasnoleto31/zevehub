@@ -9,7 +9,7 @@ import {
   Wallet,
   ShieldCheck,
   GraduationCap,
-  FileSpreadsheet,
+  
 } from "lucide-react";
 
 import {
@@ -119,19 +119,6 @@ export function AppSidebar({ isAdmin }: AppSidebarProps) {
                       >
                         <Shield className="mr-2 h-4 w-4 text-red-500" />
                         {!collapsed && <span>Admin</span>}
-                      </NavLink>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                  <SidebarMenuItem>
-                    <SidebarMenuButton asChild>
-                      <NavLink
-                        to="/contratos"
-                        end
-                        className="hover:bg-white/10 text-white/80"
-                        activeClassName="bg-white/20 text-white font-medium"
-                      >
-                        <FileSpreadsheet className="mr-2 h-4 w-4 text-emerald-500" />
-                        {!collapsed && <span>Contratos</span>}
                       </NavLink>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
