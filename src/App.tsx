@@ -25,7 +25,7 @@ import Explore from "./pages/Explore";
 import PublicProfile from "./pages/PublicProfile";
 import HashtagPage from "./pages/HashtagPage";
 import Onboarding from "./pages/Onboarding";
-
+import Contratos from "./pages/Contratos";
 import NotFound from "./pages/NotFound";
 import { useEffect } from "react";
 import { registerServiceWorker } from "@/lib/register-sw";
@@ -53,7 +53,7 @@ const App = () => {
                 <Route path="/onboarding" element={<Onboarding />} />
                 <Route path="/dashboard" element={<Dashboard />} />
                 <Route path="/admin" element={<Admin />} />
-                
+                <Route path="/contratos" element={<Contratos />} />
                 <Route path="/operations" element={<Operations />} />
                 <Route path="/operation/:id" element={<OperationDetail />} />
                 <Route path="/profile" element={<Profile />} />
