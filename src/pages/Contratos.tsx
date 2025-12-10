@@ -130,87 +130,83 @@ export default function Contratos() {
     loadData();
   };
 
-  // Função para buscar todos os clientes (sem limite de 1000)
-  const fetchAllClients = async (): Promise<RegisteredClient[]> => {
-    const pageSize = 1000;
-    let allData: RegisteredClient[] = [];
-    let page = 0;
-    let hasMore = true;
-
-    while (hasMore) {
-      const from = page * pageSize;
-      const to = from + pageSize - 1;
-      
-      const { data, error } = await supabase
-        .from("registered_clients")
-        .select("*")
-        .order("name", { ascending: true })
-        .range(from, to);
-
-      if (error) throw error;
-
-      if (data && data.length > 0) {
-        allData = [...allData, ...data];
-        hasMore = data.length === pageSize;
-        page++;
-      } else {
-        hasMore = false;
-      }
-    }
-
-    return allData;
-  };
-
-  // Função para buscar todos os contratos (sem limite de 1000)
-  const fetchAllContracts = async (): Promise<Contract[]> => {
-    const pageSize = 1000;
-    let allData: Contract[] = [];
-    let page = 0;
-    let hasMore = true;
-
-    while (hasMore) {
-      const from = page * pageSize;
-      const to = from + pageSize - 1;
-      
-      const { data, error } = await supabase
-        .from("contracts")
-        .select("*")
-        .order("contract_date", { ascending: false })
-        .range(from, to);
-
-      if (error) throw error;
-
-      if (data && data.length > 0) {
-        allData = [...allData, ...data];
-        hasMore = data.length === pageSize;
-        page++;
-      } else {
-        hasMore = false;
-      }
-    }
-
-    return allData;
-  };
-
   const loadData = async () => {
     setLoading(true);
     try {
-      // Carregar TODOS os clientes cadastrados (sem limite)
-      const clientsData = await fetchAllClients();
+      // Carregar contagens (mais eficiente que carregar todos os dados)
+      const { count: clientsCount } = await supabase
+        .from("registered_clients")
+        .select("*", { count: "exact", head: true });
 
-      // Carregar TODOS os contratos (sem limite)
-      const contractsData = await fetchAllContracts();
+      const { count: contractsCount } = await supabase
+        .from("contracts")
+        .select("*", { count: "exact", head: true });
 
-      setClients(clientsData);
-      setContracts(contractsData);
+      // Carregar apenas os primeiros 200 clientes para exibição
+      const { data: clientsData, error: clientsError } = await supabase
+        .from("registered_clients")
+        .select("*")
+        .order("name", { ascending: true })
+        .limit(200);
 
-      // Fazer cruzamento dos dados
-      await crossReferenceData(clientsData, contractsData);
+      if (clientsError) throw clientsError;
+
+      // Carregar apenas os últimos 200 contratos para exibição
+      const { data: contractsData, error: contractsError } = await supabase
+        .from("contracts")
+        .select("*")
+        .order("contract_date", { ascending: false })
+        .limit(200);
+
+      if (contractsError) throw contractsError;
+
+      setClients(clientsData || []);
+      setContracts(contractsData || []);
+
+      // Calcular estatísticas de forma otimizada
+      await calculateOptimizedStats(clientsCount || 0, contractsCount || 0);
+      
+      // Fazer cruzamento apenas dos clientes carregados
+      if (clientsData && clientsData.length > 0) {
+        await crossReferenceData(clientsData, contractsData || []);
+      }
     } catch (error) {
       console.error("Erro ao carregar dados:", error);
       toast.error("Erro ao carregar dados");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const calculateOptimizedStats = async (totalClients: number, totalContracts: number) => {
+    try {
+      const threeMonthsAgo = subMonths(new Date(), 3).toISOString().split("T")[0];
+      
+      // Contar clientes com atividade nos últimos 3 meses (usando query otimizada)
+      const { data: activeClientsData } = await supabase
+        .from("contracts")
+        .select("client_name")
+        .gte("contract_date", threeMonthsAgo);
+
+      const uniqueActiveClients = new Set(
+        (activeClientsData || []).map(c => c.client_name?.toLowerCase().trim())
+      );
+
+      // Contar perfis vinculados
+      const { count: matchedCount } = await supabase
+        .from("profiles")
+        .select("*", { count: "exact", head: true })
+        .not("cpf", "is", null);
+
+      setStats({
+        totalClients,
+        totalContracts,
+        activeClients: uniqueActiveClients.size,
+        inactiveClients: Math.max(0, totalClients - uniqueActiveClients.size),
+        matchedProfiles: matchedCount || 0
+      });
+    } catch (error) {
+      console.error("Erro ao calcular estatísticas:", error);
     }
   };
 
@@ -280,18 +276,7 @@ export default function Contratos() {
     });
 
     setCrossReference(crossRef);
-
-    // Calcular estatísticas
-    const activeClients = crossRef.filter(c => c.isActive).length;
-    const matchedProfiles = crossRef.filter(c => c.matchedProfileId).length;
-
-    setStats({
-      totalClients: clientsData.length,
-      totalContracts: contractsData.length,
-      activeClients,
-      inactiveClients: clientsData.length - activeClients,
-      matchedProfiles
-    });
+    // Stats são calculados separadamente em calculateOptimizedStats
   };
 
   const handleClientsUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -461,20 +446,47 @@ export default function Contratos() {
     
     try {
       const { data: { user } } = await supabase.auth.getUser();
+      const threeMonthsAgo = subMonths(new Date(), 3).toISOString().split("T")[0];
+
+      // Buscar todos os clientes cadastrados (com seus CPFs)
+      toast.loading("Carregando clientes cadastrados...", { id: "sync-progress" });
+      const { data: allClients, error: clientsError } = await supabase
+        .from("registered_clients")
+        .select("name, cpf");
+
+      if (clientsError) throw clientsError;
+
+      // Buscar contratos ativos (últimos 3 meses) - apenas nome do cliente
+      toast.loading("Verificando atividade dos últimos 3 meses...", { id: "sync-progress" });
+      const { data: activeContracts, error: contractsError } = await supabase
+        .from("contracts")
+        .select("client_name")
+        .gte("contract_date", threeMonthsAgo);
+
+      if (contractsError) throw contractsError;
+
+      // Criar set de nomes ativos (normalizados)
+      const activeNames = new Set(
+        (activeContracts || [])
+          .filter(c => c.client_name)
+          .map(c => normalizeString(c.client_name!))
+      );
+
+      // Mapear CPF para atividade
+      const activityByCpf = new Map<string, boolean>();
+      (allClients || []).forEach(client => {
+        const normalizedName = normalizeString(client.name);
+        const normalizedCpf = client.cpf.replace(/\D/g, "");
+        activityByCpf.set(normalizedCpf, activeNames.has(normalizedName));
+      });
 
       // Buscar perfis do sistema
+      toast.loading("Atualizando acessos...", { id: "sync-progress" });
       const { data: profiles, error: profilesError } = await supabase
         .from("profiles")
         .select("id, cpf, access_status, full_name");
 
       if (profilesError) throw profilesError;
-
-      // Criar mapa de CPF para status de atividade
-      const activityByCpf = new Map<string, boolean>();
-      crossReference.forEach(cr => {
-        const normalizedCpf = cr.cpf.replace(/\D/g, "");
-        activityByCpf.set(normalizedCpf, cr.isActive);
-      });
 
       // Processar cada perfil
       for (const profile of profiles || []) {
@@ -531,6 +543,8 @@ export default function Contratos() {
           });
         }
       }
+      
+      toast.dismiss("sync-progress");
 
       if (result.errors.length > 0) {
         toast.warning(`Sincronização concluída com ${result.errors.length} erros`);
