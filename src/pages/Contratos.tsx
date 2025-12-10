@@ -163,17 +163,16 @@ export default function Contratos() {
 
       const { data: { user } } = await supabase.auth.getUser();
       
-      // Processar e inserir contratos
+      // Processar e inserir contratos - suporta formato Genial e formato genérico
       const contractsToInsert = jsonData.map((row: any) => {
-        // Normalizar CPF (remover caracteres especiais)
-        const cpf = String(row.cpf || row.CPF || row.Cpf || "")
-          .replace(/\D/g, "")
-          .padStart(11, "0");
+        // Normalizar CPF (remover caracteres especiais) - suporta múltiplos nomes de coluna
+        const cpfRaw = row["CPF/CNPJ"] || row.cpf || row.CPF || row.Cpf || row["CPF CNPJ"] || "";
+        const cpf = String(cpfRaw).replace(/\D/g, "").padStart(11, "0");
         
         // Tentar parsear a data em diferentes formatos
-        let contractDate = row.data || row.Data || row.DATE || row.date || new Date().toISOString().split("T")[0];
+        let contractDate = row["DATA DE RECEITA"] || row.data || row.Data || row.DATE || row.date || new Date().toISOString().split("T")[0];
         if (typeof contractDate === "number") {
-          // Excel serial date
+          // Excel serial date (dias desde 1900-01-01)
           const excelDate = new Date((contractDate - 25569) * 86400 * 1000);
           contractDate = excelDate.toISOString().split("T")[0];
         } else if (typeof contractDate === "string" && contractDate.includes("/")) {
@@ -183,19 +182,31 @@ export default function Contratos() {
           }
         }
 
+        // Nome do cliente - suporta múltiplos nomes de coluna
+        const clientName = row.CLIENTE || row.Cliente || row.nome || row.Nome || row.NOME || null;
+
+        // Volume/Contratos - usar 1 se não tiver coluna de volume (representa 1 registro de atividade)
+        const volume = parseInt(row.volume || row.Volume || row.VOLUME || row.contratos || row.Contratos || 1);
+
+        // Ativo - suporta múltiplos nomes de coluna
+        const asset = row.PRODUTO || row.produto || row.ativo || row.Ativo || row.ATIVO || row.ticker || row.Ticker || row["TIPO PRODUTO"] || null;
+
+        // Corretora/Plataforma
+        const broker = row.PLATAFORMA || row.plataforma || row.corretora || row.Corretora || row.CORRETORA || "Genial";
+
         return {
           cpf,
-          client_name: row.nome || row.Nome || row.NOME || row.cliente || row.Cliente || null,
+          client_name: clientName,
           contract_date: contractDate,
-          volume: parseInt(row.volume || row.Volume || row.VOLUME || row.contratos || row.Contratos || 0),
-          asset: row.ativo || row.Ativo || row.ATIVO || row.ticker || row.Ticker || null,
-          broker: row.corretora || row.Corretora || row.CORRETORA || null,
+          volume,
+          asset,
+          broker,
           imported_by: user?.id
         };
       });
 
-      // Inserir em lotes de 100
-      const batchSize = 100;
+      // Inserir em lotes de 500 para máxima velocidade
+      const batchSize = 500;
       let inserted = 0;
       
       for (let i = 0; i < contractsToInsert.length; i += batchSize) {
@@ -206,7 +217,14 @@ export default function Contratos() {
           throw error;
         }
         inserted += batch.length;
+        
+        // Mostrar progresso
+        if (contractsToInsert.length > batchSize) {
+          toast.loading(`Importando... ${inserted}/${contractsToInsert.length}`, { id: "import-progress" });
+        }
       }
+      
+      toast.dismiss("import-progress");
 
       toast.success(`${inserted} contratos importados com sucesso!`);
       loadContracts();
@@ -339,8 +357,8 @@ export default function Contratos() {
 
   const downloadTemplate = () => {
     const template = [
-      { cpf: "12345678901", nome: "João Silva", data: "01/12/2024", volume: 100, ativo: "WIN", corretora: "XP" },
-      { cpf: "98765432100", nome: "Maria Santos", data: "15/11/2024", volume: 50, ativo: "WDO", corretora: "Clear" }
+      { "CPF/CNPJ": "014.933.476-16", "CLIENTE": "DIEGO AUGUSTO QUEIROZ DE LIMA", "DATA DE RECEITA": "01/12/2024", "PLATAFORMA": "Genial Cloud", "PRODUTO": "OUTROS" },
+      { "CPF/CNPJ": "216.810.358-55", "CLIENTE": "ALINE CRISTINA DE SOUZA ALMEIDA", "DATA DE RECEITA": "15/11/2024", "PLATAFORMA": "Profit One", "PRODUTO": "OUTROS" }
     ];
     
     const ws = XLSX.utils.json_to_sheet(template);
