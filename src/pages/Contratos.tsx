@@ -130,30 +130,82 @@ export default function Contratos() {
     loadData();
   };
 
+  // Função para buscar todos os clientes (sem limite de 1000)
+  const fetchAllClients = async (): Promise<RegisteredClient[]> => {
+    const pageSize = 1000;
+    let allData: RegisteredClient[] = [];
+    let page = 0;
+    let hasMore = true;
+
+    while (hasMore) {
+      const from = page * pageSize;
+      const to = from + pageSize - 1;
+      
+      const { data, error } = await supabase
+        .from("registered_clients")
+        .select("*")
+        .order("name", { ascending: true })
+        .range(from, to);
+
+      if (error) throw error;
+
+      if (data && data.length > 0) {
+        allData = [...allData, ...data];
+        hasMore = data.length === pageSize;
+        page++;
+      } else {
+        hasMore = false;
+      }
+    }
+
+    return allData;
+  };
+
+  // Função para buscar todos os contratos (sem limite de 1000)
+  const fetchAllContracts = async (): Promise<Contract[]> => {
+    const pageSize = 1000;
+    let allData: Contract[] = [];
+    let page = 0;
+    let hasMore = true;
+
+    while (hasMore) {
+      const from = page * pageSize;
+      const to = from + pageSize - 1;
+      
+      const { data, error } = await supabase
+        .from("contracts")
+        .select("*")
+        .order("contract_date", { ascending: false })
+        .range(from, to);
+
+      if (error) throw error;
+
+      if (data && data.length > 0) {
+        allData = [...allData, ...data];
+        hasMore = data.length === pageSize;
+        page++;
+      } else {
+        hasMore = false;
+      }
+    }
+
+    return allData;
+  };
+
   const loadData = async () => {
     setLoading(true);
     try {
-      // Carregar clientes cadastrados
-      const { data: clientsData, error: clientsError } = await supabase
-        .from("registered_clients")
-        .select("*")
-        .order("name", { ascending: true });
+      // Carregar TODOS os clientes cadastrados (sem limite)
+      const clientsData = await fetchAllClients();
 
-      if (clientsError) throw clientsError;
+      // Carregar TODOS os contratos (sem limite)
+      const contractsData = await fetchAllContracts();
 
-      // Carregar contratos
-      const { data: contractsData, error: contractsError } = await supabase
-        .from("contracts")
-        .select("*")
-        .order("contract_date", { ascending: false });
-
-      if (contractsError) throw contractsError;
-
-      setClients(clientsData || []);
-      setContracts(contractsData || []);
+      setClients(clientsData);
+      setContracts(contractsData);
 
       // Fazer cruzamento dos dados
-      await crossReferenceData(clientsData || [], contractsData || []);
+      await crossReferenceData(clientsData, contractsData);
     } catch (error) {
       console.error("Erro ao carregar dados:", error);
       toast.error("Erro ao carregar dados");
