@@ -619,6 +619,95 @@ export type Database = {
         }
         Relationships: []
       }
+      journal_trades: {
+        Row: {
+          asset: string
+          contracts: number | null
+          created_at: string
+          emotion_after: string | null
+          emotion_before: string | null
+          entry_price: number | null
+          entry_time: string | null
+          exit_time: string | null
+          followed_plan: boolean | null
+          id: string
+          market: string
+          notes: string | null
+          result_r: number | null
+          result_value: number | null
+          risk_value: number | null
+          side: string
+          status: string
+          stop_loss: number | null
+          strategy_id: string | null
+          target: number | null
+          timeframe: string | null
+          trade_date: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          asset: string
+          contracts?: number | null
+          created_at?: string
+          emotion_after?: string | null
+          emotion_before?: string | null
+          entry_price?: number | null
+          entry_time?: string | null
+          exit_time?: string | null
+          followed_plan?: boolean | null
+          id?: string
+          market?: string
+          notes?: string | null
+          result_r?: number | null
+          result_value?: number | null
+          risk_value?: number | null
+          side?: string
+          status?: string
+          stop_loss?: number | null
+          strategy_id?: string | null
+          target?: number | null
+          timeframe?: string | null
+          trade_date?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          asset?: string
+          contracts?: number | null
+          created_at?: string
+          emotion_after?: string | null
+          emotion_before?: string | null
+          entry_price?: number | null
+          entry_time?: string | null
+          exit_time?: string | null
+          followed_plan?: boolean | null
+          id?: string
+          market?: string
+          notes?: string | null
+          result_r?: number | null
+          result_value?: number | null
+          risk_value?: number | null
+          side?: string
+          status?: string
+          stop_loss?: number | null
+          strategy_id?: string | null
+          target?: number | null
+          timeframe?: string | null
+          trade_date?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "journal_trades_strategy_id_fkey"
+            columns: ["strategy_id"]
+            isOneToOne: false
+            referencedRelation: "strategies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       lancamentos_financas: {
         Row: {
           categoria_id: string | null

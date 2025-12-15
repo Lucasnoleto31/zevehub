@@ -10,6 +10,7 @@ import {
   ShieldCheck,
   GraduationCap,
   FileSpreadsheet,
+  BookOpen,
 } from "lucide-react";
 
 import {
@@ -58,6 +59,12 @@ const menuItems = [
     url: "/comunidade",
     icon: Users,
     color: "text-pink-500",
+  },
+  {
+    title: "Diário de Trading",
+    url: "/journal",
+    icon: BookOpen,
+    color: "text-violet-500",
   },
   {
     title: "Perfil",
