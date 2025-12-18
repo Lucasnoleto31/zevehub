@@ -1,17 +1,12 @@
-// Performance Heatmap with export and alerts
-import { useEffect, useState, useMemo, useRef, useCallback } from "react";
+// Performance Heatmap
+import { useState, useMemo, useCallback } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Activity, TrendingUp, TrendingDown, Flame, Target, Crown, AlertTriangle, GitCompare, Calendar, ArrowUp, ArrowDown, Minus, Download, FileImage, FileText, Bell, BellRing, X, ChevronDown } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
+import { Activity, Crown, AlertTriangle, GitCompare, Calendar, ArrowUp, ArrowDown, Minus } from "lucide-react";
+import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { toast } from "sonner";
-import html2canvas from "html2canvas";
-import jsPDF from "jspdf";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
 interface Operation {
   operation_date: string;
@@ -34,37 +29,29 @@ interface ComparisonData extends HeatmapData {
   changePercent: number;
 }
 
-interface PerformanceAlert {
-  id: string;
-  weekday: string;
-  hour: string;
-  type: string;
-  change: number;
-  changePercent: number;
-  message: string;
-}
-
 interface PerformanceHeatmapProps {
   operations: Operation[];
 }
 
 type ViewMode = "normal" | "comparison";
-type ComparisonPeriod = "week" | "month" | "quarter";
+type ComparisonPeriod = "all" | "week" | "month" | "quarter";
 
-const ALERT_THRESHOLD = 30;
 const WEEKDAYS = ["Seg", "Ter", "Qua", "Qui", "Sex"];
 const HOURS = Array.from({ length: 9 }, (_, i) => `${i + 9}h`);
 
 const PerformanceHeatmap = ({ operations }: PerformanceHeatmapProps) => {
   const [hoveredCell, setHoveredCell] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>("normal");
-  const [comparisonPeriod, setComparisonPeriod] = useState<ComparisonPeriod>("month");
-  const [alerts, setAlerts] = useState<PerformanceAlert[]>([]);
-  const [showAlerts, setShowAlerts] = useState(false);
-  const [isExporting, setIsExporting] = useState(false);
-  const heatmapRef = useRef<HTMLDivElement>(null);
+  const [comparisonPeriod, setComparisonPeriod] = useState<ComparisonPeriod>("all");
 
   const filterByPeriod = useCallback((ops: Operation[], periodType: "current" | "previous", period: ComparisonPeriod): Operation[] => {
+    if (period === "all") {
+      // For "all", split operations in half by date
+      const sorted = [...ops].sort((a, b) => a.operation_date.localeCompare(b.operation_date));
+      const midpoint = Math.floor(sorted.length / 2);
+      return periodType === "current" ? sorted.slice(midpoint) : sorted.slice(0, midpoint);
+    }
+
     const now = new Date();
     let startDate: Date;
     let endDate: Date;
@@ -161,30 +148,13 @@ const PerformanceHeatmap = ({ operations }: PerformanceHeatmapProps) => {
     });
   }, [operations, comparisonPeriod, filterByPeriod, processOperations]);
 
-  useEffect(() => {
-    const newAlerts: PerformanceAlert[] = comparisonData
-      .filter(d => (d.operations > 0 || d.previousOperations > 0) && Math.abs(d.changePercent) >= ALERT_THRESHOLD)
-      .map(d => ({
-        id: `${d.weekday}-${d.hour}`,
-        weekday: d.weekday,
-        hour: d.hour,
-        type: d.changePercent > 0 ? "improvement" : "decline",
-        change: d.change,
-        changePercent: d.changePercent,
-        message: `${d.weekday} às ${d.hour}: ${d.changePercent > 0 ? "Melhoria" : "Queda"} de ${Math.abs(d.changePercent).toFixed(0)}%`,
-      }))
-      .slice(0, 10);
-    setAlerts(newAlerts);
-  }, [comparisonData]);
-
-  const { bestSlot, worstSlot, totalOperations } = useMemo(() => {
+  const { bestSlot, worstSlot } = useMemo(() => {
     const data = viewMode === "normal" ? heatmapData : comparisonData;
     const withOps = data.filter(d => d.operations > 0);
-    if (withOps.length === 0) return { bestSlot: null, worstSlot: null, totalOperations: 0 };
+    if (withOps.length === 0) return { bestSlot: null, worstSlot: null };
     return {
       bestSlot: withOps.reduce((max, d) => d.totalResult > max.totalResult ? d : max, withOps[0]),
       worstSlot: withOps.reduce((min, d) => d.totalResult < min.totalResult ? d : min, withOps[0]),
-      totalOperations: withOps.reduce((sum, d) => sum + d.operations, 0),
     };
   }, [heatmapData, comparisonData, viewMode]);
 
@@ -196,40 +166,8 @@ const PerformanceHeatmap = ({ operations }: PerformanceHeatmapProps) => {
     return { improved, declined, totalChange };
   }, [comparisonData, viewMode]);
 
-  const exportAsPNG = useCallback(async () => {
-    if (!heatmapRef.current) return;
-    setIsExporting(true);
-    try {
-      const canvas = await html2canvas(heatmapRef.current, { backgroundColor: "#0a0a0a", scale: 2 });
-      const link = document.createElement("a");
-      link.download = `heatmap-${new Date().toISOString().split("T")[0]}.png`;
-      link.href = canvas.toDataURL("image/png");
-      link.click();
-      toast.success("Heatmap exportado como PNG!");
-    } catch { toast.error("Erro ao exportar PNG"); }
-    finally { setIsExporting(false); }
-  }, []);
-
-  const exportAsPDF = useCallback(async () => {
-    if (!heatmapRef.current) return;
-    setIsExporting(true);
-    try {
-      const canvas = await html2canvas(heatmapRef.current, { backgroundColor: "#0a0a0a", scale: 2 });
-      const pdf = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
-      const pdfWidth = pdf.internal.pageSize.getWidth();
-      const pdfHeight = pdf.internal.pageSize.getHeight();
-      const ratio = Math.min(pdfWidth / canvas.width, pdfHeight / canvas.height);
-      pdf.setFillColor(10, 10, 10);
-      pdf.rect(0, 0, pdfWidth, pdfHeight, "F");
-      pdf.addImage(canvas.toDataURL("image/png"), "PNG", 10, 15, canvas.width * ratio * 0.9, canvas.height * ratio * 0.9);
-      pdf.save(`heatmap-${new Date().toISOString().split("T")[0]}.pdf`);
-      toast.success("Heatmap exportado como PDF!");
-    } catch { toast.error("Erro ao exportar PDF"); }
-    finally { setIsExporting(false); }
-  }, []);
-
   const formatCurrency = (value: number) => value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
-  const getPeriodLabel = (p: ComparisonPeriod) => p === "week" ? "Semana" : p === "month" ? "Mês" : "Trimestre";
+  const getPeriodLabel = (p: ComparisonPeriod) => p === "all" ? "Todo o período" : p === "week" ? "Semana" : p === "month" ? "Mês" : "Trimestre";
 
   const getColorIntensity = (result: number, ops: number) => {
     if (ops === 0) return { bg: "bg-muted/30", border: "border-border/20", text: "text-muted-foreground/30" };
@@ -283,8 +221,9 @@ const PerformanceHeatmap = ({ operations }: PerformanceHeatmapProps) => {
 
               {viewMode === "comparison" && (
                 <Select value={comparisonPeriod} onValueChange={(v) => setComparisonPeriod(v as ComparisonPeriod)}>
-                  <SelectTrigger className="w-[130px] h-8 bg-muted/50"><Calendar className="w-3.5 h-3.5 mr-2 text-violet-400" /><SelectValue /></SelectTrigger>
+                  <SelectTrigger className="w-[150px] h-8 bg-muted/50"><Calendar className="w-3.5 h-3.5 mr-2 text-violet-400" /><SelectValue /></SelectTrigger>
                   <SelectContent>
+                    <SelectItem value="all">Todo o período</SelectItem>
                     <SelectItem value="week">Semana</SelectItem>
                     <SelectItem value="month">Mês</SelectItem>
                     <SelectItem value="quarter">Trimestre</SelectItem>
@@ -292,50 +231,12 @@ const PerformanceHeatmap = ({ operations }: PerformanceHeatmapProps) => {
                 </Select>
               )}
 
-              <Popover open={showAlerts} onOpenChange={setShowAlerts}>
-                <PopoverTrigger asChild>
-                  <Button variant="outline" size="sm" className={`h-8 relative ${alerts.length > 0 ? "border-amber-500/50 text-amber-400" : ""}`}>
-                    {alerts.length > 0 ? <BellRing className="w-4 h-4" /> : <Bell className="w-4 h-4" />}
-                    {alerts.length > 0 && <span className="absolute -top-1 -right-1 w-4 h-4 bg-amber-500 rounded-full text-[10px] font-bold text-amber-950 flex items-center justify-center">{alerts.length}</span>}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-80 p-0" align="end">
-                  <div className="p-3 border-b border-border/50 bg-amber-500/10"><h4 className="font-semibold flex items-center gap-2"><BellRing className="w-4 h-4 text-amber-400" />Alertas ({ALERT_THRESHOLD}%+)</h4></div>
-                  <div className="max-h-[250px] overflow-y-auto">
-                    {alerts.length === 0 ? <div className="p-4 text-center text-muted-foreground text-sm">Nenhum alerta</div> : (
-                      <div className="divide-y divide-border/30">
-                        {alerts.map(a => (
-                          <div key={a.id} className="p-3 flex items-center gap-3">
-                            <div className={`p-1.5 rounded-lg ${a.type === "improvement" ? "bg-emerald-500/20 text-emerald-400" : "bg-rose-500/20 text-rose-400"}`}>
-                              {a.type === "improvement" ? <TrendingUp className="w-4 h-4" /> : <TrendingDown className="w-4 h-4" />}
-                            </div>
-                            <div className="flex-1"><p className="text-sm">{a.message}</p><p className={`text-xs ${a.change > 0 ? "text-emerald-400" : "text-rose-400"}`}>{formatCurrency(a.change)}</p></div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                </PopoverContent>
-              </Popover>
-
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" size="sm" className="h-8" disabled={isExporting}>
-                    <Download className="w-4 h-4" /><ChevronDown className="w-3 h-3 ml-1" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={exportAsPNG}><FileImage className="w-4 h-4 mr-2 text-emerald-400" />PNG</DropdownMenuItem>
-                  <DropdownMenuItem onClick={exportAsPDF}><FileText className="w-4 h-4 mr-2 text-rose-400" />PDF</DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-
               {viewMode === "normal" && bestSlot && <Badge variant="outline" className="hidden lg:flex bg-emerald-500/10 border-emerald-500/30 text-emerald-400"><Crown className="w-3 h-3 mr-1" />{bestSlot.weekday} {bestSlot.hour}</Badge>}
             </div>
           </div>
         </CardHeader>
         
-        <CardContent className="relative pt-4" ref={heatmapRef}>
+        <CardContent className="relative pt-4">
           <TooltipProvider delayDuration={100}>
             <div className="overflow-x-auto">
               <div className="inline-block min-w-full">
@@ -345,12 +246,11 @@ const PerformanceHeatmap = ({ operations }: PerformanceHeatmapProps) => {
                 </div>
 
                 <div className="space-y-2">
-                  {HOURS.map((hour, hi) => (
+                  {HOURS.map((hour) => (
                     <div key={hour} className="flex gap-2">
                       <div className="w-14 text-sm font-medium text-muted-foreground/70 flex items-center justify-end pr-2">{hour}</div>
-                      {WEEKDAYS.map((day, di) => {
+                      {WEEKDAYS.map((day) => {
                         const cellKey = `${day}-${hour}`;
-                        const isHovered = hoveredCell === cellKey;
                         
                         if (viewMode === "normal") {
                           const cellData = heatmapData.find(d => d.weekday === day && d.hour === hour);
