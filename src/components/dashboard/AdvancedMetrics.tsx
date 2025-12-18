@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
+import { motion } from "framer-motion";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { TrendingUp, TrendingDown, Activity, Target, Info, Clock } from "lucide-react";
+import { TrendingUp, TrendingDown, Activity, Target, Info, Clock, Zap, Shield, ArrowUpRight, ArrowDownRight } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { cn } from "@/lib/utils";
 
 interface Operation {
   operation_date: string;
@@ -26,10 +27,17 @@ interface AdvancedMetricsProps {
 const AdvancedMetrics = ({ operations }: AdvancedMetricsProps) => {
   const [metricsByStrategy, setMetricsByStrategy] = useState<Record<string, Metrics>>({});
   const [strategies, setStrategies] = useState<string[]>([]);
+  const [selectedStrategy, setSelectedStrategy] = useState<string>("");
 
   useEffect(() => {
     calculateMetricsByStrategy();
   }, [operations]);
+
+  useEffect(() => {
+    if (strategies.length > 0 && !selectedStrategy) {
+      setSelectedStrategy(strategies[0]);
+    }
+  }, [strategies]);
 
   const calculateMetricsByStrategy = () => {
     if (operations.length === 0) {
@@ -38,7 +46,6 @@ const AdvancedMetrics = ({ operations }: AdvancedMetricsProps) => {
       return;
     }
 
-    // Agrupar operações por estratégia
     const operationsByStrategy: Record<string, Operation[]> = {};
     operations.forEach((op) => {
       const strategy = op.strategy || "Sem estratégia";
@@ -71,7 +78,7 @@ const AdvancedMetrics = ({ operations }: AdvancedMetricsProps) => {
         drawdownDuration: 0,
       };
     }
-    // Agrupar por dia
+    
     const dailyResults = new Map<string, number>();
     ops.forEach((op) => {
       const date = op.operation_date;
@@ -80,7 +87,6 @@ const AdvancedMetrics = ({ operations }: AdvancedMetricsProps) => {
 
     const dailyReturns = Array.from(dailyResults.values());
 
-    // Calcular Sharpe Ratio
     const avgReturn = dailyReturns.reduce((a, b) => a + b, 0) / dailyReturns.length;
     const variance =
       dailyReturns.reduce((sum, ret) => sum + Math.pow(ret - avgReturn, 2), 0) /
@@ -89,7 +95,6 @@ const AdvancedMetrics = ({ operations }: AdvancedMetricsProps) => {
     const riskFreeRate = 0;
     const sharpeRatio = stdDev !== 0 ? (avgReturn - riskFreeRate) / stdDev : 0;
 
-    // Calcular Maximum Drawdown
     let peak = 0;
     let maxDrawdown = 0;
     let accumulated = 0;
@@ -105,14 +110,12 @@ const AdvancedMetrics = ({ operations }: AdvancedMetricsProps) => {
       }
     });
 
-    // Calcular Profit Factor
     const gains = ops.filter((op) => op.result > 0).reduce((sum, op) => sum + op.result, 0);
     const losses = Math.abs(
       ops.filter((op) => op.result < 0).reduce((sum, op) => sum + op.result, 0)
     );
     const profitFactor = losses !== 0 ? gains / losses : gains > 0 ? Infinity : 0;
 
-    // Calcular Expectancy (expectativa)
     const totalOperations = ops.length;
     const winningTrades = ops.filter((op) => op.result > 0).length;
     const losingTrades = ops.filter((op) => op.result < 0).length;
@@ -122,11 +125,9 @@ const AdvancedMetrics = ({ operations }: AdvancedMetricsProps) => {
     const lossRate = losingTrades / totalOperations;
     const expectancy = winRate * avgWin - lossRate * avgLoss;
 
-    // Calcular Recovery Factor
     const totalProfit = ops.reduce((sum, op) => sum + op.result, 0);
     const recoveryFactor = maxDrawdown !== 0 ? totalProfit / maxDrawdown : 0;
 
-    // Calcular Drawdown Duration (duração média de drawdowns em dias)
     const sortedDates = Array.from(dailyResults.keys()).sort();
     let drawdownDurations: number[] = [];
     let currentDrawdownStart: string | null = null;
@@ -137,7 +138,6 @@ const AdvancedMetrics = ({ operations }: AdvancedMetricsProps) => {
       accumulatedValue += dailyResults.get(date) || 0;
       
       if (accumulatedValue > peakValue) {
-        // Novo pico - se estava em drawdown, terminou
         if (currentDrawdownStart !== null) {
           const startIndex = sortedDates.indexOf(currentDrawdownStart);
           const duration = index - startIndex;
@@ -146,12 +146,10 @@ const AdvancedMetrics = ({ operations }: AdvancedMetricsProps) => {
         }
         peakValue = accumulatedValue;
       } else if (accumulatedValue < peakValue && currentDrawdownStart === null) {
-        // Começou um drawdown
         currentDrawdownStart = date;
       }
     });
 
-    // Se terminou em drawdown, conta até o último dia
     if (currentDrawdownStart !== null) {
       const startIndex = sortedDates.indexOf(currentDrawdownStart);
       const duration = sortedDates.length - 1 - startIndex;
@@ -172,7 +170,6 @@ const AdvancedMetrics = ({ operations }: AdvancedMetricsProps) => {
     };
   };
 
-
   const MetricCard = ({
     title,
     value,
@@ -180,54 +177,142 @@ const AdvancedMetrics = ({ operations }: AdvancedMetricsProps) => {
     description,
     tooltip,
     isPositive,
+    accentColor = "primary",
+    index = 0,
   }: {
     title: string;
     value: string;
-    icon: any;
+    icon: React.ElementType;
     description: string;
     tooltip: string;
     isPositive?: boolean;
-  }) => (
-    <Card>
-      <CardContent className="pt-6">
-        <div className="flex items-start justify-between">
-          <div className="space-y-2 flex-1">
-            <div className="flex items-center gap-2">
-              <Icon className="w-4 h-4 text-muted-foreground" />
-              <p className="text-sm font-medium text-muted-foreground">{title}</p>
-              <Tooltip>
-                <TooltipTrigger>
-                  <Info className="w-3 h-3 text-muted-foreground" />
-                </TooltipTrigger>
-                <TooltipContent className="max-w-xs">
-                  <p className="text-xs">{tooltip}</p>
-                </TooltipContent>
-              </Tooltip>
+    accentColor?: "emerald" | "rose" | "amber" | "cyan" | "violet" | "primary";
+    index?: number;
+  }) => {
+    const colorClasses = {
+      primary: {
+        border: "border-primary/20 hover:border-primary/40",
+        icon: "from-primary/20 to-primary/5 text-primary border-primary/20",
+        glow: "from-primary/10",
+      },
+      emerald: {
+        border: "border-emerald-500/20 hover:border-emerald-500/40",
+        icon: "from-emerald-500/20 to-emerald-500/5 text-emerald-400 border-emerald-500/20",
+        glow: "from-emerald-500/10",
+      },
+      rose: {
+        border: "border-rose-500/20 hover:border-rose-500/40",
+        icon: "from-rose-500/20 to-rose-500/5 text-rose-400 border-rose-500/20",
+        glow: "from-rose-500/10",
+      },
+      amber: {
+        border: "border-amber-500/20 hover:border-amber-500/40",
+        icon: "from-amber-500/20 to-amber-500/5 text-amber-400 border-amber-500/20",
+        glow: "from-amber-500/10",
+      },
+      cyan: {
+        border: "border-cyan-500/20 hover:border-cyan-500/40",
+        icon: "from-cyan-500/20 to-cyan-500/5 text-cyan-400 border-cyan-500/20",
+        glow: "from-cyan-500/10",
+      },
+      violet: {
+        border: "border-violet-500/20 hover:border-violet-500/40",
+        icon: "from-violet-500/20 to-violet-500/5 text-violet-400 border-violet-500/20",
+        glow: "from-violet-500/10",
+      },
+    };
+
+    const colors = colorClasses[accentColor];
+
+    return (
+      <motion.div
+        initial={{ opacity: 0, y: 20, scale: 0.95 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        transition={{ delay: index * 0.08, duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+        whileHover={{ y: -4, transition: { duration: 0.2 } }}
+      >
+        <Card className={cn(
+          "group relative overflow-hidden backdrop-blur-xl transition-all duration-500",
+          "bg-gradient-to-br from-card via-card to-accent/5",
+          "border-2 hover:shadow-2xl hover:shadow-black/20",
+          colors.border
+        )}>
+          {/* Gradient overlay on hover */}
+          <div className={cn(
+            "absolute inset-0 bg-gradient-to-br opacity-0 group-hover:opacity-100 transition-opacity duration-500",
+            colors.glow,
+            "via-transparent to-transparent"
+          )} />
+          
+          {/* Subtle grid pattern */}
+          <div className="absolute inset-0 opacity-[0.02] bg-[linear-gradient(to_right,hsl(var(--foreground))_1px,transparent_1px),linear-gradient(to_bottom,hsl(var(--foreground))_1px,transparent_1px)] bg-[size:20px_20px]" />
+
+          <CardContent className="pt-6 relative z-10">
+            <div className="flex items-start justify-between">
+              <div className="space-y-3 flex-1">
+                <div className="flex items-center gap-3">
+                  <motion.div 
+                    className={cn(
+                      "p-2.5 rounded-xl bg-gradient-to-br border shadow-lg",
+                      colors.icon
+                    )}
+                    whileHover={{ scale: 1.1, rotate: 5 }}
+                  >
+                    <Icon className="w-5 h-5" />
+                  </motion.div>
+                  <div className="flex items-center gap-2">
+                    <p className="text-sm font-bold text-muted-foreground uppercase tracking-wider">{title}</p>
+                    <Tooltip>
+                      <TooltipTrigger>
+                        <Info className="w-3.5 h-3.5 text-muted-foreground/50 hover:text-muted-foreground transition-colors" />
+                      </TooltipTrigger>
+                      <TooltipContent className="max-w-xs bg-card/95 backdrop-blur-xl border-border/50">
+                        <p className="text-xs">{tooltip}</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </div>
+                </div>
+                
+                <motion.p
+                  className={cn(
+                    "text-3xl md:text-4xl font-black tracking-tight",
+                    isPositive !== undefined
+                      ? isPositive
+                        ? "text-emerald-400"
+                        : "text-rose-400"
+                      : "text-foreground"
+                  )}
+                  initial={{ scale: 0.9 }}
+                  animate={{ scale: 1 }}
+                  transition={{ delay: index * 0.08 + 0.2, type: "spring", stiffness: 200 }}
+                >
+                  {value}
+                </motion.p>
+                
+                <div className="flex items-center gap-2">
+                  {isPositive !== undefined && (
+                    isPositive ? (
+                      <ArrowUpRight className="w-4 h-4 text-emerald-400" />
+                    ) : (
+                      <ArrowDownRight className="w-4 h-4 text-rose-400" />
+                    )
+                  )}
+                  <p className="text-sm text-muted-foreground font-medium">{description}</p>
+                </div>
+              </div>
             </div>
-            <p
-              className={`text-3xl font-bold ${
-                isPositive !== undefined
-                  ? isPositive
-                    ? "text-success"
-                    : "text-destructive"
-                  : "text-foreground"
-              }`}
-            >
-              {value}
-            </p>
-            <p className="text-xs text-muted-foreground">{description}</p>
-          </div>
-        </div>
-      </CardContent>
-    </Card>
-  );
+          </CardContent>
+        </Card>
+      </motion.div>
+    );
+  };
 
   const renderMetricsForStrategy = (metrics: Metrics) => (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
       <MetricCard
         title="Sharpe Ratio"
         value={metrics.sharpeRatio.toFixed(2)}
-        icon={TrendingUp}
+        icon={Zap}
         description={
           metrics.sharpeRatio > 1
             ? "Excelente retorno ajustado"
@@ -237,6 +322,8 @@ const AdvancedMetrics = ({ operations }: AdvancedMetricsProps) => {
         }
         tooltip="Mede o retorno ajustado ao risco. Valores acima de 1 são considerados bons, acima de 2 excelentes."
         isPositive={metrics.sharpeRatio > 0}
+        accentColor={metrics.sharpeRatio > 0 ? "emerald" : "rose"}
+        index={0}
       />
 
       <MetricCard
@@ -249,6 +336,8 @@ const AdvancedMetrics = ({ operations }: AdvancedMetricsProps) => {
         description="Maior perda acumulada"
         tooltip="A maior queda do pico até o vale. Indica o maior risco histórico enfrentado."
         isPositive={false}
+        accentColor="rose"
+        index={1}
       />
 
       <MetricCard
@@ -268,6 +357,8 @@ const AdvancedMetrics = ({ operations }: AdvancedMetricsProps) => {
         }
         tooltip="Relação entre lucros e perdas. Valores acima de 1.5 indicam boa lucratividade."
         isPositive={metrics.profitFactor > 1}
+        accentColor={metrics.profitFactor > 1 ? "emerald" : "rose"}
+        index={2}
       />
 
       <MetricCard
@@ -280,12 +371,14 @@ const AdvancedMetrics = ({ operations }: AdvancedMetricsProps) => {
         description="Ganho esperado por operação"
         tooltip="Valor médio esperado de ganho ou perda por operação executada."
         isPositive={metrics.expectancy > 0}
+        accentColor={metrics.expectancy > 0 ? "cyan" : "rose"}
+        index={3}
       />
 
       <MetricCard
         title="Recovery Factor"
         value={metrics.recoveryFactor.toFixed(2)}
-        icon={TrendingUp}
+        icon={Shield}
         description={
           metrics.recoveryFactor > 3
             ? "Recuperação forte"
@@ -295,6 +388,8 @@ const AdvancedMetrics = ({ operations }: AdvancedMetricsProps) => {
         }
         tooltip="Relação entre lucro total e drawdown máximo. Valores acima de 2 são bons."
         isPositive={metrics.recoveryFactor > 1}
+        accentColor={metrics.recoveryFactor > 1 ? "violet" : "amber"}
+        index={4}
       />
 
       <MetricCard
@@ -312,54 +407,96 @@ const AdvancedMetrics = ({ operations }: AdvancedMetricsProps) => {
         }
         tooltip="Tempo médio em dias para recuperar de um período de drawdown. Valores menores indicam recuperação mais rápida."
         isPositive={metrics.drawdownDuration < 10}
+        accentColor={metrics.drawdownDuration < 10 ? "emerald" : "amber"}
+        index={5}
       />
     </div>
   );
 
   if (strategies.length === 0) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Activity className="w-5 h-5" />
-            Métricas Avançadas por Robô
-          </CardTitle>
-          <CardDescription>
-            Nenhuma operação encontrada para exibir métricas
-          </CardDescription>
-        </CardHeader>
-      </Card>
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+      >
+        <Card className="border-2 border-border/30 bg-gradient-to-br from-card via-card to-accent/5">
+          <CardHeader>
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 rounded-xl bg-gradient-to-br from-violet-500/20 to-violet-500/5 border border-violet-500/20">
+                <Activity className="w-5 h-5 text-violet-400" />
+              </div>
+              <div>
+                <CardTitle className="text-lg">Métricas Avançadas por Robô</CardTitle>
+                <CardDescription>Nenhuma operação encontrada</CardDescription>
+              </div>
+            </div>
+          </CardHeader>
+        </Card>
+      </motion.div>
     );
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Activity className="w-5 h-5" />
-          Métricas Avançadas por Robô
-        </CardTitle>
-        <CardDescription>
-          Indicadores de risco e performance ajustada por estratégia
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <Tabs defaultValue={strategies[0]} className="w-full">
-          <TabsList className="w-full flex flex-wrap h-auto">
-            {strategies.map((strategy) => (
-              <TabsTrigger key={strategy} value={strategy} className="flex-1 min-w-[120px]">
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5 }}
+    >
+      <Card className={cn(
+        "border-2 overflow-hidden backdrop-blur-xl",
+        "bg-gradient-to-br from-card via-card to-violet-500/5",
+        "border-violet-500/20"
+      )}>
+        <CardHeader className="pb-4">
+          <div className="flex items-center gap-4">
+            <motion.div 
+              className="p-3 rounded-2xl bg-gradient-to-br from-violet-500/20 to-violet-500/5 border border-violet-500/20 shadow-lg shadow-violet-500/10"
+              whileHover={{ scale: 1.05, rotate: 5 }}
+            >
+              <Activity className="w-6 h-6 text-violet-400" />
+            </motion.div>
+            <div>
+              <CardTitle className="text-xl font-bold">Métricas Avançadas por Robô</CardTitle>
+              <CardDescription className="text-sm">Indicadores de risco e performance ajustada por estratégia</CardDescription>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          {/* Strategy Selector - Premium Pills */}
+          <div className="flex flex-wrap gap-2 p-2 rounded-2xl bg-muted/30 border border-border/30">
+            {strategies.map((strategy, index) => (
+              <motion.button
+                key={strategy}
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ delay: index * 0.03 }}
+                onClick={() => setSelectedStrategy(strategy)}
+                className={cn(
+                  "px-4 py-2.5 rounded-xl text-sm font-semibold transition-all duration-300",
+                  selectedStrategy === strategy
+                    ? "bg-gradient-to-r from-violet-500 to-purple-500 text-white shadow-lg shadow-violet-500/30"
+                    : "bg-card/50 text-muted-foreground hover:bg-card hover:text-foreground border border-transparent hover:border-border/50"
+                )}
+              >
                 {strategy}
-              </TabsTrigger>
+              </motion.button>
             ))}
-          </TabsList>
-          {strategies.map((strategy) => (
-            <TabsContent key={strategy} value={strategy} className="mt-6">
-              {renderMetricsForStrategy(metricsByStrategy[strategy])}
-            </TabsContent>
-          ))}
-        </Tabs>
-      </CardContent>
-    </Card>
+          </div>
+
+          {/* Metrics Grid */}
+          {selectedStrategy && metricsByStrategy[selectedStrategy] && (
+            <motion.div
+              key={selectedStrategy}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3 }}
+            >
+              {renderMetricsForStrategy(metricsByStrategy[selectedStrategy])}
+            </motion.div>
+          )}
+        </CardContent>
+      </Card>
+    </motion.div>
   );
 };
 
