@@ -159,21 +159,14 @@ const MonthlyComparisonChart = ({ operations, loading }: MonthlyComparisonChartP
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={monthlyData} margin={{ top: 20, right: 20, left: 10, bottom: 5 }}>
                   <defs>
-                    <linearGradient id="gradientPositive" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="#22c55e" stopOpacity={1} />
-                      <stop offset="100%" stopColor="#16a34a" stopOpacity={0.8} />
+                    <linearGradient id="gradientPositiveMonthly" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#4ade80" stopOpacity={1} />
+                      <stop offset="100%" stopColor="#22c55e" stopOpacity={0.9} />
                     </linearGradient>
-                    <linearGradient id="gradientNegative" x1="0" y1="1" x2="0" y2="0">
-                      <stop offset="0%" stopColor="#ef4444" stopOpacity={1} />
-                      <stop offset="100%" stopColor="#dc2626" stopOpacity={0.8} />
+                    <linearGradient id="gradientNegativeMonthly" x1="0" y1="1" x2="0" y2="0">
+                      <stop offset="0%" stopColor="#f87171" stopOpacity={1} />
+                      <stop offset="100%" stopColor="#ef4444" stopOpacity={0.9} />
                     </linearGradient>
-                    <filter id="glow">
-                      <feGaussianBlur stdDeviation="2" result="coloredBlur"/>
-                      <feMerge>
-                        <feMergeNode in="coloredBlur"/>
-                        <feMergeNode in="SourceGraphic"/>
-                      </feMerge>
-                    </filter>
                   </defs>
                   <CartesianGrid 
                     strokeDasharray="3 3" 
@@ -203,12 +196,13 @@ const MonthlyComparisonChart = ({ operations, loading }: MonthlyComparisonChartP
                     dataKey="resultado" 
                     radius={[6, 6, 6, 6]}
                     maxBarSize={50}
-                    filter="url(#glow)"
                   >
                     {monthlyData.map((entry, index) => (
                       <Cell 
                         key={`cell-${index}`}
-                        fill={entry.resultado >= 0 ? "url(#gradientPositive)" : "url(#gradientNegative)"}
+                        fill={entry.resultado >= 0 ? "#4ade80" : "#f87171"}
+                        stroke={entry.resultado >= 0 ? "#22c55e" : "#ef4444"}
+                        strokeWidth={1}
                       />
                     ))}
                   </Bar>
