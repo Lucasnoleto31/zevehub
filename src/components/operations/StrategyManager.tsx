@@ -8,7 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Bot, Plus, Trash2, Loader2, Edit2, Check, X } from "lucide-react";
+import { Bot, Plus, Trash2, Loader2, Edit2, Check, X, Shield } from "lucide-react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Switch } from "@/components/ui/switch";
 
@@ -29,6 +29,7 @@ const StrategyManager = ({ userId }: StrategyManagerProps) => {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
   
   // Form state
   const [name, setName] = useState("");
@@ -39,6 +40,7 @@ const StrategyManager = ({ userId }: StrategyManagerProps) => {
   const [editDescription, setEditDescription] = useState("");
 
   useEffect(() => {
+    checkAdminStatus();
     loadStrategies();
     
     // Real-time subscription para todas as estratégias
@@ -61,6 +63,21 @@ const StrategyManager = ({ userId }: StrategyManagerProps) => {
       supabase.removeChannel(channel);
     };
   }, []);
+
+  const checkAdminStatus = async () => {
+    try {
+      const { data } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', userId)
+        .eq('role', 'admin')
+        .maybeSingle();
+      
+      setIsAdmin(!!data);
+    } catch (error) {
+      console.error('Erro ao verificar status admin:', error);
+    }
+  };
 
   const loadStrategies = async () => {
     try {
@@ -184,62 +201,78 @@ const StrategyManager = ({ userId }: StrategyManagerProps) => {
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-      {/* Formulário de Cadastro */}
-      <Card className="lg:col-span-1">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Plus className="w-5 h-5" />
-            Nova Estratégia
-          </CardTitle>
-          <CardDescription>
-            Cadastre uma nova estratégia de trading
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="strategy-name">Nome da Estratégia *</Label>
-              <Input
-                id="strategy-name"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="Ex: Bot WIN v1.0, Estratégia XYZ"
-                required
-                disabled={submitting}
-              />
-            </div>
+      {/* Formulário de Cadastro - Apenas Admin */}
+      {isAdmin ? (
+        <Card className="lg:col-span-1">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Plus className="w-5 h-5" />
+              Nova Estratégia
+            </CardTitle>
+            <CardDescription>
+              Cadastre uma nova estratégia de trading
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="strategy-name">Nome da Estratégia *</Label>
+                <Input
+                  id="strategy-name"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="Ex: Bot WIN v1.0, Estratégia XYZ"
+                  required
+                  disabled={submitting}
+                />
+              </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="strategy-description">Descrição</Label>
-              <Textarea
-                id="strategy-description"
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                placeholder="Descreva a estratégia..."
-                rows={4}
-                disabled={submitting}
-              />
-            </div>
+              <div className="space-y-2">
+                <Label htmlFor="strategy-description">Descrição</Label>
+                <Textarea
+                  id="strategy-description"
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  placeholder="Descreva a estratégia..."
+                  rows={4}
+                  disabled={submitting}
+                />
+              </div>
 
-            <Button type="submit" className="w-full gap-2" disabled={submitting}>
-              {submitting ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  Cadastrando...
-                </>
-              ) : (
-                <>
-                  <Plus className="w-4 h-4" />
-                  Cadastrar Estratégia
-                </>
-              )}
-            </Button>
-          </form>
-        </CardContent>
-      </Card>
+              <Button type="submit" className="w-full gap-2" disabled={submitting}>
+                {submitting ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Cadastrando...
+                  </>
+                ) : (
+                  <>
+                    <Plus className="w-4 h-4" />
+                    Cadastrar Estratégia
+                  </>
+                )}
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
+      ) : (
+        <Card className="lg:col-span-1">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Shield className="w-5 h-5 text-muted-foreground" />
+              Acesso Restrito
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-muted-foreground">
+              Apenas administradores podem adicionar, editar ou excluir estratégias.
+            </p>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Lista de Estratégias */}
-      <Card className="lg:col-span-2">
+      <Card className={isAdmin ? "lg:col-span-2" : "lg:col-span-2"}>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Bot className="w-5 h-5" />
@@ -267,14 +300,14 @@ const StrategyManager = ({ userId }: StrategyManagerProps) => {
                     <TableHead>Nome</TableHead>
                     <TableHead>Descrição</TableHead>
                     <TableHead>Status</TableHead>
-                    <TableHead className="w-[120px]">Ações</TableHead>
+                    {isAdmin && <TableHead className="w-[120px]">Ações</TableHead>}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {strategies.map((strategy) => (
                     <TableRow key={strategy.id}>
                       <TableCell className="font-medium">
-                        {editingId === strategy.id ? (
+                        {editingId === strategy.id && isAdmin ? (
                           <Input
                             value={editName}
                             onChange={(e) => setEditName(e.target.value)}
@@ -285,7 +318,7 @@ const StrategyManager = ({ userId }: StrategyManagerProps) => {
                         )}
                       </TableCell>
                       <TableCell>
-                        {editingId === strategy.id ? (
+                        {editingId === strategy.id && isAdmin ? (
                           <Textarea
                             value={editDescription}
                             onChange={(e) => setEditDescription(e.target.value)}
@@ -300,75 +333,79 @@ const StrategyManager = ({ userId }: StrategyManagerProps) => {
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
-                          <Switch
-                            checked={strategy.is_active}
-                            onCheckedChange={() => handleToggleActive(strategy.id, strategy.is_active)}
-                          />
+                          {isAdmin ? (
+                            <Switch
+                              checked={strategy.is_active}
+                              onCheckedChange={() => handleToggleActive(strategy.id, strategy.is_active)}
+                            />
+                          ) : null}
                           <Badge variant={strategy.is_active ? "default" : "outline"}>
                             {strategy.is_active ? 'Ativa' : 'Inativa'}
                           </Badge>
                         </div>
                       </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-1">
-                          {editingId === strategy.id ? (
-                            <>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-8 w-8"
-                                onClick={() => saveEdit(strategy.id)}
-                              >
-                                <Check className="w-4 h-4 text-success" />
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-8 w-8"
-                                onClick={cancelEdit}
-                              >
-                                <X className="w-4 h-4 text-muted-foreground" />
-                              </Button>
-                            </>
-                          ) : (
-                            <>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-8 w-8"
-                                onClick={() => startEdit(strategy)}
-                              >
-                                <Edit2 className="w-4 h-4 text-primary" />
-                              </Button>
-                              <AlertDialog>
-                                <AlertDialogTrigger asChild>
-                                  <Button variant="ghost" size="icon" className="h-8 w-8">
-                                    <Trash2 className="w-4 h-4 text-destructive" />
-                                  </Button>
-                                </AlertDialogTrigger>
-                                <AlertDialogContent>
-                                  <AlertDialogHeader>
-                                    <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
-                                    <AlertDialogDescription>
-                                      Tem certeza que deseja excluir a estratégia "{strategy.name}"? 
-                                      Esta ação não pode ser desfeita.
-                                    </AlertDialogDescription>
-                                  </AlertDialogHeader>
-                                  <AlertDialogFooter>
-                                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                                    <AlertDialogAction 
-                                      onClick={() => handleDelete(strategy.id)}
-                                      className="bg-destructive hover:bg-destructive/90"
-                                    >
-                                      Excluir
-                                    </AlertDialogAction>
-                                  </AlertDialogFooter>
-                                </AlertDialogContent>
-                              </AlertDialog>
-                            </>
-                          )}
-                        </div>
-                      </TableCell>
+                      {isAdmin && (
+                        <TableCell>
+                          <div className="flex items-center gap-1">
+                            {editingId === strategy.id ? (
+                              <>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8"
+                                  onClick={() => saveEdit(strategy.id)}
+                                >
+                                  <Check className="w-4 h-4 text-success" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8"
+                                  onClick={cancelEdit}
+                                >
+                                  <X className="w-4 h-4 text-muted-foreground" />
+                                </Button>
+                              </>
+                            ) : (
+                              <>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8"
+                                  onClick={() => startEdit(strategy)}
+                                >
+                                  <Edit2 className="w-4 h-4 text-primary" />
+                                </Button>
+                                <AlertDialog>
+                                  <AlertDialogTrigger asChild>
+                                    <Button variant="ghost" size="icon" className="h-8 w-8">
+                                      <Trash2 className="w-4 h-4 text-destructive" />
+                                    </Button>
+                                  </AlertDialogTrigger>
+                                  <AlertDialogContent>
+                                    <AlertDialogHeader>
+                                      <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
+                                      <AlertDialogDescription>
+                                        Tem certeza que deseja excluir a estratégia "{strategy.name}"? 
+                                        Esta ação não pode ser desfeita.
+                                      </AlertDialogDescription>
+                                    </AlertDialogHeader>
+                                    <AlertDialogFooter>
+                                      <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                      <AlertDialogAction 
+                                        onClick={() => handleDelete(strategy.id)}
+                                        className="bg-destructive hover:bg-destructive/90"
+                                      >
+                                        Excluir
+                                      </AlertDialogAction>
+                                    </AlertDialogFooter>
+                                  </AlertDialogContent>
+                                </AlertDialog>
+                              </>
+                            )}
+                          </div>
+                        </TableCell>
+                      )}
                     </TableRow>
                   ))}
                 </TableBody>
