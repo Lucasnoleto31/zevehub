@@ -202,10 +202,20 @@ const OperationsDashboard = ({ userId }: OperationsDashboardProps) => {
 
       setOperations(allOperations);
       
+      // Estratégias excluídas que não devem aparecer no filtro
+      const excludedStrategies = [
+        'zero a zero', 
+        'zero a zero (ze)', 
+        'front running', 
+        'devolvida', 
+        'fomo', 
+        'lateralidade'
+      ];
+      
       const strategies = Array.from(new Set(
         allOperations
           .map(op => op.strategy)
-          .filter(s => s && s.trim() !== '')
+          .filter(s => s && s.trim() !== '' && !excludedStrategies.includes(s.toLowerCase()))
       )) as string[];
       setAvailableStrategies(strategies.sort());
     } catch (error) {
