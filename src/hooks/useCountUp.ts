@@ -17,7 +17,7 @@ export const useCountUp = ({
 }: UseCountUpOptions) => {
   const [count, setCount] = useState(0);
   const [isVisible, setIsVisible] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
+  const ref = useRef<any>(null);
   const hasAnimated = useRef(false);
 
   useEffect(() => {
