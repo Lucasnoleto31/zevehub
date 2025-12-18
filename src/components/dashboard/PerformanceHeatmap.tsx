@@ -20,6 +20,8 @@ interface HeatmapData {
   result: number;
   operations: number;
   totalResult: number;
+  wins: number;
+  losses: number;
 }
 
 interface ComparisonData extends HeatmapData {
@@ -172,12 +174,16 @@ const PerformanceHeatmap = ({ operations }: PerformanceHeatmapProps) => {
         const key = `${day}-${hour}`;
         const results = heatmapMap.get(key) || [];
         const totalResult = results.reduce((sum, r) => sum + r, 0);
+        const wins = results.filter(r => r > 0).length;
+        const losses = results.filter(r => r < 0).length;
         result.push({
           weekday: weekdayNames[day],
           hour: `${hour}h`,
           result: results.length > 0 ? totalResult / results.length : 0,
           operations: results.length,
           totalResult,
+          wins,
+          losses,
         });
       }
     }
@@ -788,6 +794,16 @@ const PerformanceHeatmap = ({ operations }: PerformanceHeatmapProps) => {
                                   <div className={`flex justify-between items-center p-2 rounded-lg ${isDark ? "bg-slate-700/30" : "bg-slate-100"}`}>
                                     <span className={`text-sm ${isDark ? "text-slate-400" : "text-slate-500"}`}>Operações</span>
                                     <span className={`font-black text-lg ${isDark ? "text-white" : "text-slate-800"}`}>{cellData?.operations || 0}</span>
+                                  </div>
+                                  <div className={`grid grid-cols-2 gap-2`}>
+                                    <div className={`flex flex-col items-center p-2 rounded-lg ${isDark ? "bg-emerald-500/10" : "bg-emerald-50"}`}>
+                                      <span className={`text-xs ${isDark ? "text-emerald-400/70" : "text-emerald-600/70"}`}>Ganhos</span>
+                                      <span className={`font-black text-lg text-emerald-500`}>{cellData?.wins || 0}</span>
+                                    </div>
+                                    <div className={`flex flex-col items-center p-2 rounded-lg ${isDark ? "bg-rose-500/10" : "bg-rose-50"}`}>
+                                      <span className={`text-xs ${isDark ? "text-rose-400/70" : "text-rose-600/70"}`}>Perdas</span>
+                                      <span className={`font-black text-lg text-rose-500`}>{cellData?.losses || 0}</span>
+                                    </div>
                                   </div>
                                   <div className={`flex justify-between items-center p-2 rounded-lg ${isDark ? "bg-slate-700/30" : "bg-slate-100"}`}>
                                     <span className={`text-sm ${isDark ? "text-slate-400" : "text-slate-500"}`}>Resultado</span>
