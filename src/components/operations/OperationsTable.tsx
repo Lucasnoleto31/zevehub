@@ -6,7 +6,6 @@ import { Button } from "@/components/ui/button";
 import { Trash2, Pencil } from "lucide-react";
 import { toast } from "sonner";
 import { OperationEditDialog } from "./OperationEditDialog";
-import { AIClassifier } from "./AIClassifier";
 import type { FilterValues } from "./OperationsFilters";
 
 interface Operation {
@@ -212,15 +211,6 @@ const OperationsTable = ({ userId, isAdmin = false, filters }: OperationsTablePr
                   ) : (
                     <span className="text-muted-foreground text-sm">-</span>
                   )}
-                  <AIClassifier
-                    operationId={operation.id}
-                    asset={operation.asset}
-                    result={operation.result}
-                    contracts={operation.contracts}
-                    costs={operation.costs}
-                    notes={operation.notes}
-                    onSuccess={loadOperations}
-                  />
                 </div>
               </TableCell>
               <TableCell>

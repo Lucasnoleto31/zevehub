@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ArrowLeft, Plus, TrendingUp } from "lucide-react";
-import { toast } from "sonner";
 import OperationForm from "@/components/operations/OperationForm";
 import OperationsTable from "@/components/operations/OperationsTable";
 import OperationsDashboard from "@/components/operations/OperationsDashboard";
@@ -15,12 +14,6 @@ import DeleteOperationsByStrategy from "@/components/operations/DeleteOperations
 import StrategyManager from "@/components/operations/StrategyManager";
 import { OperationsFilters, type FilterValues } from "@/components/operations/OperationsFilters";
 import { ThemeToggle } from "@/components/ThemeToggle";
-import { ExportOperations } from "@/components/operations/ExportOperations";
-import { AdvancedFilters, type AdvancedFilterValues } from "@/components/operations/AdvancedFilters";
-import { StatsCards } from "@/components/operations/StatsCards";
-import { RiskAlerts } from "@/components/operations/RiskAlerts";
-import { EnhancedStatsCards } from "@/components/operations/EnhancedStatsCards";
-import { BulkAIClassifier } from "@/components/operations/BulkAIClassifier";
 
 const Operations = () => {
   const navigate = useNavigate();
@@ -36,105 +29,10 @@ const Operations = () => {
     timeTo: "",
     resultType: "all",
   });
-  const [advancedFilters, setAdvancedFilters] = useState<AdvancedFilterValues>({
-    strategies: [],
-  });
-  const [operations, setOperations] = useState<any[]>([]);
-  const [stats, setStats] = useState({
-    totalTrades: 0,
-    winRate: 0,
-    profitTotal: 0,
-    averagePerTrade: 0,
-    bestTrade: 0,
-    worstTrade: 0,
-    currentStreak: 0,
-  });
 
   useEffect(() => {
     checkUser();
   }, []);
-
-  useEffect(() => {
-    if (user) {
-      loadOperations();
-    }
-  }, [user, advancedFilters]);
-
-  const loadOperations = async () => {
-    try {
-      // Carregar todas as operações do sistema
-      let query = supabase
-        .from("trading_operations")
-        .select("*")
-        .order("operation_date", { ascending: false });
-
-      if (advancedFilters.startDate) {
-        const fromStr = advancedFilters.startDate.toISOString().split('T')[0];
-        query = query.gte("operation_date", fromStr);
-      }
-
-      if (advancedFilters.endDate) {
-        const toStr = advancedFilters.endDate.toISOString().split('T')[0];
-        query = query.lte("operation_date", toStr);
-      }
-
-      const { data, error } = await query.limit(1000);
-
-      if (error) throw error;
-
-      let filteredData = data || [];
-
-      // Filtro de estratégias client-side
-      if (advancedFilters.strategies.length > 0) {
-        filteredData = filteredData.filter((op) =>
-          op.strategy && advancedFilters.strategies.includes(op.strategy)
-        );
-      }
-
-      setOperations(filteredData);
-
-      // Calcular estatísticas
-      const totalTrades = filteredData.length;
-      const profitTotal = filteredData.reduce((sum, op) => sum + (op.result || 0), 0);
-      const positiveOps = filteredData.filter((op) => (op.result || 0) > 0).length;
-      const winRate = totalTrades > 0 ? (positiveOps / totalTrades) * 100 : 0;
-      const averagePerTrade = totalTrades > 0 ? profitTotal / totalTrades : 0;
-      
-      const bestTrade = filteredData.length > 0 
-        ? Math.max(...filteredData.map(op => op.result || 0))
-        : 0;
-      
-      const worstTrade = filteredData.length > 0
-        ? Math.min(...filteredData.map(op => op.result || 0))
-        : 0;
-
-      // Calcular sequência atual
-      let currentStreak = 0;
-      const sortedOps = [...filteredData].sort((a, b) => 
-        b.operation_date.localeCompare(a.operation_date)
-      );
-      
-      for (const op of sortedOps) {
-        if (op.result > 0) {
-          currentStreak++;
-        } else {
-          break;
-        }
-      }
-
-      setStats({
-        totalTrades,
-        winRate,
-        profitTotal,
-        averagePerTrade,
-        bestTrade,
-        worstTrade,
-        currentStreak,
-      });
-    } catch (error) {
-      console.error("Erro ao carregar operações:", error);
-    }
-  };
 
   const checkUser = async () => {
     try {
@@ -206,11 +104,10 @@ const Operations = () => {
 
       <main className="container mx-auto px-4 py-8">
         <Tabs defaultValue="register" className="space-y-6">
-          <TabsList className="grid w-full max-w-3xl grid-cols-4">
+          <TabsList className="grid w-full max-w-2xl grid-cols-3">
             <TabsTrigger value="register">Registrar</TabsTrigger>
             <TabsTrigger value="strategies">Estratégias</TabsTrigger>
             <TabsTrigger value="dashboard">Dashboard Geral</TabsTrigger>
-            <TabsTrigger value="analytics">Análise Detalhada</TabsTrigger>
           </TabsList>
 
           <TabsContent value="register" className="space-y-6">
@@ -264,75 +161,6 @@ const Operations = () => {
 
           <TabsContent value="dashboard">
             <OperationsDashboard userId={user?.id} />
-          </TabsContent>
-
-          <TabsContent value="analytics" className="space-y-6">
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              <div className="lg:col-span-2 space-y-6">
-                <AdvancedFilters onFiltersChange={setAdvancedFilters} />
-                
-                <EnhancedStatsCards
-                  totalTrades={stats.totalTrades}
-                  winRate={stats.winRate}
-                  profitTotal={stats.profitTotal}
-                  averagePerTrade={stats.averagePerTrade}
-                  bestTrade={stats.bestTrade}
-                  worstTrade={stats.worstTrade}
-                  currentStreak={stats.currentStreak}
-                />
-
-                <Card>
-                  <CardHeader>
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <CardTitle>Operações Detalhadas</CardTitle>
-                        <CardDescription>
-                          {operations.length} operações encontradas no sistema
-                        </CardDescription>
-                      </div>
-                      <ExportOperations
-                        operations={operations}
-                        stats={{
-                          totalOperations: stats.totalTrades,
-                          winRate: stats.winRate,
-                          totalResult: stats.profitTotal,
-                          averageWin: operations.filter(op => op.result > 0).reduce((sum, op) => sum + op.result, 0) / Math.max(operations.filter(op => op.result > 0).length, 1),
-                          averageLoss: Math.abs(operations.filter(op => op.result < 0).reduce((sum, op) => sum + op.result, 0) / Math.max(operations.filter(op => op.result < 0).length, 1)),
-                        }}
-                      />
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <OperationsTable
-                      userId={user?.id}
-                      isAdmin={isAdmin}
-                      filters={filters}
-                    />
-                  </CardContent>
-                </Card>
-              </div>
-
-              <div className="lg:col-span-1">
-                <div className="space-y-6">
-                  <RiskAlerts operations={operations} />
-                  
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>Classificação IA</CardTitle>
-                      <CardDescription>
-                        Classifique automaticamente suas operações
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <BulkAIClassifier 
-                        userId={user?.id} 
-                        onSuccess={loadOperations}
-                      />
-                    </CardContent>
-                  </Card>
-                </div>
-              </div>
-            </div>
           </TabsContent>
         </Tabs>
       </main>
