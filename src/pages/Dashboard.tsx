@@ -162,24 +162,41 @@ const Dashboard = () => {
 
       console.log(`Total de operações no banco: ${count}`);
 
-      // Buscar todas as operações de todos os usuários
-      const { data: operations, error: opsError } = await supabase
-        .from("trading_operations")
-        .select("*")
-        .order("operation_date", { ascending: false })
-        .order("operation_time", { ascending: false })
-        .range(0, 999999);
+      // Buscar TODAS as operações usando paginação para superar o limite de 1000
+      let allOps: Operation[] = [];
+      const pageSize = 1000;
+      let page = 0;
+      let hasMore = true;
 
-      if (opsError) {
-        console.error("Erro ao carregar operações:", opsError);
-        toast.error("Erro ao carregar operações");
+      while (hasMore) {
+        const { data: pageData, error: pageError } = await supabase
+          .from("trading_operations")
+          .select("*")
+          .order("operation_date", { ascending: false })
+          .order("operation_time", { ascending: false })
+          .range(page * pageSize, (page + 1) * pageSize - 1);
+
+        if (pageError) {
+          console.error("Erro ao carregar operações:", pageError);
+          toast.error("Erro ao carregar operações");
+          break;
+        }
+
+        if (pageData && pageData.length > 0) {
+          allOps = [...allOps, ...pageData];
+          page++;
+          hasMore = pageData.length === pageSize;
+        } else {
+          hasMore = false;
+        }
       }
 
-      if (operations) {
-        console.log(`Total de operações carregadas: ${operations.length}`);
-        const totalOps = operations.length;
-        const totalProfit = operations.reduce((sum, op) => sum + Number(op.result), 0);
-        const winningOps = operations.filter(op => Number(op.result) > 0).length;
+      console.log(`Total de operações carregadas: ${allOps.length}`);
+      
+      if (allOps.length > 0) {
+        const totalOps = allOps.length;
+        const totalProfit = allOps.reduce((sum, op) => sum + Number(op.result), 0);
+        const winningOps = allOps.filter(op => Number(op.result) > 0).length;
         const winRate = totalOps > 0 ? (winningOps / totalOps) * 100 : 0;
         const avgResult = totalOps > 0 ? totalProfit / totalOps : 0;
 
@@ -190,9 +207,9 @@ const Dashboard = () => {
           averageResult: avgResult,
         });
 
-        setRecentOperations(operations.slice(0, 5));
-        setAllOperations(operations);
-        setAdvancedMetrics(calculateAdvancedMetrics(operations));
+        setRecentOperations(allOps.slice(0, 5));
+        setAllOperations(allOps);
+        setAdvancedMetrics(calculateAdvancedMetrics(allOps));
       }
     } catch (error) {
       console.error("Erro ao carregar dados:", error);
