@@ -5,10 +5,8 @@ import {
   LineChart,
   User,
   Shield,
-  Users,
   Wallet,
   ShieldCheck,
-  GraduationCap,
   FileSpreadsheet,
 } from "lucide-react";
 
@@ -52,12 +50,6 @@ const menuItems = [
     url: "/risco",
     icon: ShieldCheck,
     color: "text-cyan-500",
-  },
-  {
-    title: "Comunidade",
-    url: "/comunidade",
-    icon: Users,
-    color: "text-pink-500",
   },
   {
     title: "Perfil",
