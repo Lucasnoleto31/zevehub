@@ -23,6 +23,8 @@ import { PeriodFilter, PeriodOption, filterOperationsByPeriod } from "@/componen
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/dashboard/AppSidebar";
 import { RestrictedAccess } from "@/components/dashboard/RestrictedAccess";
+import MonthlyComparisonChart from "@/components/dashboard/MonthlyComparisonChart";
+import PerformanceHeatmap from "@/components/dashboard/PerformanceHeatmap";
 
 interface Operation {
   id: string;
@@ -413,6 +415,12 @@ const Dashboard = () => {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
               <EquityCurveChart operations={filteredOperations} loading={loading} />
               <PerformanceByDayChart operations={filteredOperations} loading={loading} />
+            </div>
+
+            {/* Monthly Comparison & Performance Heatmap */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+              <MonthlyComparisonChart operations={allOperations} loading={loading} />
+              <PerformanceHeatmap operations={filteredOperations} />
             </div>
 
             {/* Win/Loss Distribution & Recent Operations */}
