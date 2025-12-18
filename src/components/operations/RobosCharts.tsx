@@ -114,55 +114,169 @@ export const RobosCharts = ({
   const positiveMonths = monthStats.filter(m => m.result > 0).length;
   const positiveYears = yearlyStats.filter(y => y.result > 0).length;
 
+  // Calculate performance curve stats
+  const curveTotal = performanceCurve.length > 0 ? performanceCurve[performanceCurve.length - 1]?.value || 0 : 0;
+  const curveMax = Math.max(...performanceCurve.map(p => p.value || 0));
+  const curveMin = Math.min(...performanceCurve.map(p => p.value || 0));
+
   return (
     <div className="space-y-6">
-      {/* Performance Curve - Full Width */}
-      <ChartCard
-        title="Curva de Performance"
-        description="Evolução do resultado acumulado ao longo do tempo"
-        icon={TrendingUp}
-        delay={0.1}
+      {/* Performance Curve - Premium Full Width */}
+      <motion.div
+        initial={{ opacity: 0, y: 20, scale: 0.98 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        transition={{ delay: 0.1, duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
       >
-        <ResponsiveContainer width="100%" height={350}>
-          <AreaChart data={performanceCurve}>
-            <defs>
-              <linearGradient id="gradient-curve" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity={0.4} />
-                <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity={0} />
-              </linearGradient>
-            </defs>
+        <Card className={cn(
+          "border-2 overflow-hidden backdrop-blur-xl transition-all duration-500",
+          "bg-gradient-to-br from-card via-card to-cyan-500/5",
+          "hover:shadow-2xl hover:shadow-cyan-500/10",
+          "border-cyan-500/20"
+        )}>
+          <CardHeader className="pb-2">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <motion.div 
+                  className="p-3 rounded-2xl bg-gradient-to-br from-cyan-500/20 to-cyan-500/5 border border-cyan-500/20 shadow-lg shadow-cyan-500/10"
+                  whileHover={{ scale: 1.05, rotate: 5 }}
+                >
+                  <TrendingUp className="w-6 h-6 text-cyan-400" />
+                </motion.div>
+                <div>
+                  <CardTitle className="text-xl font-bold">Curva de Performance</CardTitle>
+                  <CardDescription className="text-sm">Evolução do resultado acumulado ao longo do tempo</CardDescription>
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
+                <div className={cn(
+                  "px-4 py-2 rounded-xl text-sm font-bold",
+                  curveTotal >= 0 
+                    ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20" 
+                    : "bg-rose-500/10 text-rose-400 border border-rose-500/20"
+                )}>
+                  {curveTotal.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
+                </div>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="pt-4">
+            <ResponsiveContainer width="100%" height={380}>
+              <AreaChart data={performanceCurve}>
+                <defs>
+                  <linearGradient id="gradient-curve-premium" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#22d3ee" stopOpacity={0.5} />
+                    <stop offset="50%" stopColor="#22d3ee" stopOpacity={0.2} />
+                    <stop offset="100%" stopColor="#22d3ee" stopOpacity={0} />
+                  </linearGradient>
+                  <linearGradient id="gradient-line-premium" x1="0" y1="0" x2="1" y2="0">
+                    <stop offset="0%" stopColor="#06b6d4" />
+                    <stop offset="50%" stopColor="#22d3ee" />
+                    <stop offset="100%" stopColor="#67e8f9" />
+                  </linearGradient>
+                  <filter id="glow-curve" x="-50%" y="-50%" width="200%" height="200%">
+                    <feGaussianBlur stdDeviation="4" result="coloredBlur"/>
+                    <feMerge>
+                      <feMergeNode in="coloredBlur"/>
+                      <feMergeNode in="SourceGraphic"/>
+                    </feMerge>
+                  </filter>
+                </defs>
+                
+                <CartesianGrid 
+                  strokeDasharray="3 3" 
+                  stroke="hsl(var(--border))" 
+                  opacity={0.1}
+                  vertical={false}
+                />
+                
+                <XAxis 
+                  dataKey="date" 
+                  tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }} 
+                  axisLine={false} 
+                  tickLine={false}
+                />
+                <YAxis 
+                  tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }} 
+                  axisLine={false} 
+                  tickLine={false}
+                  tickFormatter={(value) => `R$${(value/1000).toFixed(0)}k`}
+                />
+                <Tooltip 
+                  content={({ active, payload, label }) => {
+                    if (active && payload && payload.length) {
+                      const value = payload[0]?.value as number || 0;
+                      return (
+                        <div className="bg-card/95 backdrop-blur-xl border-2 border-cyan-500/30 rounded-xl p-4 shadow-2xl shadow-cyan-500/10">
+                          <p className="text-sm font-semibold text-foreground mb-2">{label}</p>
+                          <div className="flex items-center gap-2">
+                            {value >= 0 ? (
+                              <ArrowUpRight className="w-4 h-4 text-emerald-400" />
+                            ) : (
+                              <ArrowDownRight className="w-4 h-4 text-rose-400" />
+                            )}
+                            <span className={cn(
+                              "text-xl font-bold",
+                              value >= 0 ? "text-emerald-400" : "text-rose-400"
+                            )}>
+                              {value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    }
+                    return null;
+                  }}
+                />
+                
+                <ReferenceLine 
+                  y={0} 
+                  stroke="hsl(var(--border))" 
+                  strokeWidth={2}
+                  strokeDasharray="6 6"
+                />
+                
+                <Area 
+                  type="monotone" 
+                  dataKey="value" 
+                  stroke="url(#gradient-line-premium)"
+                  strokeWidth={3} 
+                  fill="url(#gradient-curve-premium)"
+                  filter="url(#glow-curve)"
+                />
+              </AreaChart>
+            </ResponsiveContainer>
             
-            <XAxis 
-              dataKey="date" 
-              tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }} 
-              axisLine={false} 
-              tickLine={false}
-            />
-            <YAxis 
-              tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }} 
-              axisLine={false} 
-              tickLine={false}
-              tickFormatter={(value) => `R$${(value/1000).toFixed(0)}k`}
-            />
-            <Tooltip content={<CustomTooltip />} />
-            
-            <ReferenceLine 
-              y={0} 
-              stroke="hsl(var(--border))" 
-              strokeWidth={1}
-              strokeDasharray="4 4"
-            />
-            
-            <Area 
-              type="monotone" 
-              dataKey="value" 
-              stroke="hsl(var(--primary))"
-              strokeWidth={2.5} 
-              fill="url(#gradient-curve)"
-            />
-          </AreaChart>
-        </ResponsiveContainer>
-      </ChartCard>
+            {/* Summary Stats */}
+            <div className="grid grid-cols-3 gap-4 mt-4 p-4 rounded-xl bg-muted/20 border border-border/30">
+              <div className="text-center">
+                <p className="text-[10px] uppercase text-muted-foreground font-semibold tracking-wider">Resultado Total</p>
+                <p className={cn(
+                  "text-lg font-bold mt-1",
+                  curveTotal >= 0 ? "text-emerald-400" : "text-rose-400"
+                )}>
+                  {curveTotal.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
+                </p>
+              </div>
+              <div className="text-center border-x border-border/30">
+                <p className="text-[10px] uppercase text-muted-foreground font-semibold tracking-wider flex items-center justify-center gap-1">
+                  <ArrowUpRight className="w-3 h-3 text-emerald-400" /> Máximo
+                </p>
+                <p className="text-lg font-bold mt-1 text-emerald-400">
+                  {curveMax.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
+                </p>
+              </div>
+              <div className="text-center">
+                <p className="text-[10px] uppercase text-muted-foreground font-semibold tracking-wider flex items-center justify-center gap-1">
+                  <ArrowDownRight className="w-3 h-3 text-rose-400" /> Mínimo
+                </p>
+                <p className="text-lg font-bold mt-1 text-rose-400">
+                  {curveMin.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </motion.div>
 
       {/* Two Column Charts - Monthly & Yearly */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
