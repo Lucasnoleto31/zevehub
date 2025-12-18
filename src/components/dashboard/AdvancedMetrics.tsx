@@ -3,6 +3,7 @@ import { motion } from "framer-motion";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { TrendingUp, TrendingDown, Activity, Target, Info, Clock, Zap, Shield, ArrowUpRight, ArrowDownRight } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { LineChart, Line, ResponsiveContainer, Area, AreaChart } from "recharts";
 import { cn } from "@/lib/utils";
 
 interface Operation {
@@ -20,12 +21,23 @@ interface Metrics {
   drawdownDuration: number;
 }
 
+interface HistoricalMetrics {
+  month: string;
+  sharpeRatio: number;
+  maxDrawdown: number;
+  profitFactor: number;
+  expectancy: number;
+  recoveryFactor: number;
+  drawdownDuration: number;
+}
+
 interface AdvancedMetricsProps {
   operations: Operation[];
 }
 
 const AdvancedMetrics = ({ operations }: AdvancedMetricsProps) => {
   const [metricsByStrategy, setMetricsByStrategy] = useState<Record<string, Metrics>>({});
+  const [historicalByStrategy, setHistoricalByStrategy] = useState<Record<string, HistoricalMetrics[]>>({});
   const [strategies, setStrategies] = useState<string[]>([]);
   const [selectedStrategy, setSelectedStrategy] = useState<string>("");
 
@@ -42,6 +54,7 @@ const AdvancedMetrics = ({ operations }: AdvancedMetricsProps) => {
   const calculateMetricsByStrategy = () => {
     if (operations.length === 0) {
       setMetricsByStrategy({});
+      setHistoricalByStrategy({});
       setStrategies([]);
       return;
     }
@@ -56,15 +69,43 @@ const AdvancedMetrics = ({ operations }: AdvancedMetricsProps) => {
     });
 
     const calculatedMetrics: Record<string, Metrics> = {};
+    const calculatedHistorical: Record<string, HistoricalMetrics[]> = {};
     const strategyNames = Object.keys(operationsByStrategy);
 
     strategyNames.forEach((strategy) => {
       const strategyOps = operationsByStrategy[strategy];
       calculatedMetrics[strategy] = calculateMetrics(strategyOps);
+      calculatedHistorical[strategy] = calculateHistoricalMetrics(strategyOps);
     });
 
     setMetricsByStrategy(calculatedMetrics);
+    setHistoricalByStrategy(calculatedHistorical);
     setStrategies(strategyNames);
+  };
+
+  const calculateHistoricalMetrics = (ops: Operation[]): HistoricalMetrics[] => {
+    // Group operations by month
+    const opsByMonth: Record<string, Operation[]> = {};
+    ops.forEach((op) => {
+      const month = op.operation_date.substring(0, 7); // YYYY-MM
+      if (!opsByMonth[month]) {
+        opsByMonth[month] = [];
+      }
+      opsByMonth[month].push(op);
+    });
+
+    // Calculate metrics for each month
+    const months = Object.keys(opsByMonth).sort();
+    const lastMonths = months.slice(-6); // Last 6 months
+
+    return lastMonths.map((month) => {
+      const monthOps = opsByMonth[month];
+      const metrics = calculateMetrics(monthOps);
+      return {
+        month,
+        ...metrics,
+      };
+    });
   };
 
   const calculateMetrics = (ops: Operation[]): Metrics => {
@@ -170,6 +211,56 @@ const AdvancedMetrics = ({ operations }: AdvancedMetricsProps) => {
     };
   };
 
+  const MiniSparkline = ({ 
+    data, 
+    dataKey, 
+    color, 
+    isInverted = false 
+  }: { 
+    data: HistoricalMetrics[]; 
+    dataKey: keyof HistoricalMetrics; 
+    color: string;
+    isInverted?: boolean;
+  }) => {
+    if (!data || data.length < 2) return null;
+
+    const values = data.map(d => d[dataKey] as number);
+    const trend = values[values.length - 1] - values[0];
+    const isTrendPositive = isInverted ? trend < 0 : trend > 0;
+
+    return (
+      <div className="relative h-12 w-full mt-3">
+        <ResponsiveContainer width="100%" height="100%">
+          <AreaChart data={data}>
+            <defs>
+              <linearGradient id={`gradient-${dataKey}-${color}`} x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor={color} stopOpacity={0.4} />
+                <stop offset="100%" stopColor={color} stopOpacity={0} />
+              </linearGradient>
+            </defs>
+            <Area
+              type="monotone"
+              dataKey={dataKey}
+              stroke={color}
+              strokeWidth={2}
+              fill={`url(#gradient-${dataKey}-${color})`}
+              dot={false}
+            />
+          </AreaChart>
+        </ResponsiveContainer>
+        {/* Trend indicator */}
+        <div className={cn(
+          "absolute -top-1 right-0 text-[10px] font-bold px-1.5 py-0.5 rounded",
+          isTrendPositive 
+            ? "bg-emerald-500/20 text-emerald-400" 
+            : "bg-rose-500/20 text-rose-400"
+        )}>
+          {isTrendPositive ? "↑" : "↓"} {Math.abs(((values[values.length - 1] - values[0]) / (values[0] || 1)) * 100).toFixed(0)}%
+        </div>
+      </div>
+    );
+  };
+
   const MetricCard = ({
     title,
     value,
@@ -179,6 +270,9 @@ const AdvancedMetrics = ({ operations }: AdvancedMetricsProps) => {
     isPositive,
     accentColor = "primary",
     index = 0,
+    sparklineData,
+    sparklineKey,
+    sparklineInverted = false,
   }: {
     title: string;
     value: string;
@@ -188,37 +282,46 @@ const AdvancedMetrics = ({ operations }: AdvancedMetricsProps) => {
     isPositive?: boolean;
     accentColor?: "emerald" | "rose" | "amber" | "cyan" | "violet" | "primary";
     index?: number;
+    sparklineData?: HistoricalMetrics[];
+    sparklineKey?: keyof HistoricalMetrics;
+    sparklineInverted?: boolean;
   }) => {
     const colorClasses = {
       primary: {
         border: "border-primary/20 hover:border-primary/40",
         icon: "from-primary/20 to-primary/5 text-primary border-primary/20",
         glow: "from-primary/10",
+        sparkline: "hsl(var(--primary))",
       },
       emerald: {
         border: "border-emerald-500/20 hover:border-emerald-500/40",
         icon: "from-emerald-500/20 to-emerald-500/5 text-emerald-400 border-emerald-500/20",
         glow: "from-emerald-500/10",
+        sparkline: "#4ade80",
       },
       rose: {
         border: "border-rose-500/20 hover:border-rose-500/40",
         icon: "from-rose-500/20 to-rose-500/5 text-rose-400 border-rose-500/20",
         glow: "from-rose-500/10",
+        sparkline: "#f87171",
       },
       amber: {
         border: "border-amber-500/20 hover:border-amber-500/40",
         icon: "from-amber-500/20 to-amber-500/5 text-amber-400 border-amber-500/20",
         glow: "from-amber-500/10",
+        sparkline: "#fbbf24",
       },
       cyan: {
         border: "border-cyan-500/20 hover:border-cyan-500/40",
         icon: "from-cyan-500/20 to-cyan-500/5 text-cyan-400 border-cyan-500/20",
         glow: "from-cyan-500/10",
+        sparkline: "#22d3ee",
       },
       violet: {
         border: "border-violet-500/20 hover:border-violet-500/40",
         icon: "from-violet-500/20 to-violet-500/5 text-violet-400 border-violet-500/20",
         glow: "from-violet-500/10",
+        sparkline: "#a78bfa",
       },
     };
 
@@ -247,24 +350,24 @@ const AdvancedMetrics = ({ operations }: AdvancedMetricsProps) => {
           {/* Subtle grid pattern */}
           <div className="absolute inset-0 opacity-[0.02] bg-[linear-gradient(to_right,hsl(var(--foreground))_1px,transparent_1px),linear-gradient(to_bottom,hsl(var(--foreground))_1px,transparent_1px)] bg-[size:20px_20px]" />
 
-          <CardContent className="pt-6 relative z-10">
-            <div className="flex items-start justify-between">
-              <div className="space-y-3 flex-1">
-                <div className="flex items-center gap-3">
+          <CardContent className="pt-5 pb-4 relative z-10">
+            <div className="space-y-1">
+              <div className="flex items-start justify-between">
+                <div className="flex items-center gap-2">
                   <motion.div 
                     className={cn(
-                      "p-2.5 rounded-xl bg-gradient-to-br border shadow-lg",
+                      "p-2 rounded-xl bg-gradient-to-br border shadow-lg",
                       colors.icon
                     )}
                     whileHover={{ scale: 1.1, rotate: 5 }}
                   >
-                    <Icon className="w-5 h-5" />
+                    <Icon className="w-4 h-4" />
                   </motion.div>
-                  <div className="flex items-center gap-2">
-                    <p className="text-sm font-bold text-muted-foreground uppercase tracking-wider">{title}</p>
+                  <div className="flex items-center gap-1.5">
+                    <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">{title}</p>
                     <Tooltip>
                       <TooltipTrigger>
-                        <Info className="w-3.5 h-3.5 text-muted-foreground/50 hover:text-muted-foreground transition-colors" />
+                        <Info className="w-3 h-3 text-muted-foreground/50 hover:text-muted-foreground transition-colors" />
                       </TooltipTrigger>
                       <TooltipContent className="max-w-xs bg-card/95 backdrop-blur-xl border-border/50">
                         <p className="text-xs">{tooltip}</p>
@@ -272,34 +375,44 @@ const AdvancedMetrics = ({ operations }: AdvancedMetricsProps) => {
                     </Tooltip>
                   </div>
                 </div>
-                
-                <motion.p
-                  className={cn(
-                    "text-3xl md:text-4xl font-black tracking-tight",
-                    isPositive !== undefined
-                      ? isPositive
-                        ? "text-emerald-400"
-                        : "text-rose-400"
-                      : "text-foreground"
-                  )}
-                  initial={{ scale: 0.9 }}
-                  animate={{ scale: 1 }}
-                  transition={{ delay: index * 0.08 + 0.2, type: "spring", stiffness: 200 }}
-                >
-                  {value}
-                </motion.p>
-                
-                <div className="flex items-center gap-2">
-                  {isPositive !== undefined && (
-                    isPositive ? (
-                      <ArrowUpRight className="w-4 h-4 text-emerald-400" />
-                    ) : (
-                      <ArrowDownRight className="w-4 h-4 text-rose-400" />
-                    )
-                  )}
-                  <p className="text-sm text-muted-foreground font-medium">{description}</p>
-                </div>
               </div>
+              
+              <motion.p
+                className={cn(
+                  "text-2xl md:text-3xl font-black tracking-tight",
+                  isPositive !== undefined
+                    ? isPositive
+                      ? "text-emerald-400"
+                      : "text-rose-400"
+                    : "text-foreground"
+                )}
+                initial={{ scale: 0.9 }}
+                animate={{ scale: 1 }}
+                transition={{ delay: index * 0.08 + 0.2, type: "spring", stiffness: 200 }}
+              >
+                {value}
+              </motion.p>
+              
+              <div className="flex items-center gap-1.5">
+                {isPositive !== undefined && (
+                  isPositive ? (
+                    <ArrowUpRight className="w-3.5 h-3.5 text-emerald-400" />
+                  ) : (
+                    <ArrowDownRight className="w-3.5 h-3.5 text-rose-400" />
+                  )
+                )}
+                <p className="text-xs text-muted-foreground font-medium">{description}</p>
+              </div>
+
+              {/* Sparkline */}
+              {sparklineData && sparklineKey && sparklineData.length >= 2 && (
+                <MiniSparkline 
+                  data={sparklineData} 
+                  dataKey={sparklineKey} 
+                  color={colors.sparkline}
+                  isInverted={sparklineInverted}
+                />
+              )}
             </div>
           </CardContent>
         </Card>
@@ -307,7 +420,7 @@ const AdvancedMetrics = ({ operations }: AdvancedMetricsProps) => {
     );
   };
 
-  const renderMetricsForStrategy = (metrics: Metrics) => (
+  const renderMetricsForStrategy = (metrics: Metrics, historical: HistoricalMetrics[]) => (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
       <MetricCard
         title="Sharpe Ratio"
@@ -324,6 +437,8 @@ const AdvancedMetrics = ({ operations }: AdvancedMetricsProps) => {
         isPositive={metrics.sharpeRatio > 0}
         accentColor={metrics.sharpeRatio > 0 ? "emerald" : "rose"}
         index={0}
+        sparklineData={historical}
+        sparklineKey="sharpeRatio"
       />
 
       <MetricCard
@@ -338,6 +453,9 @@ const AdvancedMetrics = ({ operations }: AdvancedMetricsProps) => {
         isPositive={false}
         accentColor="rose"
         index={1}
+        sparklineData={historical}
+        sparklineKey="maxDrawdown"
+        sparklineInverted={true}
       />
 
       <MetricCard
@@ -359,6 +477,8 @@ const AdvancedMetrics = ({ operations }: AdvancedMetricsProps) => {
         isPositive={metrics.profitFactor > 1}
         accentColor={metrics.profitFactor > 1 ? "emerald" : "rose"}
         index={2}
+        sparklineData={historical}
+        sparklineKey="profitFactor"
       />
 
       <MetricCard
@@ -373,6 +493,8 @@ const AdvancedMetrics = ({ operations }: AdvancedMetricsProps) => {
         isPositive={metrics.expectancy > 0}
         accentColor={metrics.expectancy > 0 ? "cyan" : "rose"}
         index={3}
+        sparklineData={historical}
+        sparklineKey="expectancy"
       />
 
       <MetricCard
@@ -390,6 +512,8 @@ const AdvancedMetrics = ({ operations }: AdvancedMetricsProps) => {
         isPositive={metrics.recoveryFactor > 1}
         accentColor={metrics.recoveryFactor > 1 ? "violet" : "amber"}
         index={4}
+        sparklineData={historical}
+        sparklineKey="recoveryFactor"
       />
 
       <MetricCard
@@ -409,6 +533,9 @@ const AdvancedMetrics = ({ operations }: AdvancedMetricsProps) => {
         isPositive={metrics.drawdownDuration < 10}
         accentColor={metrics.drawdownDuration < 10 ? "emerald" : "amber"}
         index={5}
+        sparklineData={historical}
+        sparklineKey="drawdownDuration"
+        sparklineInverted={true}
       />
     </div>
   );
@@ -457,7 +584,7 @@ const AdvancedMetrics = ({ operations }: AdvancedMetricsProps) => {
             </motion.div>
             <div>
               <CardTitle className="text-xl font-bold">Métricas Avançadas por Robô</CardTitle>
-              <CardDescription className="text-sm">Indicadores de risco e performance ajustada por estratégia</CardDescription>
+              <CardDescription className="text-sm">Indicadores de risco e performance ajustada por estratégia • Últimos 6 meses</CardDescription>
             </div>
           </div>
         </CardHeader>
@@ -491,7 +618,10 @@ const AdvancedMetrics = ({ operations }: AdvancedMetricsProps) => {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.3 }}
             >
-              {renderMetricsForStrategy(metricsByStrategy[selectedStrategy])}
+              {renderMetricsForStrategy(
+                metricsByStrategy[selectedStrategy],
+                historicalByStrategy[selectedStrategy] || []
+              )}
             </motion.div>
           )}
         </CardContent>
