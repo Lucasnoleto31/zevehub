@@ -38,7 +38,6 @@ serve(async (req) => {
 Baseado nas informações da operação, classifique a estratégia utilizada.
 
 Estratégias possíveis:
-- Zero a Zero (ZE): Operação intraday que busca resultado neutro ou pequeno lucro
 - Abertura de Posição (AP): Posição aberta no início do pregão
 - Tape Reading: Leitura de fluxo de ordens
 - Breakout: Rompimento de níveis importantes
