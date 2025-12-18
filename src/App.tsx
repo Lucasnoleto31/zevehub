@@ -20,10 +20,6 @@ import TrilhaDetail from "./pages/TrilhaDetail";
 import LessonView from "./pages/LessonView";
 import QuizView from "./pages/QuizView";
 import AdminEducacional from "./pages/AdminEducacional";
-import Community from "./pages/Community";
-import Explore from "./pages/Explore";
-import PublicProfile from "./pages/PublicProfile";
-import HashtagPage from "./pages/HashtagPage";
 import Onboarding from "./pages/Onboarding";
 import Contratos from "./pages/Contratos";
 import NotFound from "./pages/NotFound";
@@ -64,10 +60,6 @@ const App = () => {
                 <Route path="/aprenda/trilha/:slug" element={<TrilhaDetail />} />
                 <Route path="/aprenda/aula/:lessonId" element={<LessonView />} />
                 <Route path="/aprenda/quiz/:quizId" element={<QuizView />} />
-                <Route path="/perfil/:userId" element={<PublicProfile />} />
-                <Route path="/comunidade" element={<Community />} />
-                <Route path="/explorar" element={<Explore />} />
-                <Route path="/hashtag/:hashtag" element={<HashtagPage />} />
                 {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                 <Route path="*" element={<NotFound />} />
               </Routes>
