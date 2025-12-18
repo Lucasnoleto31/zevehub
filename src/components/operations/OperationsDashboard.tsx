@@ -16,6 +16,7 @@ import { Badge } from "@/components/ui/badge";
 import PerformanceHeatmap from "@/components/dashboard/PerformanceHeatmap";
 import TopPerformanceDays from "@/components/dashboard/TopPerformanceDays";
 import AdvancedMetrics from "@/components/dashboard/AdvancedMetrics";
+import HeroStatsSection from "@/components/dashboard/HeroStatsSection";
 
 interface OperationsDashboardProps {
   userId: string;
@@ -49,54 +50,56 @@ interface Stats {
   standardDeviation: number;
 }
 
-const StatCard = ({ 
+const SecondaryStatCard = ({ 
   title, 
   value, 
   subtitle, 
   icon: Icon, 
-  trend, 
-  className = "" 
+  trend
 }: { 
   title: string; 
   value: string | number; 
   subtitle?: string; 
   icon?: any; 
   trend?: "up" | "down" | "neutral";
-  className?: string;
 }) => (
   <div className={cn(
-    "group relative overflow-hidden rounded-2xl p-5 transition-all duration-500",
-    "bg-gradient-to-br from-card via-card to-card/80",
-    "border border-border/50 hover:border-primary/30",
-    "hover:shadow-xl hover:shadow-primary/5 hover:-translate-y-1",
-    className
+    "group relative overflow-hidden rounded-xl p-4 transition-all duration-300",
+    "bg-gradient-to-br from-card/90 via-card/70 to-card/50",
+    "border border-border/40 hover:border-primary/30",
+    "hover:shadow-lg hover:-translate-y-0.5 backdrop-blur-sm"
   )}>
-    <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+    <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
     <div className="relative z-10">
-      <div className="flex items-center justify-between mb-3">
-        <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">{title}</span>
+      <div className="flex items-center justify-between mb-2">
+        <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">{title}</span>
         {Icon && (
-          <div className="p-2 rounded-xl bg-primary/10 text-primary">
-            <Icon className="w-4 h-4" />
+          <div className={cn(
+            "p-1.5 rounded-lg transition-all duration-300 group-hover:scale-110",
+            trend === "up" && "bg-emerald-500/15 text-emerald-400",
+            trend === "down" && "bg-rose-500/15 text-rose-400",
+            !trend && "bg-primary/10 text-primary"
+          )}>
+            <Icon className="w-3.5 h-3.5" />
           </div>
         )}
       </div>
       <div className={cn(
-        "text-2xl font-bold tracking-tight",
-        trend === "up" && "text-emerald-500",
-        trend === "down" && "text-rose-500",
+        "text-lg font-bold tracking-tight",
+        trend === "up" && "text-emerald-400",
+        trend === "down" && "text-rose-400",
         !trend && "text-foreground"
       )}>
         {value}
       </div>
       {subtitle && (
-        <p className="text-xs text-muted-foreground mt-1">{subtitle}</p>
+        <p className="text-[10px] text-muted-foreground mt-0.5">{subtitle}</p>
       )}
     </div>
   </div>
 );
 
-const FilterChip = ({ 
+const FilterChip = ({
   active, 
   onClick, 
   children,
@@ -756,60 +759,18 @@ const OperationsDashboard = ({ userId }: OperationsDashboardProps) => {
   return (
     <div className="space-y-8">
       {/* Hero Stats Section */}
-      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-primary/10 via-background to-background p-6 md:p-8 border border-border/50">
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-primary/20 via-transparent to-transparent opacity-50" />
-        
-        <div className="relative z-10">
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
-            <div>
-              <h2 className="text-2xl md:text-3xl font-bold tracking-tight">Dashboard de Performance</h2>
-              <p className="text-muted-foreground mt-1">
-                Análise completa de {filteredOperations.length.toLocaleString()} operações
-              </p>
-            </div>
-            <div className="flex items-center gap-2">
-              <Badge variant="outline" className="bg-background/80 backdrop-blur-sm">
-                <Activity className="w-3 h-3 mr-1" />
-                {stats.positiveDays + stats.negativeDays} dias operados
-              </Badge>
-            </div>
-          </div>
-
-          {/* Main Stats */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div className="col-span-2 md:col-span-1">
-              <StatCard
-                title="Resultado Total"
-                value={stats.totalResult.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
-                icon={DollarSign}
-                trend={stats.totalResult >= 0 ? "up" : "down"}
-                className={stats.totalResult >= 0 ? "border-emerald-500/30" : "border-rose-500/30"}
-              />
-            </div>
-            <StatCard
-              title="Taxa de Acerto"
-              value={`${stats.winRate.toFixed(1)}%`}
-              subtitle={`${stats.positiveDays}W / ${stats.negativeDays}L`}
-              icon={Target}
-              trend={stats.winRate >= 50 ? "up" : "down"}
-            />
-            <StatCard
-              title="Payoff"
-              value={stats.payoff.toFixed(2)}
-              subtitle="Ganho/Perda média"
-              icon={Award}
-              trend={stats.payoff >= 1 ? "up" : "down"}
-            />
-            <StatCard
-              title="Consistência"
-              value={`${stats.monthlyConsistency.toFixed(1)}%`}
-              subtitle={`${stats.positiveMonths}+ / ${stats.negativeMonths}-`}
-              icon={Zap}
-              trend={stats.monthlyConsistency >= 60 ? "up" : "neutral"}
-            />
-          </div>
-        </div>
-      </div>
+      <HeroStatsSection
+        totalOperations={filteredOperations.length}
+        totalDays={stats.positiveDays + stats.negativeDays}
+        totalResult={stats.totalResult}
+        winRate={stats.winRate}
+        positiveDays={stats.positiveDays}
+        negativeDays={stats.negativeDays}
+        payoff={stats.payoff}
+        monthlyConsistency={stats.monthlyConsistency}
+        positiveMonths={stats.positiveMonths}
+        negativeMonths={stats.negativeMonths}
+      />
 
       {/* Filters Section - Enhanced */}
       <Collapsible open={filtersOpen} onOpenChange={setFiltersOpen}>
@@ -1268,37 +1229,37 @@ const OperationsDashboard = ({ userId }: OperationsDashboardProps) => {
 
       {/* Secondary Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
-        <StatCard
+        <SecondaryStatCard
           title="Melhor Trade"
           value={`+${stats.bestResult.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}`}
           icon={TrendingUp}
           trend="up"
         />
-        <StatCard
+        <SecondaryStatCard
           title="Pior Trade"
           value={stats.worstResult.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
           icon={TrendingDown}
           trend="down"
         />
-        <StatCard
+        <SecondaryStatCard
           title="Média Mensal"
           value={stats.averageMonthlyResult.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
           icon={BarChart2}
           trend={stats.averageMonthlyResult >= 0 ? "up" : "down"}
         />
-        <StatCard
+        <SecondaryStatCard
           title="Desvio Padrão"
           value={stats.standardDeviation.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
           subtitle="Variação diária"
           icon={Activity}
         />
-        <StatCard
+        <SecondaryStatCard
           title="Volatilidade"
           value={`${stats.volatility.toFixed(1)}%`}
           subtitle={stats.volatility < 30 ? "Baixa" : stats.volatility < 60 ? "Moderada" : "Alta"}
           icon={Percent}
         />
-        <StatCard
+        <SecondaryStatCard
           title="Sequência"
           value={`${stats.positiveStreak}W / ${stats.negativeStreak}L`}
           subtitle="Máximas registradas"
