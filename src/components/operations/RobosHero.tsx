@@ -35,8 +35,12 @@ const AnimatedValue = ({ value, prefix = "", suffix = "", decimals = 0 }: {
   suffix?: string;
   decimals?: number;
 }) => {
-  const { rawValue } = useCountUp({ end: value, duration: 1500, decimals });
-  return <>{prefix}{rawValue.toFixed(decimals)}{suffix}</>;
+  const { ref, rawValue } = useCountUp({ end: value, duration: 1500, decimals });
+  return (
+    <span ref={ref}>
+      {prefix}{rawValue.toFixed(decimals)}{suffix}
+    </span>
+  );
 };
 
 const MetricCard = ({ 
