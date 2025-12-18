@@ -71,7 +71,7 @@ export const RecentOperationsTable = ({ operations, loading }: RecentOperationsT
   }
 
   return (
-    <Card className="mt-6 border-2">
+    <Card className="border-2 h-full">
       <CardHeader className="pb-4">
         <div className="flex items-center justify-between">
           <CardTitle className="text-xl">Operações Recentes</CardTitle>

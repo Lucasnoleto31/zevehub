@@ -15,9 +15,23 @@ import {
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { DashboardStats } from "@/components/dashboard/DashboardStats";
 import { RecentOperationsTable } from "@/components/dashboard/RecentOperationsTable";
+import { EquityCurveChart } from "@/components/dashboard/EquityCurveChart";
+import { PerformanceByDayChart } from "@/components/dashboard/PerformanceByDayChart";
+import { WinLossDistribution } from "@/components/dashboard/WinLossDistribution";
+import { QuickMetricsCards } from "@/components/dashboard/QuickMetricsCards";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/dashboard/AppSidebar";
 import { RestrictedAccess } from "@/components/dashboard/RestrictedAccess";
+
+interface Operation {
+  id: string;
+  operation_date: string;
+  result: number;
+  asset: string;
+  strategy: string | null;
+  contracts: number;
+  operation_time: string;
+}
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -32,11 +46,85 @@ const Dashboard = () => {
     winRate: 0,
     averageResult: 0,
   });
-  const [recentOperations, setRecentOperations] = useState<any[]>([]);
+  const [recentOperations, setRecentOperations] = useState<Operation[]>([]);
+  const [allOperations, setAllOperations] = useState<Operation[]>([]);
+  const [advancedMetrics, setAdvancedMetrics] = useState({
+    bestTrade: 0,
+    worstTrade: 0,
+    currentStreak: 0,
+    profitFactor: 0,
+    avgWin: 0,
+    avgLoss: 0,
+    wins: 0,
+    losses: 0,
+  });
 
   useEffect(() => {
     checkUser();
   }, []);
+
+  const calculateAdvancedMetrics = (operations: Operation[]) => {
+    if (operations.length === 0) {
+      return {
+        bestTrade: 0,
+        worstTrade: 0,
+        currentStreak: 0,
+        profitFactor: 0,
+        avgWin: 0,
+        avgLoss: 0,
+        wins: 0,
+        losses: 0,
+      };
+    }
+
+    const results = operations.map(op => op.result);
+    const wins = operations.filter(op => op.result > 0);
+    const losses = operations.filter(op => op.result < 0);
+    
+    const bestTrade = Math.max(...results);
+    const worstTrade = Math.min(...results);
+    
+    const totalWins = wins.reduce((sum, op) => sum + op.result, 0);
+    const totalLosses = Math.abs(losses.reduce((sum, op) => sum + op.result, 0));
+    const profitFactor = totalLosses > 0 ? totalWins / totalLosses : totalWins > 0 ? Infinity : 0;
+    
+    const avgWin = wins.length > 0 ? totalWins / wins.length : 0;
+    const avgLoss = losses.length > 0 ? totalLosses / losses.length : 0;
+
+    // Calculate current streak
+    let currentStreak = 0;
+    const sortedOps = [...operations].sort((a, b) => {
+      const dateA = `${a.operation_date}${a.operation_time}`;
+      const dateB = `${b.operation_date}${b.operation_time}`;
+      return dateB.localeCompare(dateA);
+    });
+
+    if (sortedOps.length > 0) {
+      const firstResult = sortedOps[0].result;
+      const isWinStreak = firstResult > 0;
+      
+      for (const op of sortedOps) {
+        if (isWinStreak && op.result > 0) {
+          currentStreak++;
+        } else if (!isWinStreak && op.result < 0) {
+          currentStreak--;
+        } else {
+          break;
+        }
+      }
+    }
+
+    return {
+      bestTrade,
+      worstTrade,
+      currentStreak,
+      profitFactor: isFinite(profitFactor) ? profitFactor : 0,
+      avgWin,
+      avgLoss: -avgLoss,
+      wins: wins.length,
+      losses: losses.length,
+    };
+  };
 
   const checkUser = async () => {
     try {
@@ -103,6 +191,8 @@ const Dashboard = () => {
         });
 
         setRecentOperations(operations.slice(0, 5));
+        setAllOperations(operations);
+        setAdvancedMetrics(calculateAdvancedMetrics(operations));
       }
     } catch (error) {
       console.error("Erro ao carregar dados:", error);
@@ -241,7 +331,8 @@ const Dashboard = () => {
           </header>
 
           <main className="flex-1 px-4 py-8 overflow-auto">
-            <div className="mb-8 animate-fade-in">
+            {/* Welcome Card */}
+            <div className="mb-6 animate-fade-in">
               <Card className="border-2 relative overflow-hidden group">
                 <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-accent/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
                 <CardContent className="pt-6 relative z-10">
@@ -275,8 +366,39 @@ const Dashboard = () => {
               </Card>
             </div>
 
+            {/* Main Stats */}
             <DashboardStats stats={stats} />
-            <RecentOperationsTable operations={recentOperations} />
+
+            {/* Quick Metrics */}
+            <div className="mb-6">
+              <QuickMetricsCards
+                bestTrade={advancedMetrics.bestTrade}
+                worstTrade={advancedMetrics.worstTrade}
+                currentStreak={advancedMetrics.currentStreak}
+                profitFactor={advancedMetrics.profitFactor}
+                avgWin={advancedMetrics.avgWin}
+                avgLoss={advancedMetrics.avgLoss}
+                loading={loading}
+              />
+            </div>
+
+            {/* Charts Grid */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+              <EquityCurveChart operations={allOperations} loading={loading} />
+              <PerformanceByDayChart operations={allOperations} loading={loading} />
+            </div>
+
+            {/* Win/Loss Distribution & Recent Operations */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              <WinLossDistribution 
+                wins={advancedMetrics.wins} 
+                losses={advancedMetrics.losses} 
+                loading={loading} 
+              />
+              <div className="lg:col-span-2">
+                <RecentOperationsTable operations={recentOperations} />
+              </div>
+            </div>
           </main>
         </div>
       </div>
