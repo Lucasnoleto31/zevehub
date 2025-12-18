@@ -2,9 +2,10 @@ import { motion } from "framer-motion";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { 
   LineChart, Line, BarChart, Bar, XAxis, YAxis, Tooltip, 
-  ResponsiveContainer, AreaChart, Area, ReferenceLine, Cell, CartesianGrid
+  ResponsiveContainer, AreaChart, Area, ReferenceLine, Cell, CartesianGrid,
+  ComposedChart, Legend
 } from "recharts";
-import { TrendingUp, BarChart2, Clock, Calendar, ArrowUpRight, ArrowDownRight, Sparkles } from "lucide-react";
+import { TrendingUp, BarChart2, Clock, Calendar, ArrowUpRight, ArrowDownRight, Sparkles, Target, TrendingDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface RobosChartsProps {
@@ -381,100 +382,217 @@ export const RobosCharts = ({
         </ChartCard>
       </div>
 
-      {/* Hour Distribution */}
-      <ChartCard
-        title="Distribuição por Horário"
-        description="Performance e volume de operações por hora"
-        icon={Clock}
-        iconColor="from-amber-500/20 to-amber-500/5 text-amber-400"
-        borderColor="border-amber-500/20"
-        delay={0.4}
-      >
-        <ResponsiveContainer width="100%" height={300}>
-          <BarChart data={hourDistribution}>
-            <CartesianGrid 
-              strokeDasharray="3 3" 
-              stroke="hsl(var(--border))" 
-              opacity={0.2}
-              vertical={false}
-            />
-            <XAxis 
-              dataKey="hour" 
-              tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }} 
-              axisLine={false} 
-              tickLine={false} 
-            />
-            <YAxis 
-              yAxisId="left"
-              tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }} 
-              axisLine={false} 
-              tickLine={false}
-            />
-            <YAxis 
-              yAxisId="right"
-              orientation="right"
-              tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }} 
-              axisLine={false} 
-              tickLine={false}
-              tickFormatter={(value) => `R$${(value/1000).toFixed(0)}k`}
-            />
-            <Tooltip 
-              content={({ active, payload, label }) => {
-                if (active && payload && payload.length) {
-                  return (
-                    <div className="bg-card/95 backdrop-blur-xl border border-border/50 rounded-xl p-4 shadow-2xl">
-                      <p className="text-sm font-semibold text-foreground mb-2">{label}</p>
-                      <div className="space-y-1.5">
-                        <div className="flex items-center justify-between gap-4">
-                          <span className="text-xs text-emerald-400">Positivas:</span>
-                          <span className="text-sm font-bold text-emerald-400">{payload[0]?.value || 0}</span>
-                        </div>
-                        <div className="flex items-center justify-between gap-4">
-                          <span className="text-xs text-rose-400">Negativas:</span>
-                          <span className="text-sm font-bold text-rose-400">{payload[1]?.value || 0}</span>
-                        </div>
-                        <div className="flex items-center justify-between gap-4 pt-1 border-t border-border/30">
-                          <span className="text-xs text-amber-400">Resultado:</span>
-                          <span className="text-sm font-bold text-amber-400">
-                            {(payload[2]?.value || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                }
-                return null;
-              }}
-              cursor={{ fill: 'hsl(var(--accent))', opacity: 0.1 }}
-            />
-            <Bar 
-              yAxisId="left" 
-              dataKey="positivas" 
-              stackId="a" 
-              fill="#4ade80"
-              name="Positivas" 
-              radius={[0, 0, 0, 0]} 
-            />
-            <Bar 
-              yAxisId="left" 
-              dataKey="negativas" 
-              stackId="a" 
-              fill="#f87171"
-              name="Negativas" 
-              radius={[4, 4, 0, 0]} 
-            />
-            <Line 
-              yAxisId="right" 
-              type="monotone"
-              dataKey="resultado" 
-              stroke="#fbbf24"
-              strokeWidth={3}
-              dot={{ fill: '#fbbf24', strokeWidth: 2, r: 4 }}
-              name="Resultado (R$)"
-            />
-          </BarChart>
-        </ResponsiveContainer>
-      </ChartCard>
+      {/* Hour Distribution - Premium */}
+      {(() => {
+        const totalOperacoes = hourDistribution.reduce((sum, h) => sum + (h.operacoes || 0), 0);
+        const totalResultado = hourDistribution.reduce((sum, h) => sum + (h.resultado || 0), 0);
+        const bestHour = hourDistribution.reduce((best, h) => (h.resultado || 0) > (best?.resultado || -Infinity) ? h : best, hourDistribution[0]);
+        const worstHour = hourDistribution.reduce((worst, h) => (h.resultado || 0) < (worst?.resultado || Infinity) ? h : worst, hourDistribution[0]);
+        
+        return (
+          <ChartCard
+            title="Distribuição por Horário"
+            description="Performance e volume de operações por hora"
+            icon={Clock}
+            iconColor="from-amber-500/20 to-amber-500/5 text-amber-400"
+            borderColor="border-amber-500/20"
+            delay={0.4}
+            badge={
+              <div className="flex items-center gap-2">
+                <div className={cn(
+                  "px-3 py-1.5 rounded-lg text-xs font-semibold",
+                  totalResultado >= 0 
+                    ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20" 
+                    : "bg-rose-500/10 text-rose-400 border border-rose-500/20"
+                )}>
+                  {totalResultado.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
+                </div>
+              </div>
+            }
+          >
+            <div className="space-y-4">
+              <ResponsiveContainer width="100%" height={320}>
+                <ComposedChart data={hourDistribution} barCategoryGap="8%">
+                  <defs>
+                    <linearGradient id="gradientPositiveHour" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#4ade80" stopOpacity={1} />
+                      <stop offset="100%" stopColor="#22c55e" stopOpacity={0.8} />
+                    </linearGradient>
+                    <linearGradient id="gradientNegativeHour" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#f87171" stopOpacity={1} />
+                      <stop offset="100%" stopColor="#ef4444" stopOpacity={0.8} />
+                    </linearGradient>
+                    <linearGradient id="gradientLineHour" x1="0" y1="0" x2="1" y2="0">
+                      <stop offset="0%" stopColor="#fbbf24" stopOpacity={1} />
+                      <stop offset="100%" stopColor="#f59e0b" stopOpacity={1} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid 
+                    strokeDasharray="3 3" 
+                    stroke="hsl(var(--border))" 
+                    opacity={0.15}
+                    vertical={false}
+                  />
+                  <XAxis 
+                    dataKey="hour" 
+                    tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11, fontWeight: 500 }} 
+                    axisLine={false} 
+                    tickLine={false} 
+                  />
+                  <YAxis 
+                    yAxisId="left"
+                    tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 10 }} 
+                    axisLine={false} 
+                    tickLine={false}
+                    label={{ 
+                      value: 'Operações', 
+                      angle: -90, 
+                      position: 'insideLeft',
+                      style: { fill: 'hsl(var(--muted-foreground))', fontSize: 10 }
+                    }}
+                  />
+                  <YAxis 
+                    yAxisId="right"
+                    orientation="right"
+                    tick={{ fill: "#fbbf24", fontSize: 10 }} 
+                    axisLine={false} 
+                    tickLine={false}
+                    tickFormatter={(value) => {
+                      if (Math.abs(value) >= 1000) return `R$${(value/1000).toFixed(0)}k`;
+                      return `R$${value}`;
+                    }}
+                    label={{ 
+                      value: 'Resultado (R$)', 
+                      angle: 90, 
+                      position: 'insideRight',
+                      style: { fill: '#fbbf24', fontSize: 10 }
+                    }}
+                  />
+                  <Tooltip 
+                    content={({ active, payload, label }) => {
+                      if (active && payload && payload.length) {
+                        const data = payload[0]?.payload;
+                        const positivas = data?.positivas || 0;
+                        const negativas = data?.negativas || 0;
+                        const resultado = data?.resultado || 0;
+                        const total = positivas + negativas;
+                        const winRate = total > 0 ? ((positivas / total) * 100).toFixed(1) : 0;
+                        
+                        return (
+                          <div className="bg-card/95 backdrop-blur-xl border border-amber-500/30 rounded-xl p-4 shadow-2xl min-w-[180px]">
+                            <div className="flex items-center gap-2 mb-3 pb-2 border-b border-border/30">
+                              <Clock className="w-4 h-4 text-amber-400" />
+                              <p className="text-base font-bold text-foreground">{label}</p>
+                            </div>
+                            <div className="space-y-2">
+                              <div className="flex items-center justify-between gap-4">
+                                <div className="flex items-center gap-1.5">
+                                  <div className="w-2.5 h-2.5 rounded-full bg-emerald-400" />
+                                  <span className="text-xs text-muted-foreground">Positivas:</span>
+                                </div>
+                                <span className="text-sm font-bold text-emerald-400">{positivas}</span>
+                              </div>
+                              <div className="flex items-center justify-between gap-4">
+                                <div className="flex items-center gap-1.5">
+                                  <div className="w-2.5 h-2.5 rounded-full bg-rose-400" />
+                                  <span className="text-xs text-muted-foreground">Negativas:</span>
+                                </div>
+                                <span className="text-sm font-bold text-rose-400">{negativas}</span>
+                              </div>
+                              <div className="flex items-center justify-between gap-4">
+                                <div className="flex items-center gap-1.5">
+                                  <Target className="w-2.5 h-2.5 text-sky-400" />
+                                  <span className="text-xs text-muted-foreground">Taxa Acerto:</span>
+                                </div>
+                                <span className="text-sm font-bold text-sky-400">{winRate}%</span>
+                              </div>
+                              <div className="flex items-center justify-between gap-4 pt-2 mt-2 border-t border-border/30">
+                                <div className="flex items-center gap-1.5">
+                                  <div className="w-2.5 h-2.5 rounded-full bg-amber-400" />
+                                  <span className="text-xs text-muted-foreground">Resultado:</span>
+                                </div>
+                                <span className={cn(
+                                  "text-sm font-bold",
+                                  resultado >= 0 ? "text-amber-400" : "text-rose-400"
+                                )}>
+                                  {resultado.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      }
+                      return null;
+                    }}
+                    cursor={{ fill: 'hsl(var(--accent))', opacity: 0.1 }}
+                  />
+                  <Bar 
+                    yAxisId="left" 
+                    dataKey="positivas" 
+                    stackId="stack" 
+                    fill="url(#gradientPositiveHour)"
+                    name="Positivas" 
+                    radius={[0, 0, 0, 0]}
+                    maxBarSize={50}
+                  />
+                  <Bar 
+                    yAxisId="left" 
+                    dataKey="negativas" 
+                    stackId="stack" 
+                    fill="url(#gradientNegativeHour)"
+                    name="Negativas" 
+                    radius={[4, 4, 0, 0]}
+                    maxBarSize={50}
+                  />
+                  <Line 
+                    yAxisId="right" 
+                    type="monotone"
+                    dataKey="resultado" 
+                    stroke="url(#gradientLineHour)"
+                    strokeWidth={3}
+                    dot={{ fill: '#fbbf24', stroke: '#f59e0b', strokeWidth: 2, r: 5 }}
+                    activeDot={{ r: 7, fill: '#fbbf24', stroke: '#fff', strokeWidth: 2 }}
+                    name="Resultado"
+                  />
+                </ComposedChart>
+              </ResponsiveContainer>
+
+              {/* Summary footer */}
+              <div className="grid grid-cols-4 gap-3 p-3 rounded-xl bg-muted/30 border border-border/30">
+                <div className="text-center">
+                  <p className="text-[10px] uppercase text-muted-foreground">Total Ops</p>
+                  <p className="text-sm font-bold text-foreground">{totalOperacoes}</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-[10px] uppercase text-muted-foreground">Resultado</p>
+                  <p className={cn(
+                    "text-sm font-bold",
+                    totalResultado >= 0 ? "text-emerald-400" : "text-rose-400"
+                  )}>
+                    {totalResultado.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
+                  </p>
+                </div>
+                <div className="text-center">
+                  <p className="text-[10px] uppercase text-emerald-400/70 flex items-center justify-center gap-1">
+                    <ArrowUpRight className="w-3 h-3" /> Melhor
+                  </p>
+                  <p className="text-sm font-bold text-emerald-400">
+                    {bestHour?.hour || '-'} ({(bestHour?.resultado || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })})
+                  </p>
+                </div>
+                <div className="text-center">
+                  <p className="text-[10px] uppercase text-rose-400/70 flex items-center justify-center gap-1">
+                    <ArrowDownRight className="w-3 h-3" /> Pior
+                  </p>
+                  <p className="text-sm font-bold text-rose-400">
+                    {worstHour?.hour || '-'} ({(worstHour?.resultado || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })})
+                  </p>
+                </div>
+              </div>
+            </div>
+          </ChartCard>
+        );
+      })()}
     </div>
   );
 };
