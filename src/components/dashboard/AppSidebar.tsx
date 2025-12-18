@@ -10,6 +10,7 @@ import {
   ShieldCheck,
   GraduationCap,
   FileSpreadsheet,
+  BookOpen,
 } from "lucide-react";
 
 import {
@@ -60,18 +61,17 @@ const menuItems = [
     color: "text-pink-500",
   },
   {
+    title: "Diário de Trading",
+    url: "/journal",
+    icon: BookOpen,
+    color: "text-purple-500",
+  },
+  {
     title: "Perfil",
     url: "/profile",
     icon: User,
     color: "text-orange-500",
   },
-  // Aprenda - oculto temporariamente enquanto está em desenvolvimento
-  // {
-  //   title: "Aprenda",
-  //   url: "/aprenda",
-  //   icon: GraduationCap,
-  //   color: "text-purple-500",
-  // },
 ];
 
 export function AppSidebar({ isAdmin }: AppSidebarProps) {
