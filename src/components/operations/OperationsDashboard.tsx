@@ -11,6 +11,7 @@ import RobosStrategyCards from "./RobosStrategyCards";
 import PerformanceHeatmap from "@/components/dashboard/PerformanceHeatmap";
 import TopPerformanceDays from "@/components/dashboard/TopPerformanceDays";
 import AdvancedMetrics from "@/components/dashboard/AdvancedMetrics";
+import PerformanceCalendar from "@/components/dashboard/PerformanceCalendar";
 
 interface OperationsDashboardProps {
   userId: string;
@@ -643,6 +644,14 @@ const OperationsDashboard = ({ userId }: OperationsDashboardProps) => {
 
       {/* Advanced Metrics */}
       <AdvancedMetrics operations={filteredOperations} />
+
+      {/* Performance Calendar */}
+      <PerformanceCalendar operations={filteredOperations.map(op => ({
+        id: `${op.operation_date}-${op.operation_time}`,
+        operation_date: op.operation_date,
+        result: op.result,
+        strategy: op.strategy || undefined,
+      }))} />
 
       {/* Heatmap & Top Days */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
