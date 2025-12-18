@@ -640,11 +640,6 @@ const OperationsDashboard = ({ userId }: OperationsDashboardProps) => {
         hourDistribution={hourDistribution}
       />
 
-      {/* Strategy Analysis */}
-      <RobosStrategyCards
-        strategyStats={strategyStats}
-        filteredOperations={filteredOperations}
-      />
 
       {/* Advanced Metrics */}
       <AdvancedMetrics operations={filteredOperations} />
