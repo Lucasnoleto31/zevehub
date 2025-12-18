@@ -1,6 +1,6 @@
 import { useEffect, useState, useMemo } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Activity, TrendingUp, TrendingDown, Flame, Snowflake, Target } from "lucide-react";
+import { Activity, TrendingUp, TrendingDown, Flame, Snowflake, Target, Crown, AlertTriangle, Sparkles } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Tooltip,
@@ -287,6 +287,8 @@ const PerformanceHeatmap = ({ operations }: PerformanceHeatmapProps) => {
                         );
                         const cellKey = `${day}-${hour}`;
                         const isHovered = hoveredCell === cellKey;
+                        const isBestSlot = bestSlot && bestSlot.weekday === day && bestSlot.hour === hour;
+                        const isWorstSlot = worstSlot && worstSlot.weekday === day && worstSlot.hour === hour && worstSlot.totalResult < 0;
                         
                         return (
                           <Tooltip key={cellKey}>
@@ -299,7 +301,7 @@ const PerformanceHeatmap = ({ operations }: PerformanceHeatmapProps) => {
                                 onHoverStart={() => setHoveredCell(cellKey)}
                                 onHoverEnd={() => setHoveredCell(null)}
                                 className={`
-                                  flex-1 min-w-[72px] h-14 rounded-lg 
+                                  relative flex-1 min-w-[72px] h-14 rounded-lg 
                                   flex items-center justify-center 
                                   text-sm font-medium 
                                   transition-all duration-300 
@@ -310,10 +312,83 @@ const PerformanceHeatmap = ({ operations }: PerformanceHeatmapProps) => {
                                   ${colorStyles.text}
                                   ${colorStyles.glow}
                                   ${isHovered ? 'ring-2 ring-amber-400/50' : ''}
+                                  ${isBestSlot ? 'ring-2 ring-amber-400 shadow-[0_0_25px_rgba(251,191,36,0.5)]' : ''}
+                                  ${isWorstSlot ? 'ring-2 ring-rose-400 shadow-[0_0_25px_rgba(244,63,94,0.5)]' : ''}
                                 `}
                               >
+                                {/* Best slot indicator */}
+                                {isBestSlot && (
+                                  <>
+                                    <motion.div
+                                      className="absolute -top-2 -right-2 z-20"
+                                      initial={{ scale: 0, rotate: -20 }}
+                                      animate={{ scale: 1, rotate: 0 }}
+                                      transition={{ type: "spring", stiffness: 300, delay: 0.5 }}
+                                    >
+                                      <div className="relative">
+                                        <motion.div
+                                          className="absolute inset-0 bg-amber-400 rounded-full blur-md"
+                                          animate={{ scale: [1, 1.3, 1], opacity: [0.5, 0.8, 0.5] }}
+                                          transition={{ duration: 2, repeat: Infinity }}
+                                        />
+                                        <div className="relative bg-gradient-to-br from-amber-400 to-yellow-500 rounded-full p-1.5 shadow-lg">
+                                          <Crown className="w-3 h-3 text-amber-900" />
+                                        </div>
+                                      </div>
+                                    </motion.div>
+                                    <motion.div
+                                      className="absolute inset-0 rounded-lg border-2 border-amber-400/50"
+                                      animate={{ opacity: [0.3, 0.7, 0.3] }}
+                                      transition={{ duration: 2, repeat: Infinity }}
+                                    />
+                                    {/* Sparkle effects */}
+                                    <motion.div
+                                      className="absolute -top-1 -left-1"
+                                      animate={{ scale: [0, 1, 0], opacity: [0, 1, 0] }}
+                                      transition={{ duration: 2, repeat: Infinity, delay: 0.3 }}
+                                    >
+                                      <Sparkles className="w-3 h-3 text-amber-300" />
+                                    </motion.div>
+                                    <motion.div
+                                      className="absolute -bottom-1 left-1/2"
+                                      animate={{ scale: [0, 1, 0], opacity: [0, 1, 0] }}
+                                      transition={{ duration: 2, repeat: Infinity, delay: 0.8 }}
+                                    >
+                                      <Sparkles className="w-2.5 h-2.5 text-amber-300" />
+                                    </motion.div>
+                                  </>
+                                )}
+                                
+                                {/* Worst slot indicator */}
+                                {isWorstSlot && (
+                                  <>
+                                    <motion.div
+                                      className="absolute -top-2 -right-2 z-20"
+                                      initial={{ scale: 0, rotate: 20 }}
+                                      animate={{ scale: 1, rotate: 0 }}
+                                      transition={{ type: "spring", stiffness: 300, delay: 0.5 }}
+                                    >
+                                      <div className="relative">
+                                        <motion.div
+                                          className="absolute inset-0 bg-rose-500 rounded-full blur-md"
+                                          animate={{ scale: [1, 1.3, 1], opacity: [0.5, 0.8, 0.5] }}
+                                          transition={{ duration: 1.5, repeat: Infinity }}
+                                        />
+                                        <div className="relative bg-gradient-to-br from-rose-500 to-red-600 rounded-full p-1.5 shadow-lg">
+                                          <AlertTriangle className="w-3 h-3 text-white" />
+                                        </div>
+                                      </div>
+                                    </motion.div>
+                                    <motion.div
+                                      className="absolute inset-0 rounded-lg border-2 border-rose-400/50"
+                                      animate={{ opacity: [0.3, 0.7, 0.3] }}
+                                      transition={{ duration: 1.5, repeat: Infinity }}
+                                    />
+                                  </>
+                                )}
+
                                 {cellData && cellData.operations > 0 && (
-                                  <span className="relative">
+                                  <span className="relative z-10">
                                     {cellData.operations}
                                     {isHovered && (
                                       <motion.div
@@ -333,10 +408,28 @@ const PerformanceHeatmap = ({ operations }: PerformanceHeatmapProps) => {
                               className="bg-card/95 backdrop-blur-xl border border-border/50 p-0 shadow-2xl rounded-xl overflow-hidden min-w-[220px]"
                             >
                               {/* Tooltip header */}
-                              <div className="px-4 py-3 bg-gradient-to-r from-amber-500/10 to-transparent border-b border-border/30">
+                              <div className={`px-4 py-3 border-b border-border/30 ${
+                                isBestSlot 
+                                  ? 'bg-gradient-to-r from-amber-500/20 to-transparent' 
+                                  : isWorstSlot 
+                                    ? 'bg-gradient-to-r from-rose-500/20 to-transparent'
+                                    : 'bg-gradient-to-r from-amber-500/10 to-transparent'
+                              }`}>
                                 <p className="font-bold text-foreground flex items-center gap-2">
-                                  <span className="w-2 h-2 rounded-full bg-amber-400" />
+                                  {isBestSlot && <Crown className="w-4 h-4 text-amber-400" />}
+                                  {isWorstSlot && <AlertTriangle className="w-4 h-4 text-rose-400" />}
+                                  {!isBestSlot && !isWorstSlot && <span className="w-2 h-2 rounded-full bg-amber-400" />}
                                   {day} às {hour}
+                                  {isBestSlot && (
+                                    <span className="ml-auto text-xs font-medium text-amber-400 bg-amber-400/10 px-2 py-0.5 rounded-full">
+                                      Melhor horário
+                                    </span>
+                                  )}
+                                  {isWorstSlot && (
+                                    <span className="ml-auto text-xs font-medium text-rose-400 bg-rose-400/10 px-2 py-0.5 rounded-full">
+                                      Evitar
+                                    </span>
+                                  )}
                                 </p>
                               </div>
                               
