@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { User } from "@supabase/supabase-js";
@@ -19,6 +19,7 @@ import { EquityCurveChart } from "@/components/dashboard/EquityCurveChart";
 import { PerformanceByDayChart } from "@/components/dashboard/PerformanceByDayChart";
 import { WinLossDistribution } from "@/components/dashboard/WinLossDistribution";
 import { QuickMetricsCards } from "@/components/dashboard/QuickMetricsCards";
+import { PeriodFilter, PeriodOption, filterOperationsByPeriod } from "@/components/dashboard/PeriodFilter";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/dashboard/AppSidebar";
 import { RestrictedAccess } from "@/components/dashboard/RestrictedAccess";
@@ -33,6 +34,70 @@ interface Operation {
   operation_time: string;
 }
 
+// Helper function to calculate advanced metrics
+const calculateAdvancedMetrics = (operations: Operation[]) => {
+  if (operations.length === 0) {
+    return {
+      bestTrade: 0,
+      worstTrade: 0,
+      currentStreak: 0,
+      profitFactor: 0,
+      avgWin: 0,
+      avgLoss: 0,
+      wins: 0,
+      losses: 0,
+    };
+  }
+
+  const results = operations.map(op => op.result);
+  const wins = operations.filter(op => op.result > 0);
+  const losses = operations.filter(op => op.result < 0);
+  
+  const bestTrade = Math.max(...results);
+  const worstTrade = Math.min(...results);
+  
+  const totalWins = wins.reduce((sum, op) => sum + op.result, 0);
+  const totalLosses = Math.abs(losses.reduce((sum, op) => sum + op.result, 0));
+  const profitFactor = totalLosses > 0 ? totalWins / totalLosses : totalWins > 0 ? Infinity : 0;
+  
+  const avgWin = wins.length > 0 ? totalWins / wins.length : 0;
+  const avgLoss = losses.length > 0 ? totalLosses / losses.length : 0;
+
+  // Calculate current streak
+  let currentStreak = 0;
+  const sortedOps = [...operations].sort((a, b) => {
+    const dateA = `${a.operation_date}${a.operation_time}`;
+    const dateB = `${b.operation_date}${b.operation_time}`;
+    return dateB.localeCompare(dateA);
+  });
+
+  if (sortedOps.length > 0) {
+    const firstResult = sortedOps[0].result;
+    const isWinStreak = firstResult > 0;
+    
+    for (const op of sortedOps) {
+      if (isWinStreak && op.result > 0) {
+        currentStreak++;
+      } else if (!isWinStreak && op.result < 0) {
+        currentStreak--;
+      } else {
+        break;
+      }
+    }
+  }
+
+  return {
+    bestTrade,
+    worstTrade,
+    currentStreak,
+    profitFactor: isFinite(profitFactor) ? profitFactor : 0,
+    avgWin,
+    avgLoss: -avgLoss,
+    wins: wins.length,
+    losses: losses.length,
+  };
+};
+
 const Dashboard = () => {
   const navigate = useNavigate();
   const [user, setUser] = useState<User | null>(null);
@@ -40,91 +105,43 @@ const Dashboard = () => {
   const [roles, setRoles] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [accessStatus, setAccessStatus] = useState<string>("aprovado");
-  const [stats, setStats] = useState({
-    totalOperations: 0,
-    totalProfit: 0,
-    winRate: 0,
-    averageResult: 0,
-  });
-  const [recentOperations, setRecentOperations] = useState<Operation[]>([]);
   const [allOperations, setAllOperations] = useState<Operation[]>([]);
-  const [advancedMetrics, setAdvancedMetrics] = useState({
-    bestTrade: 0,
-    worstTrade: 0,
-    currentStreak: 0,
-    profitFactor: 0,
-    avgWin: 0,
-    avgLoss: 0,
-    wins: 0,
-    losses: 0,
-  });
+  const [selectedPeriod, setSelectedPeriod] = useState<PeriodOption>("30d");
+
+  // Filter operations based on selected period
+  const filteredOperations = useMemo(() => {
+    return filterOperationsByPeriod(allOperations, selectedPeriod);
+  }, [allOperations, selectedPeriod]);
+
+  // Calculate stats based on filtered operations
+  const stats = useMemo(() => {
+    const totalOps = filteredOperations.length;
+    const totalProfit = filteredOperations.reduce((sum, op) => sum + Number(op.result), 0);
+    const winningOps = filteredOperations.filter(op => Number(op.result) > 0).length;
+    const winRate = totalOps > 0 ? (winningOps / totalOps) * 100 : 0;
+    const avgResult = totalOps > 0 ? totalProfit / totalOps : 0;
+
+    return {
+      totalOperations: totalOps,
+      totalProfit,
+      winRate,
+      averageResult: avgResult,
+    };
+  }, [filteredOperations]);
+
+  // Calculate advanced metrics based on filtered operations
+  const advancedMetrics = useMemo(() => {
+    return calculateAdvancedMetrics(filteredOperations);
+  }, [filteredOperations]);
+
+  // Recent operations (first 5 from filtered)
+  const recentOperations = useMemo(() => {
+    return filteredOperations.slice(0, 5);
+  }, [filteredOperations]);
 
   useEffect(() => {
     checkUser();
   }, []);
-
-  const calculateAdvancedMetrics = (operations: Operation[]) => {
-    if (operations.length === 0) {
-      return {
-        bestTrade: 0,
-        worstTrade: 0,
-        currentStreak: 0,
-        profitFactor: 0,
-        avgWin: 0,
-        avgLoss: 0,
-        wins: 0,
-        losses: 0,
-      };
-    }
-
-    const results = operations.map(op => op.result);
-    const wins = operations.filter(op => op.result > 0);
-    const losses = operations.filter(op => op.result < 0);
-    
-    const bestTrade = Math.max(...results);
-    const worstTrade = Math.min(...results);
-    
-    const totalWins = wins.reduce((sum, op) => sum + op.result, 0);
-    const totalLosses = Math.abs(losses.reduce((sum, op) => sum + op.result, 0));
-    const profitFactor = totalLosses > 0 ? totalWins / totalLosses : totalWins > 0 ? Infinity : 0;
-    
-    const avgWin = wins.length > 0 ? totalWins / wins.length : 0;
-    const avgLoss = losses.length > 0 ? totalLosses / losses.length : 0;
-
-    // Calculate current streak
-    let currentStreak = 0;
-    const sortedOps = [...operations].sort((a, b) => {
-      const dateA = `${a.operation_date}${a.operation_time}`;
-      const dateB = `${b.operation_date}${b.operation_time}`;
-      return dateB.localeCompare(dateA);
-    });
-
-    if (sortedOps.length > 0) {
-      const firstResult = sortedOps[0].result;
-      const isWinStreak = firstResult > 0;
-      
-      for (const op of sortedOps) {
-        if (isWinStreak && op.result > 0) {
-          currentStreak++;
-        } else if (!isWinStreak && op.result < 0) {
-          currentStreak--;
-        } else {
-          break;
-        }
-      }
-    }
-
-    return {
-      bestTrade,
-      worstTrade,
-      currentStreak,
-      profitFactor: isFinite(profitFactor) ? profitFactor : 0,
-      avgWin,
-      avgLoss: -avgLoss,
-      wins: wins.length,
-      losses: losses.length,
-    };
-  };
 
   const checkUser = async () => {
     try {
@@ -192,25 +209,7 @@ const Dashboard = () => {
       }
 
       console.log(`Total de operações carregadas: ${allOps.length}`);
-      
-      if (allOps.length > 0) {
-        const totalOps = allOps.length;
-        const totalProfit = allOps.reduce((sum, op) => sum + Number(op.result), 0);
-        const winningOps = allOps.filter(op => Number(op.result) > 0).length;
-        const winRate = totalOps > 0 ? (winningOps / totalOps) * 100 : 0;
-        const avgResult = totalOps > 0 ? totalProfit / totalOps : 0;
-
-        setStats({
-          totalOperations: totalOps,
-          totalProfit,
-          winRate,
-          averageResult: avgResult,
-        });
-
-        setRecentOperations(allOps.slice(0, 5));
-        setAllOperations(allOps);
-        setAdvancedMetrics(calculateAdvancedMetrics(allOps));
-      }
+      setAllOperations(allOps);
     } catch (error) {
       console.error("Erro ao carregar dados:", error);
     } finally {
@@ -383,6 +382,17 @@ const Dashboard = () => {
               </Card>
             </div>
 
+            {/* Period Filter */}
+            <div className="mb-6">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <h3 className="text-lg font-semibold text-foreground">Métricas de Performance</h3>
+                <PeriodFilter 
+                  selectedPeriod={selectedPeriod} 
+                  onPeriodChange={setSelectedPeriod} 
+                />
+              </div>
+            </div>
+
             {/* Main Stats */}
             <DashboardStats stats={stats} />
 
@@ -401,8 +411,8 @@ const Dashboard = () => {
 
             {/* Charts Grid */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-              <EquityCurveChart operations={allOperations} loading={loading} />
-              <PerformanceByDayChart operations={allOperations} loading={loading} />
+              <EquityCurveChart operations={filteredOperations} loading={loading} />
+              <PerformanceByDayChart operations={filteredOperations} loading={loading} />
             </div>
 
             {/* Win/Loss Distribution & Recent Operations */}
