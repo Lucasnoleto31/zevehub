@@ -576,7 +576,9 @@ export const TradingDashboard = ({ operations, strategies }: TradingDashboardPro
         hourlyResults[hour].lossCount++;
       }
     });
-    const hourlyData = Array.from({ length: 24 }, (_, hour) => ({
+    // Market hours: 9h to 18h
+    const marketHours = [9, 10, 11, 12, 13, 14, 15, 16, 17, 18];
+    const hourlyData = marketHours.map(hour => ({
       hour: `${hour}h`,
       result: hourlyResults[hour]?.total || 0,
       count: hourlyResults[hour]?.count || 0,
@@ -586,7 +588,7 @@ export const TradingDashboard = ({ operations, strategies }: TradingDashboardPro
       lossCount: hourlyResults[hour]?.lossCount || 0,
       winRate: hourlyResults[hour] ? (hourlyResults[hour].winCount / hourlyResults[hour].count) * 100 : 0,
       avg: hourlyResults[hour] ? hourlyResults[hour].total / hourlyResults[hour].count : 0
-    })).filter(h => h.count > 0);
+    }));
 
     const calendarData = Object.entries(dayResults).map(([date, data]) => ({
       date,
@@ -1726,7 +1728,7 @@ export const TradingDashboard = ({ operations, strategies }: TradingDashboardPro
                   </tr>
                 </thead>
                 <tbody>
-                  {[9, 10, 11, 12, 13, 14, 15, 16, 17].map(hour => (
+                  {[9, 10, 11, 12, 13, 14, 15, 16, 17, 18].map(hour => (
                     <tr key={hour}>
                       <td className="text-xs text-muted-foreground font-semibold py-1 pr-2 text-right">{hour}h</td>
                       {[1, 2, 3, 4, 5].map(weekday => {
