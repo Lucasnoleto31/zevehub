@@ -1211,6 +1211,102 @@ export type Database = {
         }
         Relationships: []
       }
+      profit_operations: {
+        Row: {
+          account_number: string | null
+          asset: string
+          average: string | null
+          buy_agent: string | null
+          buy_price: number | null
+          buy_qty: number | null
+          close_time: string
+          created_at: string
+          duration: string | null
+          holder_name: string | null
+          id: string
+          import_date: string | null
+          interval_result_gross: number | null
+          interval_result_percent: number | null
+          market_price: number | null
+          men: number | null
+          mep: number | null
+          open_time: string
+          operation_result: number | null
+          operation_result_percent: number | null
+          raw_data: Json | null
+          sell_agent: string | null
+          sell_price: number | null
+          sell_qty: number | null
+          side: string | null
+          tet: string | null
+          total: number | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          account_number?: string | null
+          asset: string
+          average?: string | null
+          buy_agent?: string | null
+          buy_price?: number | null
+          buy_qty?: number | null
+          close_time: string
+          created_at?: string
+          duration?: string | null
+          holder_name?: string | null
+          id?: string
+          import_date?: string | null
+          interval_result_gross?: number | null
+          interval_result_percent?: number | null
+          market_price?: number | null
+          men?: number | null
+          mep?: number | null
+          open_time: string
+          operation_result?: number | null
+          operation_result_percent?: number | null
+          raw_data?: Json | null
+          sell_agent?: string | null
+          sell_price?: number | null
+          sell_qty?: number | null
+          side?: string | null
+          tet?: string | null
+          total?: number | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          account_number?: string | null
+          asset?: string
+          average?: string | null
+          buy_agent?: string | null
+          buy_price?: number | null
+          buy_qty?: number | null
+          close_time?: string
+          created_at?: string
+          duration?: string | null
+          holder_name?: string | null
+          id?: string
+          import_date?: string | null
+          interval_result_gross?: number | null
+          interval_result_percent?: number | null
+          market_price?: number | null
+          men?: number | null
+          mep?: number | null
+          open_time?: string
+          operation_result?: number | null
+          operation_result_percent?: number | null
+          raw_data?: Json | null
+          sell_agent?: string | null
+          sell_price?: number | null
+          sell_qty?: number | null
+          side?: string | null
+          tet?: string | null
+          total?: number | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       recurring_transactions: {
         Row: {
           account_id: string | null
