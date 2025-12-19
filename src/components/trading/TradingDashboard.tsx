@@ -688,7 +688,7 @@ export const TradingDashboard = ({ operations, strategies }: TradingDashboardPro
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8" data-tour="welcome">
       {/* Hero Section with Main Stats */}
       <motion.div
         initial={{ opacity: 0 }}
@@ -743,7 +743,7 @@ export const TradingDashboard = ({ operations, strategies }: TradingDashboardPro
               </div>
             </div>
             
-            <div className="flex flex-wrap items-center gap-3">
+            <div className="flex flex-wrap items-center gap-3" data-tour="period-filter">
               <Select value={periodFilter} onValueChange={setPeriodFilter}>
                 <SelectTrigger className="w-40 bg-card/50 border-border/50">
                   <SelectValue placeholder="Período" />
@@ -821,7 +821,7 @@ export const TradingDashboard = ({ operations, strategies }: TradingDashboardPro
           </motion.div>
 
           {/* Main Stats Grid */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4" data-tour="dashboard-stats">
             <MetricCard
               label="Resultado Total"
               value={
@@ -985,6 +985,7 @@ export const TradingDashboard = ({ operations, strategies }: TradingDashboardPro
         subtitle="Evolução do resultado ao longo do tempo" 
         icon={TrendingUp}
         delay={0.3}
+        data-tour="equity-curve"
       >
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
           <StatCard
@@ -1110,6 +1111,7 @@ export const TradingDashboard = ({ operations, strategies }: TradingDashboardPro
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.4 }}
           className="relative overflow-hidden rounded-2xl border border-border/50"
+          data-tour="performance-chart"
         >
           <div className="absolute inset-0 bg-gradient-to-br from-card via-card/95 to-accent/5" />
           <div className="relative z-10 p-6">
@@ -1438,6 +1440,7 @@ export const TradingDashboard = ({ operations, strategies }: TradingDashboardPro
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.6, delay: 0.7, ease: [0.22, 1, 0.36, 1] }}
         className="relative overflow-hidden rounded-2xl border border-border/50 bg-card backdrop-blur-xl p-6"
+        data-tour="advanced-metrics"
       >
         {/* Background effects */}
         <div className="absolute inset-0 opacity-20">
@@ -1708,6 +1711,7 @@ export const TradingDashboard = ({ operations, strategies }: TradingDashboardPro
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.8, ease: [0.22, 1, 0.36, 1] }}
           className="relative overflow-hidden rounded-2xl border border-border/50 bg-card backdrop-blur-xl p-6"
+          data-tour="heatmap"
         >
           <div className="relative z-10">
             {/* Header */}

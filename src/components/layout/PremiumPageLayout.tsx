@@ -175,15 +175,23 @@ export function PremiumSection({
   subtitle,
   icon: Icon,
   actions,
+  className,
+  ...props
 }: {
   children: ReactNode;
   title?: string;
   subtitle?: string;
   icon?: LucideIcon;
   actions?: ReactNode;
+  className?: string;
+  'data-tour'?: string;
 }) {
   return (
-    <motion.div variants={itemVariants} className="space-y-4">
+    <motion.div 
+      variants={itemVariants} 
+      className={`space-y-4 ${className || ''}`}
+      data-tour={props['data-tour']}
+    >
       {(title || actions) && (
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
