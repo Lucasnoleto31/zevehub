@@ -526,7 +526,7 @@ const Auth = () => {
                 resultados
               </span>
               <br />
-              <span className="text-foreground">no trading</span>
+              <span className="text-foreground">no Mercado</span>
             </motion.h1>
 
             <motion.p variants={itemVariants} className="text-xl text-muted-foreground max-w-md leading-relaxed">
