@@ -27,6 +27,7 @@ import {
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import * as XLSX from "xlsx";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 interface Categoria {
   id: string;
@@ -1254,28 +1255,39 @@ export default function Financas() {
 
   return (
     <SidebarProvider>
-      <div className="min-h-screen flex w-full bg-gradient-to-br from-background via-accent/5 to-background relative overflow-hidden">
-        {/* Background Effects */}
-        <div className="fixed inset-0 pointer-events-none overflow-hidden">
-          <div className="particle particle-1" />
-          <div className="particle particle-2" />
-          <div className="particle particle-3" />
-          <div className="glow-orb glow-orb-1" />
-          <div className="glow-orb glow-orb-2" />
-        </div>
+      <div className="min-h-screen flex w-full bg-background relative overflow-hidden">
+        {/* Dynamic gradient background */}
+        <div
+          className="fixed inset-0 opacity-40 pointer-events-none"
+          style={{
+            background: `radial-gradient(circle at 50% 50%, hsl(var(--primary) / 0.12), transparent 50%)`,
+          }}
+        />
+
+        {/* Background pattern */}
+        <div
+          className="fixed inset-0 opacity-[0.015] pointer-events-none"
+          style={{
+            backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
+          }}
+        />
+
+        {/* Ambient orbs */}
+        <div className="fixed top-20 left-20 w-[500px] h-[500px] bg-primary/8 rounded-full blur-[150px] animate-pulse pointer-events-none" />
+        <div className="fixed bottom-20 right-20 w-[400px] h-[400px] bg-accent/8 rounded-full blur-[130px] animate-pulse pointer-events-none" style={{ animationDelay: "2s" }} />
 
         <AppSidebar isAdmin={isAdmin} />
         
         <div className="flex-1 flex flex-col">
           {/* Header */}
-          <header className="border-b bg-card/50 backdrop-blur-md sticky top-0 z-50">
+          <header className="border-b border-border/40 bg-background/80 backdrop-blur-xl sticky top-0 z-50">
             <div className="px-6 py-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-4">
                   <SidebarTrigger />
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-warning to-warning/80 flex items-center justify-center shadow-lg">
-                      <Wallet className="w-5 h-5 text-warning-foreground" />
+                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center shadow-lg shadow-primary/25">
+                      <Wallet className="w-5 h-5 text-primary-foreground" />
                     </div>
                     <div>
                       <h1 className="text-xl font-bold text-foreground">Finanças Pessoais</h1>
@@ -1283,13 +1295,14 @@ export default function Financas() {
                     </div>
                   </div>
                 </div>
+                <ThemeToggle />
               </div>
             </div>
           </header>
 
-          <main className="flex-1 p-6 overflow-auto">
+          <main className="flex-1 p-6 overflow-auto relative z-10">
             <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-              <TabsList className="grid grid-cols-6 w-full max-w-4xl bg-card/50 backdrop-blur-sm border border-border/50 p-1 rounded-xl">
+              <TabsList className="grid grid-cols-6 w-full max-w-4xl bg-card/60 backdrop-blur-sm border border-border/50 p-1 rounded-xl">
                 <TabsTrigger value="dashboard" className="flex items-center gap-2 rounded-lg data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
                   <LayoutDashboard className="h-4 w-4" />
                   <span className="hidden sm:inline">Dashboard</span>
@@ -1319,7 +1332,7 @@ export default function Financas() {
               {/* DASHBOARD TAB */}
               <TabsContent value="dashboard" className="space-y-6 animate-fade-in">
                 {/* Filtro de Mês */}
-                <Card className="border-border/50 bg-card/80 backdrop-blur-sm">
+                <Card className="border-border/50 bg-card/60 backdrop-blur-sm rounded-2xl">
                   <CardContent className="pt-4">
                     <div className="flex items-center gap-4 flex-wrap">
                       <Calendar className="h-5 w-5 text-primary" />
@@ -1371,7 +1384,7 @@ export default function Financas() {
 
                 {/* Cards de métricas */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  <Card className="relative overflow-hidden transition-all duration-300 hover:shadow-lg hover:-translate-y-1 border-border/50 bg-card/80 backdrop-blur-sm">
+                  <Card className="relative overflow-hidden transition-all duration-300 hover:shadow-lg hover:-translate-y-1 border-border/50 bg-card/60 backdrop-blur-sm rounded-2xl">
                     <div className="absolute top-0 left-0 w-1 h-full bg-primary" />
                     <CardHeader className="pb-2">
                       <div className="flex items-center justify-between">
@@ -1391,7 +1404,7 @@ export default function Financas() {
                     </CardContent>
                   </Card>
 
-                  <Card className="relative overflow-hidden transition-all duration-300 hover:shadow-lg hover:-translate-y-1 border-border/50 bg-card/80 backdrop-blur-sm">
+                  <Card className="relative overflow-hidden transition-all duration-300 hover:shadow-lg hover:-translate-y-1 border-border/50 bg-card/60 backdrop-blur-sm rounded-2xl">
                     <div className="absolute top-0 left-0 w-1 h-full bg-accent-foreground" />
                     <CardHeader className="pb-2">
                       <div className="flex items-center justify-between">
@@ -1408,7 +1421,7 @@ export default function Financas() {
                     </CardContent>
                   </Card>
 
-                  <Card className="relative overflow-hidden transition-all duration-300 hover:shadow-lg hover:-translate-y-1 border-border/50 bg-card/80 backdrop-blur-sm">
+                  <Card className="relative overflow-hidden transition-all duration-300 hover:shadow-lg hover:-translate-y-1 border-border/50 bg-card/60 backdrop-blur-sm rounded-2xl">
                     <div className="absolute top-0 left-0 w-1 h-full bg-warning" />
                     <CardHeader className="pb-2">
                       <div className="flex items-center justify-between">
@@ -1428,7 +1441,7 @@ export default function Financas() {
 
                 {/* Cards de Receitas e Despesas por Mês */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <Card className="relative overflow-hidden transition-all duration-300 hover:shadow-lg hover:-translate-y-1 border-success/30 bg-gradient-to-br from-success/5 to-success/10">
+                  <Card className="relative overflow-hidden transition-all duration-300 hover:shadow-lg hover:-translate-y-1 border-success/30 bg-gradient-to-br from-success/5 to-success/10 rounded-2xl">
                     <CardHeader className="pb-2">
                       <div className="flex items-center justify-between">
                         <CardTitle className="text-sm text-muted-foreground font-medium flex items-center gap-2">
@@ -1451,7 +1464,7 @@ export default function Financas() {
                     </CardContent>
                   </Card>
 
-                  <Card className="relative overflow-hidden transition-all duration-300 hover:shadow-lg hover:-translate-y-1 border-destructive/30 bg-gradient-to-br from-destructive/5 to-destructive/10">
+                  <Card className="relative overflow-hidden transition-all duration-300 hover:shadow-lg hover:-translate-y-1 border-destructive/30 bg-gradient-to-br from-destructive/5 to-destructive/10 rounded-2xl">
                     <CardHeader className="pb-2">
                       <div className="flex items-center justify-between">
                         <CardTitle className="text-sm text-muted-foreground font-medium flex items-center gap-2">
@@ -1469,7 +1482,7 @@ export default function Financas() {
                     </CardContent>
                   </Card>
 
-                  <Card className="relative overflow-hidden transition-all duration-300 hover:shadow-lg hover:-translate-y-1 border-warning/30 bg-gradient-to-br from-warning/5 to-warning/10">
+                  <Card className="relative overflow-hidden transition-all duration-300 hover:shadow-lg hover:-translate-y-1 border-warning/30 bg-gradient-to-br from-warning/5 to-warning/10 rounded-2xl">
                     <CardHeader className="pb-2">
                       <div className="flex items-center justify-between">
                         <CardTitle className="text-sm text-muted-foreground font-medium flex items-center gap-2">
