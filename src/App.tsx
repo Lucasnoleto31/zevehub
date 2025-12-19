@@ -15,11 +15,6 @@ import OperationDetail from "./pages/OperationDetail";
 import Profile from "./pages/Profile";
 import Financas from "./pages/Financas";
 import GerenciamentoRisco from "./pages/GerenciamentoRisco";
-import Aprenda from "./pages/Aprenda";
-import TrilhaDetail from "./pages/TrilhaDetail";
-import LessonView from "./pages/LessonView";
-import QuizView from "./pages/QuizView";
-import AdminEducacional from "./pages/AdminEducacional";
 import Onboarding from "./pages/Onboarding";
 import Contratos from "./pages/Contratos";
 import NotFound from "./pages/NotFound";
@@ -55,11 +50,6 @@ const App = () => {
                 <Route path="/profile" element={<Profile />} />
                 <Route path="/financas" element={<Financas />} />
                 <Route path="/risco" element={<GerenciamentoRisco />} />
-                <Route path="/aprenda" element={<Aprenda />} />
-                <Route path="/aprenda/admin" element={<AdminEducacional />} />
-                <Route path="/aprenda/trilha/:slug" element={<TrilhaDetail />} />
-                <Route path="/aprenda/aula/:lessonId" element={<LessonView />} />
-                <Route path="/aprenda/quiz/:quizId" element={<QuizView />} />
                 {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                 <Route path="*" element={<NotFound />} />
               </Routes>
