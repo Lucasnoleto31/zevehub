@@ -465,18 +465,22 @@ export const TradingDashboard = ({ operations, strategies }: TradingDashboardPro
       }
     }
 
+    // Equity curve by day (not by operation)
+    const sortedDays = Object.entries(dayResults)
+      .sort(([a], [b]) => a.localeCompare(b));
+    
     let cumulative = 0;
     let maxBalance = 0;
     let minBalance = 0;
-    const equityCurve = sortedOps.map((op, idx) => {
-      cumulative += op.operation_result || 0;
+    const equityCurve = sortedDays.map(([date, dailyResult], idx) => {
+      cumulative += dailyResult;
       maxBalance = Math.max(maxBalance, cumulative);
       minBalance = Math.min(minBalance, cumulative);
       return {
         index: idx + 1,
-        result: op.operation_result || 0,
+        result: dailyResult,
         total: cumulative,
-        date: format(new Date(op.open_time), 'dd/MM HH:mm')
+        date: format(parseISO(date), 'dd/MM', { locale: ptBR })
       };
     });
 
