@@ -365,12 +365,19 @@ const AdvancedMetrics = ({ operations }: AdvancedMetricsProps) => {
                   </motion.div>
                   <div className="flex items-center gap-1.5">
                     <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">{title}</p>
-                    <Tooltip>
-                      <TooltipTrigger>
-                        <Info className="w-3 h-3 text-muted-foreground/50 hover:text-muted-foreground transition-colors" />
+                    <Tooltip delayDuration={100}>
+                      <TooltipTrigger asChild>
+                        <button type="button" className="cursor-help">
+                          <Info className="w-3 h-3 text-muted-foreground/50 hover:text-muted-foreground transition-colors" />
+                        </button>
                       </TooltipTrigger>
-                      <TooltipContent className="max-w-xs bg-card/95 backdrop-blur-xl border-border/50">
-                        <p className="text-xs">{tooltip}</p>
+                      <TooltipContent 
+                        side="top" 
+                        align="center"
+                        sideOffset={8}
+                        className="max-w-[280px] z-[100] bg-popover text-popover-foreground border border-border shadow-lg"
+                      >
+                        <p className="text-xs leading-relaxed">{tooltip}</p>
                       </TooltipContent>
                     </Tooltip>
                   </div>
