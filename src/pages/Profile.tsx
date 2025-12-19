@@ -9,12 +9,12 @@ import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
-import { ArrowLeft, Camera, Save, Mail, Phone, User as UserIcon, Lock, Shield, Trash2 } from "lucide-react";
-import { ThemeToggle } from "@/components/ThemeToggle";
+import { Camera, Save, Mail, Phone, User as UserIcon, Lock, Shield, Trash2 } from "lucide-react";
 import { TwoFactorAuth } from "@/components/profile/TwoFactorAuth";
-
 import { ActiveSessions } from "@/components/profile/ActiveSessions";
 import { AvatarCropDialog } from "@/components/profile/AvatarCropDialog";
+import { PremiumPageLayout, PremiumCard, PremiumLoader } from "@/components/layout/PremiumPageLayout";
+import { motion } from "framer-motion";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -26,6 +26,15 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 20 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.5, ease: "easeOut" as const },
+  },
+};
 
 const Profile = () => {
   const navigate = useNavigate();
@@ -104,8 +113,6 @@ const Profile = () => {
       setCropDialogOpen(true);
     };
     reader.readAsDataURL(file);
-    
-    // Limpar o input para permitir selecionar a mesma imagem novamente
     e.target.value = "";
   };
 
@@ -209,7 +216,6 @@ const Profile = () => {
     }
 
     try {
-      // Primeiro, deletar dados do usuário
       const { error: profileError } = await supabase
         .from("profiles")
         .delete()
@@ -217,11 +223,9 @@ const Profile = () => {
 
       if (profileError) throw profileError;
 
-      // Depois, deletar a conta de autenticação
       const { error: authError } = await supabase.auth.admin.deleteUser(user.id);
       
       if (authError) {
-        // Se não tiver permissão admin, apenas fazer logout
         await supabase.auth.signOut();
         toast.success("Conta removida. Você foi desconectado.");
         navigate("/auth");
@@ -237,64 +241,25 @@ const Profile = () => {
   };
 
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-      </div>
-    );
+    return <PremiumLoader />;
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-accent/5 to-background relative overflow-hidden">
-      {/* Background Effects */}
-      <div className="fixed inset-0 pointer-events-none overflow-hidden">
-        <div className="particle particle-1" />
-        <div className="particle particle-2" />
-        <div className="particle particle-3" />
-        <div className="glow-orb glow-orb-1" />
-        <div className="glow-orb glow-orb-2" />
-      </div>
-
-      {/* Header */}
-      <header className="border-b bg-card/50 backdrop-blur-md sticky top-0 z-50">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => navigate("/dashboard")}
-                className="gap-2 hover:bg-primary/10"
-              >
-                <ArrowLeft className="w-4 h-4" />
-                Voltar
-              </Button>
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center shadow-lg">
-                  <UserIcon className="w-5 h-5 text-primary-foreground" />
-                </div>
-                <div>
-                  <h1 className="text-xl font-bold text-foreground">Meu Perfil</h1>
-                  <p className="text-sm text-muted-foreground">Configurações da conta</p>
-                </div>
-              </div>
-            </div>
-            <ThemeToggle />
-          </div>
-        </div>
-      </header>
-
-      <main className="container mx-auto px-4 py-8 max-w-4xl relative z-10">
-        <div className="space-y-6 animate-fade-in">
-          {/* Avatar Section */}
-          <Card className="border-border/50 bg-card/80 backdrop-blur-sm overflow-hidden">
-            <CardHeader className="bg-gradient-to-r from-primary/10 to-primary/5 border-b border-border/50">
-              <CardTitle className="flex items-center gap-2">
+    <PremiumPageLayout
+      title="Meu Perfil"
+      subtitle="Configurações da conta"
+      icon={UserIcon}
+      maxWidth="lg"
+    >
+      <div className="space-y-6">
+        {/* Avatar Section */}
+        <motion.div variants={itemVariants}>
+          <PremiumCard variant="gradient">
+            <div className="flex flex-col items-center gap-4">
+              <div className="flex items-center gap-2 mb-2">
                 <Camera className="w-5 h-5 text-primary" />
-                Foto de Perfil
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="flex flex-col items-center gap-4 pt-6">
+                <h3 className="text-lg font-semibold">Foto de Perfil</h3>
+              </div>
               <div className="relative">
                 <Avatar className="w-32 h-32 border-4 border-primary/20 ring-4 ring-primary/10 shadow-xl">
                   <AvatarImage src={formData.avatar_url} alt="Avatar" />
@@ -320,18 +285,18 @@ const Profile = () => {
               {uploading && (
                 <p className="text-sm text-muted-foreground animate-pulse">Fazendo upload...</p>
               )}
-            </CardContent>
-          </Card>
+            </div>
+          </PremiumCard>
+        </motion.div>
 
-          {/* Personal Information */}
-          <Card className="border-border/50 bg-card/80 backdrop-blur-sm">
-            <CardHeader className="border-b border-border/50">
-              <CardTitle className="flex items-center gap-2">
-                <UserIcon className="w-5 h-5 text-primary" />
-                Informações Pessoais
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4 pt-6">
+        {/* Personal Information */}
+        <motion.div variants={itemVariants}>
+          <PremiumCard>
+            <div className="flex items-center gap-2 mb-6">
+              <UserIcon className="w-5 h-5 text-primary" />
+              <h3 className="text-lg font-semibold">Informações Pessoais</h3>
+            </div>
+            <div className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="full_name" className="font-medium">Nome Completo</Label>
                 <div className="relative">
@@ -340,7 +305,7 @@ const Profile = () => {
                     id="full_name"
                     value={formData.full_name}
                     onChange={(e) => setFormData(prev => ({ ...prev, full_name: e.target.value }))}
-                    className="pl-10 h-11 bg-background/50 border-border/50 focus:border-primary"
+                    className="pl-10 h-12 bg-background/50 border-border/50 focus:border-primary rounded-xl"
                     placeholder="Seu nome completo"
                   />
                 </div>
@@ -354,7 +319,7 @@ const Profile = () => {
                     id="email"
                     value={formData.email}
                     disabled
-                    className="pl-10 h-11 bg-muted/50 border-border/50"
+                    className="pl-10 h-12 bg-muted/50 border-border/50 rounded-xl"
                     placeholder="seu@email.com"
                   />
                 </div>
@@ -371,24 +336,24 @@ const Profile = () => {
                     id="phone"
                     value={formData.phone}
                     onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
-                    className="pl-10 h-11 bg-background/50 border-border/50 focus:border-primary"
+                    className="pl-10 h-12 bg-background/50 border-border/50 focus:border-primary rounded-xl"
                     placeholder="(00) 00000-0000"
                   />
                 </div>
               </div>
-            </CardContent>
-          </Card>
+            </div>
+          </PremiumCard>
+        </motion.div>
 
-          {/* Notifications */}
-          <Card className="border-border/50 bg-card/80 backdrop-blur-sm">
-            <CardHeader className="border-b border-border/50">
-              <CardTitle className="flex items-center gap-2">
-                <Mail className="w-5 h-5 text-primary" />
-                Notificações
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4 pt-6">
-              <div className="flex items-center justify-between p-4 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors">
+        {/* Notifications */}
+        <motion.div variants={itemVariants}>
+          <PremiumCard>
+            <div className="flex items-center gap-2 mb-6">
+              <Mail className="w-5 h-5 text-primary" />
+              <h3 className="text-lg font-semibold">Notificações</h3>
+            </div>
+            <div className="space-y-4">
+              <div className="flex items-center justify-between p-4 rounded-xl bg-muted/30 hover:bg-muted/50 transition-colors">
                 <div className="space-y-0.5">
                   <Label className="font-medium">Notificações por E-mail</Label>
                   <p className="text-sm text-muted-foreground">
@@ -403,7 +368,7 @@ const Profile = () => {
                 />
               </div>
 
-              <div className="flex items-center justify-between p-4 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors">
+              <div className="flex items-center justify-between p-4 rounded-xl bg-muted/30 hover:bg-muted/50 transition-colors">
                 <div className="space-y-0.5">
                   <Label className="font-medium">Notificações Push</Label>
                   <p className="text-sm text-muted-foreground">
@@ -417,32 +382,37 @@ const Profile = () => {
                   }
                 />
               </div>
-            </CardContent>
-          </Card>
+            </div>
+          </PremiumCard>
+        </motion.div>
 
-          {/* Two-Factor Authentication */}
-          {user && (
+        {/* Two-Factor Authentication */}
+        {user && (
+          <motion.div variants={itemVariants}>
             <TwoFactorAuth
               userId={user.id}
               email={formData.email}
               totpEnabled={formData.totp_enabled}
               onUpdate={checkUser}
             />
-          )}
+          </motion.div>
+        )}
 
+        {/* Active Sessions */}
+        {user && (
+          <motion.div variants={itemVariants}>
+            <ActiveSessions userId={user.id} />
+          </motion.div>
+        )}
 
-          {/* Active Sessions */}
-          {user && <ActiveSessions userId={user.id} />}
-
-          {/* Security Section */}
-          <Card className="border-border/50 bg-card/80 backdrop-blur-sm">
-            <CardHeader className="border-b border-border/50">
-              <CardTitle className="flex items-center gap-2">
-                <Shield className="w-5 h-5 text-primary" />
-                Segurança
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4 pt-6">
+        {/* Security Section */}
+        <motion.div variants={itemVariants}>
+          <PremiumCard>
+            <div className="flex items-center gap-2 mb-6">
+              <Shield className="w-5 h-5 text-primary" />
+              <h3 className="text-lg font-semibold">Segurança</h3>
+            </div>
+            <div className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="new_password" className="font-medium">Nova Senha</Label>
                 <div className="relative">
@@ -452,7 +422,7 @@ const Profile = () => {
                     type="password"
                     value={passwordData.new_password}
                     onChange={(e) => setPasswordData(prev => ({ ...prev, new_password: e.target.value }))}
-                    className="pl-10 h-11 bg-background/50 border-border/50 focus:border-primary"
+                    className="pl-10 h-12 bg-background/50 border-border/50 focus:border-primary rounded-xl"
                     placeholder="Digite sua nova senha"
                   />
                 </div>
@@ -467,7 +437,7 @@ const Profile = () => {
                     type="password"
                     value={passwordData.confirm_password}
                     onChange={(e) => setPasswordData(prev => ({ ...prev, confirm_password: e.target.value }))}
-                    className="pl-10 h-11 bg-background/50 border-border/50 focus:border-primary"
+                    className="pl-10 h-12 bg-background/50 border-border/50 focus:border-primary rounded-xl"
                     placeholder="Confirme sua nova senha"
                   />
                 </div>
@@ -476,99 +446,80 @@ const Profile = () => {
               <Button
                 onClick={handleChangePassword}
                 variant="outline"
-                className="w-full h-11 hover:bg-primary hover:text-primary-foreground transition-colors"
+                className="w-full h-12 rounded-xl border-border/50 hover:bg-muted/50"
               >
                 <Lock className="w-4 h-4 mr-2" />
                 Alterar Senha
               </Button>
-            </CardContent>
-          </Card>
+            </div>
+          </PremiumCard>
+        </motion.div>
 
-          {/* Danger Zone */}
-          <Card className="border-destructive/50 bg-gradient-to-br from-destructive/5 to-destructive/10">
-            <CardHeader className="border-b border-destructive/30">
-              <CardTitle className="flex items-center gap-2 text-destructive">
-                <Trash2 className="w-5 h-5" />
-                Zona Perigosa
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4 pt-6">
-              <div className="space-y-2">
-                <Label className="font-medium">Deletar Conta Permanentemente</Label>
-                <p className="text-sm text-muted-foreground">
-                  Esta ação não pode ser desfeita. Todos os seus dados serão permanentemente removidos.
-                </p>
-              </div>
+        {/* Save Button */}
+        <motion.div variants={itemVariants}>
+          <Button
+            onClick={handleSave}
+            disabled={saving}
+            className="w-full h-14 font-semibold text-base bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 shadow-lg shadow-primary/20 rounded-xl"
+          >
+            <Save className="w-5 h-5 mr-2" />
+            {saving ? "Salvando..." : "Salvar Alterações"}
+          </Button>
+        </motion.div>
 
-              <AlertDialog>
-                <AlertDialogTrigger asChild>
-                  <Button variant="destructive" className="w-full">
-                    Deletar Minha Conta
-                  </Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>Tem certeza absoluta?</AlertDialogTitle>
-                    <AlertDialogDescription className="space-y-4">
-                      <p>
-                        Esta ação não pode ser desfeita. Isso irá permanentemente deletar sua conta
-                        e remover todos os seus dados de nossos servidores.
-                      </p>
-                      <div className="space-y-2">
-                        <Label htmlFor="delete-confirm">
-                          Digite <span className="font-bold text-foreground">DELETAR</span> para confirmar:
-                        </Label>
-                        <Input
-                          id="delete-confirm"
-                          value={deleteConfirmation}
-                          onChange={(e) => setDeleteConfirmation(e.target.value)}
-                          placeholder="DELETAR"
-                          className="font-mono"
-                        />
-                      </div>
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel onClick={() => setDeleteConfirmation("")}>
-                      Cancelar
-                    </AlertDialogCancel>
-                    <AlertDialogAction
-                      onClick={handleDeleteAccount}
-                      className="bg-error hover:bg-error/90"
-                      disabled={deleteConfirmation !== "DELETAR"}
-                    >
-                      Deletar Conta
-                    </AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
-            </CardContent>
-          </Card>
+        {/* Danger Zone */}
+        <motion.div variants={itemVariants}>
+          <PremiumCard className="border-destructive/20">
+            <div className="flex items-center gap-2 mb-6">
+              <Trash2 className="w-5 h-5 text-destructive" />
+              <h3 className="text-lg font-semibold text-destructive">Zona de Perigo</h3>
+            </div>
+            <p className="text-sm text-muted-foreground mb-4">
+              Ao deletar sua conta, todos os seus dados serão permanentemente removidos.
+              Esta ação não pode ser desfeita.
+            </p>
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button variant="destructive" className="w-full h-12 rounded-xl">
+                  <Trash2 className="w-4 h-4 mr-2" />
+                  Deletar Minha Conta
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent className="rounded-2xl">
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Tem certeza?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Esta ação é irreversível. Para confirmar, digite <strong>DELETAR</strong> abaixo.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <Input
+                  value={deleteConfirmation}
+                  onChange={(e) => setDeleteConfirmation(e.target.value)}
+                  placeholder="Digite DELETAR"
+                  className="h-12 rounded-xl"
+                />
+                <AlertDialogFooter>
+                  <AlertDialogCancel className="rounded-xl">Cancelar</AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={handleDeleteAccount}
+                    className="bg-destructive hover:bg-destructive/90 rounded-xl"
+                  >
+                    Confirmar Exclusão
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </PremiumCard>
+        </motion.div>
+      </div>
 
-          {/* Save Button */}
-          <div className="flex justify-end">
-            <Button
-              onClick={handleSave}
-              disabled={saving}
-              size="lg"
-              className="gap-2"
-            >
-              <Save className="w-4 h-4" />
-              {saving ? "Salvando..." : "Salvar Alterações"}
-            </Button>
-          </div>
-        </div>
-      </main>
-
-      {imageToCrop && (
-        <AvatarCropDialog
-          open={cropDialogOpen}
-          onOpenChange={setCropDialogOpen}
-          imageSrc={imageToCrop}
-          onCropComplete={handleCroppedImage}
-        />
-      )}
-    </div>
+      <AvatarCropDialog
+        open={cropDialogOpen}
+        onOpenChange={setCropDialogOpen}
+        imageSrc={imageToCrop}
+        onCropComplete={handleCroppedImage}
+      />
+    </PremiumPageLayout>
   );
 };
 

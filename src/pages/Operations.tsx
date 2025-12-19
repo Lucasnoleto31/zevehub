@@ -1,10 +1,9 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ArrowLeft, Plus, TrendingUp } from "lucide-react";
+import { Plus, TrendingUp } from "lucide-react";
 import OperationForm from "@/components/operations/OperationForm";
 import OperationsTable from "@/components/operations/OperationsTable";
 import OperationsDashboard from "@/components/operations/OperationsDashboard";
@@ -13,7 +12,17 @@ import DeleteAllOperations from "@/components/operations/DeleteAllOperations";
 import DeleteOperationsByStrategy from "@/components/operations/DeleteOperationsByStrategy";
 import StrategyManager from "@/components/operations/StrategyManager";
 import { OperationsFilters, type FilterValues } from "@/components/operations/OperationsFilters";
-import { ThemeToggle } from "@/components/ThemeToggle";
+import { PremiumPageLayout, PremiumCard, PremiumLoader } from "@/components/layout/PremiumPageLayout";
+import { motion } from "framer-motion";
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 20 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.5, ease: "easeOut" as const },
+  },
+};
 
 const Operations = () => {
   const navigate = useNavigate();
@@ -45,7 +54,6 @@ const Operations = () => {
 
       setUser(session.user);
 
-      // Verificar se usuário é admin
       const { data: rolesData } = await supabase
         .from("user_roles")
         .select("role")
@@ -61,110 +69,108 @@ const Operations = () => {
   };
 
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-      </div>
-    );
+    return <PremiumLoader />;
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-primary/5 to-background">
-      {/* Header */}
-      <header className="border-b bg-card/50 backdrop-blur-md sticky top-0 z-50">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => navigate("/dashboard")}
-                className="gap-2"
-              >
-                <ArrowLeft className="w-4 h-4" />
-                Voltar
-              </Button>
-              <div className="flex items-center gap-2">
-                <TrendingUp className="w-5 h-5 text-primary" />
-                <h1 className="text-xl font-bold text-foreground">Operações do Sistema</h1>
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <ThemeToggle />
-              {isAdmin && (
-                <div className="flex gap-2">
-                  <DeleteOperationsByStrategy userId={user?.id} />
-                  <DeleteAllOperations userId={user?.id} />
-                </div>
-              )}
-            </div>
+    <PremiumPageLayout
+      title="Operações do Sistema"
+      subtitle="Gerencie e analise suas operações"
+      icon={TrendingUp}
+      maxWidth="full"
+      headerActions={
+        isAdmin && (
+          <div className="flex gap-2">
+            <DeleteOperationsByStrategy userId={user?.id} />
+            <DeleteAllOperations userId={user?.id} />
           </div>
-        </div>
-      </header>
-
-      <main className="container mx-auto px-4 py-8">
-        <Tabs defaultValue="register" className="space-y-6">
-          <TabsList className="grid w-full max-w-2xl grid-cols-3">
-            <TabsTrigger value="register">Registrar</TabsTrigger>
-            <TabsTrigger value="strategies">Estratégias</TabsTrigger>
-            <TabsTrigger value="dashboard">Dashboard Geral</TabsTrigger>
+        )
+      }
+    >
+      <Tabs defaultValue="register" className="space-y-6">
+        <motion.div variants={itemVariants}>
+          <TabsList className="grid w-full max-w-2xl grid-cols-3 h-14 bg-muted/50 p-1.5 rounded-2xl">
+            <TabsTrigger 
+              value="register" 
+              className="data-[state=active]:bg-background data-[state=active]:shadow-lg rounded-xl font-semibold transition-all duration-300"
+            >
+              Registrar
+            </TabsTrigger>
+            <TabsTrigger 
+              value="strategies"
+              className="data-[state=active]:bg-background data-[state=active]:shadow-lg rounded-xl font-semibold transition-all duration-300"
+            >
+              Estratégias
+            </TabsTrigger>
+            <TabsTrigger 
+              value="dashboard"
+              className="data-[state=active]:bg-background data-[state=active]:shadow-lg rounded-xl font-semibold transition-all duration-300"
+            >
+              Dashboard Geral
+            </TabsTrigger>
           </TabsList>
+        </motion.div>
 
-          <TabsContent value="register" className="space-y-6">
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              <div className="lg:col-span-1 space-y-6">
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <Plus className="w-5 h-5" />
-                      Nova Operação
-                    </CardTitle>
-                    <CardDescription>
-                      Registre os detalhes da sua operação
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <OperationForm userId={user?.id} />
-                  </CardContent>
-                </Card>
+        <TabsContent value="register" className="space-y-6">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <motion.div variants={itemVariants} className="lg:col-span-1 space-y-6">
+              <PremiumCard variant="gradient">
+                <CardHeader className="p-0 pb-4">
+                  <CardTitle className="flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                      <Plus className="w-4 h-4 text-primary" />
+                    </div>
+                    Nova Operação
+                  </CardTitle>
+                  <CardDescription>
+                    Registre os detalhes da sua operação
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="p-0">
+                  <OperationForm userId={user?.id} />
+                </CardContent>
+              </PremiumCard>
 
-                <OperationImport userId={user?.id} />
-              </div>
+              <OperationImport userId={user?.id} />
+            </motion.div>
 
-              <div className="lg:col-span-2 space-y-4">
-                <OperationsFilters 
-                  userId={user?.id} 
-                  onFiltersChange={setFilters}
-                />
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Histórico de Operações</CardTitle>
-                    <CardDescription>
-                      Todas as operações registradas no sistema
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <OperationsTable 
-                      userId={user?.id} 
-                      isAdmin={isAdmin}
-                      filters={filters}
-                    />
-                  </CardContent>
-                </Card>
-              </div>
-            </div>
-          </TabsContent>
+            <motion.div variants={itemVariants} className="lg:col-span-2 space-y-4">
+              <OperationsFilters 
+                userId={user?.id} 
+                onFiltersChange={setFilters}
+              />
+              <PremiumCard>
+                <CardHeader className="p-0 pb-4">
+                  <CardTitle>Histórico de Operações</CardTitle>
+                  <CardDescription>
+                    Todas as operações registradas no sistema
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="p-0">
+                  <OperationsTable 
+                    userId={user?.id} 
+                    isAdmin={isAdmin}
+                    filters={filters}
+                  />
+                </CardContent>
+              </PremiumCard>
+            </motion.div>
+          </div>
+        </TabsContent>
 
-          <TabsContent value="strategies">
+        <TabsContent value="strategies">
+          <motion.div variants={itemVariants}>
             <StrategyManager userId={user?.id} />
-          </TabsContent>
+          </motion.div>
+        </TabsContent>
 
-          <TabsContent value="dashboard">
+        <TabsContent value="dashboard">
+          <motion.div variants={itemVariants}>
             <OperationsDashboard userId={user?.id} />
-          </TabsContent>
-        </Tabs>
-      </main>
-    </div>
+          </motion.div>
+        </TabsContent>
+      </Tabs>
+    </PremiumPageLayout>
   );
 };
 
