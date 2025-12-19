@@ -140,7 +140,7 @@ const StatCard = ({
         
         <motion.div 
           className={cn(
-            "text-2xl md:text-3xl font-black tracking-tight leading-none",
+            "text-lg sm:text-xl lg:text-2xl font-black tracking-tight leading-none truncate",
             trend === "up" && "text-emerald-400",
             trend === "down" && "text-rose-400",
             !trend && "text-foreground"
@@ -148,6 +148,7 @@ const StatCard = ({
           initial={{ scale: 0.9 }}
           animate={{ scale: 1 }}
           transition={{ delay: index * 0.06 + 0.2, type: "spring", stiffness: 200 }}
+          title={String(value)}
         >
           {value}
         </motion.div>
