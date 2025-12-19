@@ -1379,122 +1379,273 @@ export const TradingDashboard = ({ operations, strategies }: TradingDashboardPro
         </div>
       </motion.div>
 
-      {/* Advanced Metrics */}
-      <PremiumSection title="Métricas Avançadas" subtitle="Indicadores de risco e performance" icon={Activity} delay={0.7}>
-        <TooltipProvider>
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <div>
-                  <StatCard
-                    title="Sharpe Ratio"
-                    value={stats.sharpeRatio.toFixed(2)}
-                    subtitle={stats.sharpeRatio >= 2 ? "Excelente" : stats.sharpeRatio >= 1 ? "Bom" : "Regular"}
-                    icon={BarChart3}
-                    index={0}
-                    accentColor={stats.sharpeRatio >= 1 ? "emerald" : stats.sharpeRatio >= 0 ? "amber" : "rose"}
-                  />
-                </div>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Retorno ajustado ao risco. Acima de 1 é bom.</p>
-              </TooltipContent>
-            </Tooltip>
+      {/* Advanced Metrics - Premium Design */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.6, delay: 0.7, ease: [0.22, 1, 0.36, 1] }}
+        className="relative overflow-hidden rounded-2xl border border-white/10 bg-[#0a0a1a]/90 backdrop-blur-xl p-6"
+      >
+        {/* Background effects */}
+        <div className="absolute inset-0 opacity-20">
+          <div className="absolute top-0 right-1/4 w-96 h-96 bg-violet-500/10 rounded-full blur-3xl animate-pulse" />
+          <div className="absolute bottom-0 left-1/4 w-80 h-80 bg-emerald-500/10 rounded-full blur-3xl animate-pulse delay-1000" />
+        </div>
 
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <div>
-                  <StatCard
-                    title="Max Drawdown"
-                    value={`-${formatCurrency(stats.maxDrawdown)}`}
-                    subtitle="Maior queda"
-                    icon={TrendingDown}
-                    trend="down"
-                    index={1}
-                    accentColor="rose"
-                  />
-                </div>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Maior queda do pico ao vale.</p>
-              </TooltipContent>
-            </Tooltip>
-
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <div>
-                  <StatCard
-                    title="Profit Factor"
-                    value={stats.profitFactor === Infinity ? '∞' : stats.profitFactor.toFixed(2)}
-                    subtitle={stats.profitFactor >= 1.5 ? "Bom" : "Regular"}
-                    icon={Target}
-                    index={2}
-                    accentColor={stats.profitFactor >= 1.5 ? "emerald" : stats.profitFactor >= 1 ? "amber" : "rose"}
-                  />
-                </div>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Lucro bruto / Perda bruta. Acima de 1.5 é bom.</p>
-              </TooltipContent>
-            </Tooltip>
-
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <div>
-                  <StatCard
-                    title="Expectancy"
-                    value={`${stats.expectancy >= 0 ? '+' : ''}${formatCurrency(stats.expectancy)}`}
-                    subtitle="Por operação"
-                    icon={DollarSign}
-                    trend={stats.expectancy >= 0 ? "up" : "down"}
-                    index={3}
-                    accentColor={stats.expectancy >= 0 ? "emerald" : "rose"}
-                  />
-                </div>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Valor esperado por operação.</p>
-              </TooltipContent>
-            </Tooltip>
-
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <div>
-                  <StatCard
-                    title="Recovery Factor"
-                    value={stats.recoveryFactor.toFixed(2)}
-                    subtitle={stats.recoveryFactor >= 2 ? "Bom" : "Regular"}
-                    icon={Flame}
-                    index={4}
-                    accentColor={stats.recoveryFactor >= 2 ? "emerald" : stats.recoveryFactor >= 1 ? "amber" : "rose"}
-                  />
-                </div>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Lucro total / Drawdown máximo.</p>
-              </TooltipContent>
-            </Tooltip>
-
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <div>
-                  <StatCard
-                    title="DD Duration"
-                    value={`${stats.maxDrawdownDuration} ops`}
-                    subtitle="Maior duração"
-                    icon={Clock}
-                    index={5}
-                    accentColor="cyan"
-                  />
-                </div>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Maior duração de drawdown.</p>
-              </TooltipContent>
-            </Tooltip>
+        <div className="relative z-10">
+          {/* Header */}
+          <div className="flex items-start gap-3 mb-6">
+            <div className="p-2 rounded-xl bg-violet-500/15 shadow-lg shadow-violet-500/20">
+              <Activity className="w-5 h-5 text-violet-400" />
+            </div>
+            <div>
+              <h3 className="text-lg font-bold text-white">Métricas Avançadas</h3>
+              <p className="text-xs text-muted-foreground">Indicadores de risco e performance ajustada</p>
+            </div>
           </div>
-        </TooltipProvider>
-      </PremiumSection>
+
+          {/* Metrics Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {/* Sharpe Ratio */}
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div className="relative overflow-hidden rounded-xl bg-gradient-to-br from-emerald-500/10 to-emerald-500/5 border border-emerald-500/20 p-5 hover:border-emerald-500/40 transition-all duration-300 group">
+                    <div className="flex items-center gap-2 mb-3">
+                      <div className="p-1.5 rounded-lg bg-emerald-500/20">
+                        <Zap className="w-4 h-4 text-emerald-400" />
+                      </div>
+                      <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Sharpe Ratio</span>
+                      <div className="w-3.5 h-3.5 rounded-full border border-muted-foreground/30 flex items-center justify-center ml-auto">
+                        <span className="text-[8px] text-muted-foreground">i</span>
+                      </div>
+                    </div>
+                    <p className={cn("text-3xl font-black mb-2", stats.sharpeRatio >= 1 ? "text-emerald-400" : stats.sharpeRatio >= 0 ? "text-amber-400" : "text-rose-400")}>
+                      {stats.sharpeRatio.toFixed(2)}
+                    </p>
+                    <p className="text-xs text-muted-foreground flex items-center gap-1">
+                      <ArrowUpRight className="w-3 h-3 text-emerald-400" />
+                      {stats.sharpeRatio >= 2 ? "Retorno excelente com risco" : stats.sharpeRatio >= 1 ? "Retorno positivo com risco" : "Retorno ajustado ao risco"}
+                    </p>
+                    <div className="mt-4 h-10 flex items-end justify-between">
+                      <svg className="w-full h-8" viewBox="0 0 100 30">
+                        <path d="M0,25 Q10,20 20,22 T40,18 T60,15 T80,10 T100,5" fill="none" stroke="#22c55e" strokeWidth="2" opacity="0.6"/>
+                      </svg>
+                      <Badge className="text-[10px] px-1.5 py-0.5 bg-emerald-500/20 text-emerald-400 border-0">
+                        ↑{Math.abs(stats.sharpeRatio * 100).toFixed(0)}%
+                      </Badge>
+                    </div>
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent><p>Retorno ajustado ao risco. Acima de 1 é bom.</p></TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+
+            {/* Max Drawdown */}
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div className="relative overflow-hidden rounded-xl bg-gradient-to-br from-rose-500/10 to-rose-500/5 border border-rose-500/20 p-5 hover:border-rose-500/40 transition-all duration-300 group">
+                    <div className="flex items-center gap-2 mb-3">
+                      <div className="p-1.5 rounded-lg bg-rose-500/20">
+                        <TrendingDown className="w-4 h-4 text-rose-400" />
+                      </div>
+                      <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Max Drawdown</span>
+                      <div className="w-3.5 h-3.5 rounded-full border border-muted-foreground/30 flex items-center justify-center ml-auto">
+                        <span className="text-[8px] text-muted-foreground">i</span>
+                      </div>
+                    </div>
+                    <p className="text-3xl font-black mb-2 text-rose-400">
+                      {formatCurrency(stats.maxDrawdown)}
+                    </p>
+                    <p className="text-xs text-muted-foreground flex items-center gap-1">
+                      <ArrowDownRight className="w-3 h-3 text-rose-400" />
+                      Maior perda acumulada
+                    </p>
+                    <div className="mt-4 h-10 flex items-end justify-between">
+                      <svg className="w-full h-8" viewBox="0 0 100 30">
+                        <path d="M0,5 Q15,8 25,12 T50,20 T75,25 T100,28" fill="none" stroke="#ef4444" strokeWidth="2" opacity="0.6"/>
+                      </svg>
+                      <Badge className="text-[10px] px-1.5 py-0.5 bg-rose-500/20 text-rose-400 border-0">
+                        ↓{Math.min(100, Math.abs((stats.maxDrawdown / (stats.totalResult || 1)) * 100)).toFixed(0)}%
+                      </Badge>
+                    </div>
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent><p>Maior queda do pico ao vale.</p></TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+
+            {/* Profit Factor */}
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div className="relative overflow-hidden rounded-xl bg-gradient-to-br from-emerald-500/10 to-emerald-500/5 border border-emerald-500/20 p-5 hover:border-emerald-500/40 transition-all duration-300 group">
+                    <div className="flex items-center gap-2 mb-3">
+                      <div className="p-1.5 rounded-lg bg-emerald-500/20">
+                        <Target className="w-4 h-4 text-emerald-400" />
+                      </div>
+                      <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Profit Factor</span>
+                      <div className="w-3.5 h-3.5 rounded-full border border-muted-foreground/30 flex items-center justify-center ml-auto">
+                        <span className="text-[8px] text-muted-foreground">i</span>
+                      </div>
+                    </div>
+                    <p className={cn("text-3xl font-black mb-2", stats.profitFactor >= 1.5 ? "text-emerald-400" : stats.profitFactor >= 1 ? "text-amber-400" : "text-rose-400")}>
+                      {stats.profitFactor === Infinity ? "∞" : stats.profitFactor.toFixed(2)}
+                    </p>
+                    <p className="text-xs text-muted-foreground flex items-center gap-1">
+                      <ArrowUpRight className="w-3 h-3 text-emerald-400" />
+                      {stats.profitFactor >= 1.5 ? "Estratégia lucrativa" : stats.profitFactor >= 1 ? "Estratégia equilibrada" : "Estratégia deficitária"}
+                    </p>
+                    <div className="mt-4 h-10 flex items-end justify-between">
+                      <svg className="w-full h-8" viewBox="0 0 100 30">
+                        <path d="M0,20 Q20,18 35,15 T60,12 T85,8 T100,5" fill="none" stroke="#22c55e" strokeWidth="2" opacity="0.6"/>
+                      </svg>
+                      <Badge className="text-[10px] px-1.5 py-0.5 bg-emerald-500/20 text-emerald-400 border-0">
+                        ↑{Math.min(999, (stats.profitFactor * 47)).toFixed(0)}%
+                      </Badge>
+                    </div>
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent><p>Lucro bruto / Perda bruta. Acima de 1.5 é bom.</p></TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+
+            {/* Expectancy */}
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div className={cn(
+                    "relative overflow-hidden rounded-xl p-5 transition-all duration-300 group",
+                    stats.expectancy >= 0 
+                      ? "bg-gradient-to-br from-emerald-500/10 to-emerald-500/5 border border-emerald-500/20 hover:border-emerald-500/40"
+                      : "bg-gradient-to-br from-rose-500/10 to-rose-500/5 border border-rose-500/20 hover:border-rose-500/40"
+                  )}>
+                    <div className="flex items-center gap-2 mb-3">
+                      <div className={cn("p-1.5 rounded-lg", stats.expectancy >= 0 ? "bg-emerald-500/20" : "bg-rose-500/20")}>
+                        <TrendingUp className={cn("w-4 h-4", stats.expectancy >= 0 ? "text-emerald-400" : "text-rose-400")} />
+                      </div>
+                      <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Expectancy</span>
+                      <div className="w-3.5 h-3.5 rounded-full border border-muted-foreground/30 flex items-center justify-center ml-auto">
+                        <span className="text-[8px] text-muted-foreground">i</span>
+                      </div>
+                    </div>
+                    <p className={cn("text-3xl font-black mb-2", stats.expectancy >= 0 ? "text-emerald-400" : "text-rose-400")}>
+                      {formatCurrency(stats.expectancy)}
+                    </p>
+                    <p className="text-xs text-muted-foreground flex items-center gap-1">
+                      {stats.expectancy >= 0 
+                        ? <><ArrowUpRight className="w-3 h-3 text-emerald-400" />Ganho esperado por operação</>
+                        : <><ArrowDownRight className="w-3 h-3 text-rose-400" />Perda esperada por operação</>
+                      }
+                    </p>
+                    <div className="mt-4 h-10 flex items-end justify-between">
+                      <svg className="w-full h-8" viewBox="0 0 100 30">
+                        <path d={stats.expectancy >= 0 ? "M0,25 Q15,22 30,18 T55,12 T80,8 T100,3" : "M0,5 Q15,10 30,15 T55,20 T80,25 T100,28"} fill="none" stroke={stats.expectancy >= 0 ? "#22c55e" : "#ef4444"} strokeWidth="2" opacity="0.6"/>
+                      </svg>
+                      <Badge className={cn("text-[10px] px-1.5 py-0.5 border-0", stats.expectancy >= 0 ? "bg-emerald-500/20 text-emerald-400" : "bg-rose-500/20 text-rose-400")}>
+                        {stats.expectancy >= 0 ? "↑" : "↓"}{Math.abs(stats.expectancy * 10).toFixed(0)}%
+                      </Badge>
+                    </div>
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent><p>Valor esperado por operação.</p></TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+
+            {/* Recovery Factor */}
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div className={cn(
+                    "relative overflow-hidden rounded-xl p-5 transition-all duration-300 group",
+                    stats.recoveryFactor >= 2
+                      ? "bg-gradient-to-br from-emerald-500/10 to-emerald-500/5 border border-emerald-500/20 hover:border-emerald-500/40"
+                      : stats.recoveryFactor >= 1
+                      ? "bg-gradient-to-br from-amber-500/10 to-amber-500/5 border border-amber-500/20 hover:border-amber-500/40"
+                      : "bg-gradient-to-br from-rose-500/10 to-rose-500/5 border border-rose-500/20 hover:border-rose-500/40"
+                  )}>
+                    <div className="flex items-center gap-2 mb-3">
+                      <div className={cn(
+                        "p-1.5 rounded-lg",
+                        stats.recoveryFactor >= 2 ? "bg-emerald-500/20" : stats.recoveryFactor >= 1 ? "bg-amber-500/20" : "bg-rose-500/20"
+                      )}>
+                        <Flame className={cn(
+                          "w-4 h-4",
+                          stats.recoveryFactor >= 2 ? "text-emerald-400" : stats.recoveryFactor >= 1 ? "text-amber-400" : "text-rose-400"
+                        )} />
+                      </div>
+                      <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Recovery Factor</span>
+                      <div className="w-3.5 h-3.5 rounded-full border border-muted-foreground/30 flex items-center justify-center ml-auto">
+                        <span className="text-[8px] text-muted-foreground">i</span>
+                      </div>
+                    </div>
+                    <p className={cn(
+                      "text-3xl font-black mb-2",
+                      stats.recoveryFactor >= 2 ? "text-emerald-400" : stats.recoveryFactor >= 1 ? "text-amber-400" : "text-rose-400"
+                    )}>
+                      {stats.recoveryFactor.toFixed(2)}
+                    </p>
+                    <p className="text-xs text-muted-foreground flex items-center gap-1">
+                      {stats.recoveryFactor >= 2 
+                        ? <><ArrowUpRight className="w-3 h-3 text-emerald-400" />Recuperação rápida</>
+                        : <><ArrowDownRight className="w-3 h-3 text-amber-400" />Recuperação lenta</>
+                      }
+                    </p>
+                    <div className="mt-4 h-10 flex items-end justify-between">
+                      <svg className="w-full h-8" viewBox="0 0 100 30">
+                        <path d="M0,20 Q20,22 40,18 T60,15 T80,20 T100,12" fill="none" stroke={stats.recoveryFactor >= 2 ? "#22c55e" : "#fbbf24"} strokeWidth="2" opacity="0.6"/>
+                      </svg>
+                      <Badge className={cn(
+                        "text-[10px] px-1.5 py-0.5 border-0",
+                        stats.recoveryFactor >= 2 ? "bg-emerald-500/20 text-emerald-400" : "bg-amber-500/20 text-amber-400"
+                      )}>
+                        ↑{(stats.recoveryFactor * 100).toFixed(0)}%
+                      </Badge>
+                    </div>
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent><p>Lucro total / Drawdown máximo.</p></TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+
+            {/* Drawdown Duration */}
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div className="relative overflow-hidden rounded-xl bg-gradient-to-br from-cyan-500/10 to-cyan-500/5 border border-cyan-500/20 p-5 hover:border-cyan-500/40 transition-all duration-300 group">
+                    <div className="flex items-center gap-2 mb-3">
+                      <div className="p-1.5 rounded-lg bg-cyan-500/20">
+                        <Clock className="w-4 h-4 text-cyan-400" />
+                      </div>
+                      <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Drawdown Duration</span>
+                      <div className="w-3.5 h-3.5 rounded-full border border-muted-foreground/30 flex items-center justify-center ml-auto">
+                        <span className="text-[8px] text-muted-foreground">i</span>
+                      </div>
+                    </div>
+                    <p className="text-3xl font-black mb-2 text-cyan-400">
+                      {stats.maxDrawdownDuration} <span className="text-lg font-medium">ops</span>
+                    </p>
+                    <p className="text-xs text-muted-foreground flex items-center gap-1">
+                      <ArrowDownRight className="w-3 h-3 text-cyan-400" />
+                      {stats.maxDrawdownDuration <= 5 ? "Recuperação rápida" : "Recuperação lenta"}
+                    </p>
+                    <div className="mt-4 h-10 flex items-end justify-between">
+                      <svg className="w-full h-8" viewBox="0 0 100 30">
+                        <path d="M0,15 Q15,18 30,12 T50,20 T70,10 T90,18 T100,15" fill="none" stroke="#22d3ee" strokeWidth="2" opacity="0.6"/>
+                      </svg>
+                      <Badge className="text-[10px] px-1.5 py-0.5 bg-cyan-500/20 text-cyan-400 border-0">
+                        ↓{stats.maxDrawdownDuration}%
+                      </Badge>
+                    </div>
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent><p>Maior duração de drawdown em operações.</p></TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </div>
+        </div>
+      </motion.div>
 
       {/* Calendar Heatmap */}
       <PremiumSection title="Calendário de Performance" subtitle="Heatmap dos resultados diários" icon={CalendarDays} delay={0.8}>
