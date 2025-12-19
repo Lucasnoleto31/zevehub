@@ -540,17 +540,25 @@ export const TradingDashboard = ({ operations, strategies }: TradingDashboardPro
       .map(([year, result]) => ({ year, result }))
       .sort((a, b) => a.year.localeCompare(b.year));
 
-    const hourlyResults: Record<number, { total: number; count: number }> = {};
+    const hourlyResults: Record<number, { total: number; count: number; wins: number; losses: number }> = {};
     ops.forEach(op => {
       const hour = getHours(new Date(op.open_time));
-      if (!hourlyResults[hour]) hourlyResults[hour] = { total: 0, count: 0 };
-      hourlyResults[hour].total += op.operation_result || 0;
+      if (!hourlyResults[hour]) hourlyResults[hour] = { total: 0, count: 0, wins: 0, losses: 0 };
+      const result = op.operation_result || 0;
+      hourlyResults[hour].total += result;
       hourlyResults[hour].count++;
+      if (result >= 0) {
+        hourlyResults[hour].wins += result;
+      } else {
+        hourlyResults[hour].losses += Math.abs(result);
+      }
     });
     const hourlyData = Array.from({ length: 24 }, (_, hour) => ({
-      hour: `${hour.toString().padStart(2, '0')}:00`,
+      hour: `${hour}h`,
       result: hourlyResults[hour]?.total || 0,
       count: hourlyResults[hour]?.count || 0,
+      wins: hourlyResults[hour]?.wins || 0,
+      losses: hourlyResults[hour]?.losses || 0,
       avg: hourlyResults[hour] ? hourlyResults[hour].total / hourlyResults[hour].count : 0
     })).filter(h => h.count > 0);
 
@@ -1198,39 +1206,143 @@ export const TradingDashboard = ({ operations, strategies }: TradingDashboardPro
         </motion.div>
       </div>
 
-      {/* Hourly Distribution */}
-      <PremiumSection title="Distribuição por Horário" subtitle="Performance em cada horário do dia" icon={Clock} delay={0.6}>
-        <ChartCard>
-          <div className="h-64">
+      {/* Hourly Distribution - Premium Design */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.6, delay: 0.6, ease: [0.22, 1, 0.36, 1] }}
+        className="relative overflow-hidden rounded-2xl border border-white/10 bg-[#0a0a1a]/90 backdrop-blur-xl p-6"
+      >
+        {/* Animated gradient mesh background */}
+        <div className="absolute inset-0 opacity-30">
+          <div className="absolute top-0 left-1/4 w-96 h-96 bg-amber-500/10 rounded-full blur-3xl animate-pulse" />
+          <div className="absolute bottom-0 right-1/4 w-80 h-80 bg-emerald-500/10 rounded-full blur-3xl animate-pulse delay-1000" />
+        </div>
+
+        <div className="relative z-10">
+          {/* Header */}
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-xl bg-amber-500/15 shadow-lg shadow-amber-500/20">
+                <Clock className="w-5 h-5 text-amber-400" />
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-white">Distribuição por Horário</h3>
+                <p className="text-xs text-muted-foreground">Performance e volume de operações por hora</p>
+              </div>
+            </div>
+            <Badge className={cn(
+              "px-3 py-1.5 text-sm font-bold border-0",
+              stats.totalResult >= 0 
+                ? "bg-emerald-500/20 text-emerald-400" 
+                : "bg-rose-500/20 text-rose-400"
+            )}>
+              {formatCurrency(stats.totalResult)}
+            </Badge>
+          </div>
+
+          {/* Chart */}
+          <div className="h-72">
             <ResponsiveContainer width="100%" height="100%">
               <ComposedChart data={stats.hourlyData}>
-                <CartesianGrid strokeDasharray="3 3" className="stroke-border/30" />
-                <XAxis dataKey="hour" tick={{ fontSize: 10 }} className="text-muted-foreground" />
-                <YAxis yAxisId="left" tick={{ fontSize: 12 }} className="text-muted-foreground" />
-                <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 12 }} className="text-muted-foreground" />
+                <XAxis 
+                  dataKey="hour" 
+                  tick={{ fontSize: 11, fill: '#64748b' }}
+                  axisLine={{ stroke: 'rgba(255,255,255,0.1)' }}
+                  tickLine={false}
+                />
+                <YAxis 
+                  yAxisId="left" 
+                  tick={{ fontSize: 10, fill: '#64748b' }}
+                  axisLine={false}
+                  tickLine={false}
+                  label={{ value: 'Operações', angle: -90, position: 'insideLeft', fill: '#64748b', fontSize: 10 }}
+                />
+                <YAxis 
+                  yAxisId="right" 
+                  orientation="right"
+                  tick={{ fontSize: 10, fill: '#64748b' }}
+                  axisLine={false}
+                  tickLine={false}
+                  tickFormatter={(value) => `R$${(value / 1000).toFixed(0)}k`}
+                  label={{ value: 'Resultado (R$)', angle: 90, position: 'insideRight', fill: '#64748b', fontSize: 10 }}
+                />
                 <RechartsTooltip 
                   contentStyle={{ 
-                    backgroundColor: 'hsl(var(--card))',
-                    border: '1px solid hsl(var(--border))',
-                    borderRadius: '12px'
+                    backgroundColor: 'rgba(15, 15, 35, 0.95)',
+                    border: '1px solid rgba(251, 191, 36, 0.3)',
+                    borderRadius: '12px',
+                    boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4)',
+                    padding: '12px 16px'
                   }}
+                  labelStyle={{ color: '#ffffff', marginBottom: '8px', fontWeight: 500 }}
                   formatter={(value: number, name: string) => [
-                    name === 'count' ? value : formatCurrency(value), 
-                    name === 'result' ? 'Resultado' : 'Operações'
+                    <span style={{ 
+                      color: name === 'wins' ? '#22c55e' : name === 'losses' ? '#ef4444' : '#fbbf24', 
+                      fontWeight: 'bold', 
+                      fontSize: '14px' 
+                    }}>
+                      {name === 'count' ? value : formatCurrency(value)}
+                    </span>, 
+                    <span style={{ color: '#ffffff' }}>
+                      {name === 'wins' ? 'Ganhos' : name === 'losses' ? 'Perdas' : name === 'result' ? 'Resultado' : 'Operações'}
+                    </span>
                   ]}
                 />
-                <Legend />
-                <Bar yAxisId="left" dataKey="result" name="Resultado" radius={[4, 4, 0, 0]}>
-                  {stats.hourlyData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.result >= 0 ? '#22c55e' : '#ef4444'} />
-                  ))}
-                </Bar>
-                <Line yAxisId="right" type="monotone" dataKey="count" name="Operações" stroke="hsl(var(--primary))" strokeWidth={2} dot={false} />
+                <Bar yAxisId="left" dataKey="wins" stackId="stack" fill="#22c55e" radius={[0, 0, 0, 0]} name="wins" />
+                <Bar yAxisId="left" dataKey="losses" stackId="stack" fill="#ef4444" radius={[4, 4, 0, 0]} name="losses" />
+                <Line 
+                  yAxisId="right" 
+                  type="monotone" 
+                  dataKey="result" 
+                  stroke="#fbbf24" 
+                  strokeWidth={3} 
+                  dot={{ fill: '#fbbf24', r: 4, strokeWidth: 0 }}
+                  name="result"
+                />
               </ComposedChart>
             </ResponsiveContainer>
           </div>
-        </ChartCard>
-      </PremiumSection>
+
+          {/* Stats Summary */}
+          <div className="grid grid-cols-4 gap-4 mt-6 pt-6 border-t border-white/5">
+            <div className="text-center">
+              <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Total Ops</p>
+              <p className="text-lg font-bold text-white">
+                {stats.hourlyData.reduce((sum, h) => sum + h.count, 0)}
+              </p>
+            </div>
+            <div className="text-center">
+              <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Resultado</p>
+              <p className={cn("text-lg font-bold", stats.totalResult >= 0 ? "text-emerald-400" : "text-rose-400")}>
+                {formatCurrency(stats.totalResult)}
+              </p>
+            </div>
+            <div className="text-center">
+              <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 flex items-center justify-center gap-1">
+                <ArrowUpRight className="w-3 h-3 text-emerald-400" /> Melhor
+              </p>
+              <p className="text-lg font-bold text-emerald-400">
+                {(() => {
+                  const best = stats.hourlyData.reduce((max, h) => h.result > max.result ? h : max, stats.hourlyData[0] || { hour: '-', result: 0 });
+                  return `${best.hour} (${formatCurrency(best.result)})`;
+                })()}
+              </p>
+            </div>
+            <div className="text-center">
+              <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 flex items-center justify-center gap-1">
+                <ArrowDownRight className="w-3 h-3 text-rose-400" /> Pior
+              </p>
+              <p className="text-lg font-bold text-rose-400">
+                {(() => {
+                  const worst = stats.hourlyData.reduce((min, h) => h.result < min.result ? h : min, stats.hourlyData[0] || { hour: '-', result: 0 });
+                  return `${worst.hour} (${formatCurrency(worst.result)})`;
+                })()}
+              </p>
+            </div>
+          </div>
+        </div>
+      </motion.div>
 
       {/* Advanced Metrics */}
       <PremiumSection title="Métricas Avançadas" subtitle="Indicadores de risco e performance" icon={Activity} delay={0.7}>
