@@ -103,6 +103,7 @@ interface Strategy {
   id: string;
   name: string;
   description: string | null;
+  type?: string;
 }
 
 const Trading = () => {
@@ -310,6 +311,8 @@ const Trading = () => {
 
       // Store parsed operations and show strategy dialog
       setPendingOperations(parsedOperations);
+      // Force refetch to avoid showing stale/cached strategies
+      queryClient.invalidateQueries({ queryKey: ['strategies-manual'] });
       setShowStrategyDialog(true);
     } catch (error: any) {
       console.error('Parse error:', error);
@@ -883,16 +886,18 @@ const Trading = () => {
                       <SelectValue placeholder="Selecione uma estratégia" />
                     </SelectTrigger>
                     <SelectContent>
-                      {strategies.map((strategy) => (
-                        <SelectItem key={strategy.id} value={strategy.id}>
-                          {strategy.name}
-                        </SelectItem>
-                      ))}
+                      {strategies
+                        .filter((s) => (s.type ?? 'manual') === 'manual')
+                        .map((strategy) => (
+                          <SelectItem key={strategy.id} value={strategy.id}>
+                            {strategy.name}
+                          </SelectItem>
+                        ))}
                     </SelectContent>
                   </Select>
                 </div>
                 
-                {strategies.length === 0 && (
+                {strategies.filter((s) => (s.type ?? 'manual') === 'manual').length === 0 && (
                   <p className="text-sm text-muted-foreground text-center py-2">
                     Nenhuma estratégia encontrada. Crie uma nova abaixo.
                   </p>
