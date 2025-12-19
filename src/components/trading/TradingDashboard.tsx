@@ -446,8 +446,8 @@ export const TradingDashboard = ({ operations, strategies }: TradingDashboardPro
     const weekdayHourData: Record<string, { result: number; count: number; winCount: number; lossCount: number }> = {};
     ops.forEach(op => {
       const date = new Date(op.open_time);
-      const weekday = date.getDay(); // 0=Sun, 1=Mon, etc
-      const hour = getHours(date);
+      const weekday = date.getUTCDay(); // 0=Sun, 1=Mon, etc - use UTC to match stored time
+      const hour = date.getUTCHours(); // Use UTC hours since data is stored as UTC representing local market time
       const key = `${weekday}-${hour}`;
       if (!weekdayHourData[key]) weekdayHourData[key] = { result: 0, count: 0, winCount: 0, lossCount: 0 };
       const opResult = op.operation_result || 0;
@@ -579,7 +579,7 @@ export const TradingDashboard = ({ operations, strategies }: TradingDashboardPro
 
     const hourlyResults: Record<number, { total: number; count: number; wins: number; losses: number; winCount: number; lossCount: number }> = {};
     ops.forEach(op => {
-      const hour = getHours(new Date(op.open_time));
+      const hour = new Date(op.open_time).getUTCHours(); // Use UTC hours since data is stored as UTC representing local market time
       if (!hourlyResults[hour]) hourlyResults[hour] = { total: 0, count: 0, wins: 0, losses: 0, winCount: 0, lossCount: 0 };
       const result = op.operation_result || 0;
       hourlyResults[hour].total += result;
