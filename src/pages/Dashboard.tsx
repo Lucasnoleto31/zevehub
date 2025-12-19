@@ -1,97 +1,32 @@
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { User } from "@supabase/supabase-js";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { toast } from "sonner";
-import { LogOut, TrendingUp, Bell } from "lucide-react";
+import { LogOut, TrendingUp } from "lucide-react";
 import { motion } from "framer-motion";
 import { ThemeToggle } from "@/components/ThemeToggle";
-import { RecentOperationsTable } from "@/components/dashboard/RecentOperationsTable";
-import { EquityCurveChart } from "@/components/dashboard/EquityCurveChart";
-import { PerformanceByDayChart } from "@/components/dashboard/PerformanceByDayChart";
-import { WinLossDistribution } from "@/components/dashboard/WinLossDistribution";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/dashboard/AppSidebar";
 import { RestrictedAccess } from "@/components/dashboard/RestrictedAccess";
-import MonthlyComparisonChart from "@/components/dashboard/MonthlyComparisonChart";
-import PerformanceHeatmap from "@/components/dashboard/PerformanceHeatmap";
-import { DashboardHero } from "@/components/dashboard/DashboardHero";
-import { EnhancedPeriodFilter, filterOperationsByPeriod, type PeriodOption } from "@/components/dashboard/EnhancedPeriodFilter";
-import { StatsOverview } from "@/components/dashboard/StatsOverview";
+import { TradingDashboard } from "@/components/trading/TradingDashboard";
 
-interface Operation {
+interface ProfitOperation {
   id: string;
-  operation_date: string;
-  result: number;
+  user_id: string;
+  open_time: string;
+  close_time: string;
+  operation_result: number | null;
+  strategy_id: string | null;
   asset: string;
-  strategy: string | null;
-  contracts: number;
-  operation_time: string;
 }
 
-const calculateAdvancedMetrics = (operations: Operation[]) => {
-  if (operations.length === 0) {
-    return {
-      bestTrade: 0,
-      worstTrade: 0,
-      currentStreak: 0,
-      profitFactor: 0,
-      avgWin: 0,
-      avgLoss: 0,
-      wins: 0,
-      losses: 0,
-    };
-  }
-
-  const results = operations.map(op => op.result);
-  const wins = operations.filter(op => op.result > 0);
-  const losses = operations.filter(op => op.result < 0);
-  
-  const bestTrade = Math.max(...results);
-  const worstTrade = Math.min(...results);
-  
-  const totalWins = wins.reduce((sum, op) => sum + op.result, 0);
-  const totalLosses = Math.abs(losses.reduce((sum, op) => sum + op.result, 0));
-  const profitFactor = totalLosses > 0 ? totalWins / totalLosses : totalWins > 0 ? Infinity : 0;
-  
-  const avgWin = wins.length > 0 ? totalWins / wins.length : 0;
-  const avgLoss = losses.length > 0 ? totalLosses / losses.length : 0;
-
-  let currentStreak = 0;
-  const sortedOps = [...operations].sort((a, b) => {
-    const dateA = `${a.operation_date}${a.operation_time}`;
-    const dateB = `${b.operation_date}${b.operation_time}`;
-    return dateB.localeCompare(dateA);
-  });
-
-  if (sortedOps.length > 0) {
-    const firstResult = sortedOps[0].result;
-    const isWinStreak = firstResult > 0;
-    
-    for (const op of sortedOps) {
-      if (isWinStreak && op.result > 0) {
-        currentStreak++;
-      } else if (!isWinStreak && op.result < 0) {
-        currentStreak--;
-      } else {
-        break;
-      }
-    }
-  }
-
-  return {
-    bestTrade,
-    worstTrade,
-    currentStreak,
-    profitFactor: isFinite(profitFactor) ? profitFactor : 0,
-    avgWin,
-    avgLoss: -avgLoss,
-    wins: wins.length,
-    losses: losses.length,
-  };
-};
+interface Strategy {
+  id: string;
+  name: string;
+}
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -100,35 +35,8 @@ const Dashboard = () => {
   const [roles, setRoles] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [accessStatus, setAccessStatus] = useState<string>("aprovado");
-  const [allOperations, setAllOperations] = useState<Operation[]>([]);
-  const [selectedPeriod, setSelectedPeriod] = useState<PeriodOption>("30d");
-
-  const filteredOperations = useMemo(() => {
-    return filterOperationsByPeriod(allOperations, selectedPeriod);
-  }, [allOperations, selectedPeriod]);
-
-  const stats = useMemo(() => {
-    const totalOps = filteredOperations.length;
-    const totalProfit = filteredOperations.reduce((sum, op) => sum + Number(op.result), 0);
-    const winningOps = filteredOperations.filter(op => Number(op.result) > 0).length;
-    const winRate = totalOps > 0 ? (winningOps / totalOps) * 100 : 0;
-    const avgResult = totalOps > 0 ? totalProfit / totalOps : 0;
-
-    return {
-      totalOperations: totalOps,
-      totalProfit,
-      winRate,
-      averageResult: avgResult,
-    };
-  }, [filteredOperations]);
-
-  const advancedMetrics = useMemo(() => {
-    return calculateAdvancedMetrics(filteredOperations);
-  }, [filteredOperations]);
-
-  const recentOperations = useMemo(() => {
-    return filteredOperations.slice(0, 5);
-  }, [filteredOperations]);
+  const [operations, setOperations] = useState<ProfitOperation[]>([]);
+  const [strategies, setStrategies] = useState<Strategy[]>([]);
 
   useEffect(() => {
     checkUser();
@@ -163,35 +71,34 @@ const Dashboard = () => {
         setRoles(rolesData.map((r) => r.role));
       }
 
-      let allOps: Operation[] = [];
-      const pageSize = 1000;
-      let page = 0;
-      let hasMore = true;
+      // Fetch profit_operations
+      const { data: opsData, error: opsError } = await supabase
+        .from("profit_operations")
+        .select("id, user_id, open_time, close_time, operation_result, strategy_id, asset")
+        .eq("user_id", session.user.id)
+        .order("open_time", { ascending: false });
 
-      while (hasMore) {
-        const { data: pageData, error: pageError } = await supabase
-          .from("trading_operations")
-          .select("*")
-          .order("operation_date", { ascending: false })
-          .order("operation_time", { ascending: false })
-          .range(page * pageSize, (page + 1) * pageSize - 1);
-
-        if (pageError) {
-          console.error("Erro ao carregar operações:", pageError);
-          toast.error("Erro ao carregar operações");
-          break;
-        }
-
-        if (pageData && pageData.length > 0) {
-          allOps = [...allOps, ...pageData];
-          page++;
-          hasMore = pageData.length === pageSize;
-        } else {
-          hasMore = false;
-        }
+      if (opsError) {
+        console.error("Erro ao carregar operações:", opsError);
+        toast.error("Erro ao carregar operações");
+      } else {
+        setOperations(opsData || []);
       }
 
-      setAllOperations(allOps);
+      // Fetch strategies
+      const { data: strategiesData, error: strategiesError } = await supabase
+        .from("strategies")
+        .select("id, name")
+        .eq("user_id", session.user.id)
+        .eq("is_active", true)
+        .order("name");
+
+      if (strategiesError) {
+        console.error("Erro ao carregar estratégias:", strategiesError);
+      } else {
+        setStrategies(strategiesData || []);
+      }
+
     } catch (error) {
       console.error("Erro ao carregar dados:", error);
     } finally {
@@ -319,86 +226,16 @@ const Dashboard = () => {
 
           {/* Main Content */}
           <main className="flex-1 px-4 lg:px-6 py-6 overflow-auto">
-            <div className="max-w-[1600px] mx-auto space-y-6">
-              {/* Hero Section */}
+            <div className="max-w-[1600px] mx-auto">
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.5 }}
               >
-                <DashboardHero
-                  userName={profile?.full_name || "Trader"}
-                  userEmail={profile?.email || user?.email || ""}
-                  avatarUrl={profile?.avatar_url}
-                  roles={roles}
-                  stats={stats}
-                  advancedMetrics={advancedMetrics}
+                <TradingDashboard 
+                  operations={operations} 
+                  strategies={strategies} 
                 />
-              </motion.div>
-
-              {/* Period Filter */}
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5, delay: 0.1 }}
-              >
-                <EnhancedPeriodFilter
-                  selectedPeriod={selectedPeriod}
-                  onPeriodChange={setSelectedPeriod}
-                  totalOperations={filteredOperations.length}
-                />
-              </motion.div>
-
-              {/* Stats Overview */}
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5, delay: 0.2 }}
-              >
-                <StatsOverview
-                  stats={stats}
-                  advancedMetrics={advancedMetrics}
-                  loading={loading}
-                />
-              </motion.div>
-
-              {/* Charts Grid */}
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5, delay: 0.3 }}
-                className="grid grid-cols-1 lg:grid-cols-2 gap-6"
-              >
-                <EquityCurveChart operations={filteredOperations} loading={loading} />
-                <PerformanceByDayChart operations={filteredOperations} loading={loading} />
-              </motion.div>
-
-              {/* Monthly & Heatmap */}
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5, delay: 0.4 }}
-                className="grid grid-cols-1 lg:grid-cols-2 gap-6"
-              >
-                <MonthlyComparisonChart operations={allOperations} loading={loading} />
-                <PerformanceHeatmap operations={filteredOperations} />
-              </motion.div>
-
-              {/* Distribution & Recent Operations */}
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5, delay: 0.5 }}
-                className="grid grid-cols-1 lg:grid-cols-3 gap-6"
-              >
-                <WinLossDistribution 
-                  wins={advancedMetrics.wins} 
-                  losses={advancedMetrics.losses} 
-                  loading={loading} 
-                />
-                <div className="lg:col-span-2">
-                  <RecentOperationsTable operations={recentOperations} />
-                </div>
               </motion.div>
             </div>
           </main>
