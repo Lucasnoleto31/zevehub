@@ -207,7 +207,7 @@ const Index = () => {
               variants={itemVariants}
               className="text-xl md:text-2xl text-muted-foreground mb-12 max-w-3xl mx-auto leading-relaxed font-light"
             >
-              A plataforma inteligente que revoluciona o monitoramento de robôs de trading.
+              A plataforma inteligente que revoluciona o monitoramento de robôs.
               <span className="text-foreground font-medium"> Análises em tempo real, insights com IA</span> e suporte
               especializado para maximizar sua performance.
             </motion.p>
