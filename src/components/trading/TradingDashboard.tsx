@@ -915,32 +915,93 @@ export const TradingDashboard = ({ operations, strategies }: TradingDashboardPro
           />
         </div>
 
-        <ChartCard>
-          <div className="h-72">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={stats.equityCurve}>
-                <CartesianGrid strokeDasharray="3 3" className="stroke-border/30" />
-                <XAxis dataKey="index" tick={{ fontSize: 12 }} className="text-muted-foreground" />
-                <YAxis tick={{ fontSize: 12 }} className="text-muted-foreground" />
-                <RechartsTooltip 
-                  contentStyle={{ 
-                    backgroundColor: 'hsl(var(--card))',
-                    border: '1px solid hsl(var(--border))',
-                    borderRadius: '12px'
-                  }}
-                  formatter={(value: number) => [formatCurrency(value), 'Resultado']}
-                />
-                <defs>
-                  <linearGradient id="colorEquity" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.4}/>
-                    <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0}/>
-                  </linearGradient>
-                </defs>
-                <Area type="monotone" dataKey="total" stroke="hsl(var(--primary))" fill="url(#colorEquity)" strokeWidth={2} />
-              </AreaChart>
-            </ResponsiveContainer>
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="relative overflow-hidden rounded-2xl"
+        >
+          {/* Premium dark background */}
+          <div className="absolute inset-0 bg-gradient-to-br from-[#0a0a1a] via-[#0d0d20] to-[#0a0a1a]" />
+          
+          {/* Subtle ambient glow */}
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[80%] h-[60%] bg-primary/5 rounded-full blur-3xl" />
+          
+          {/* Chart container */}
+          <div className="relative z-10 p-6">
+            <div className="h-80">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={stats.equityCurve} margin={{ top: 20, right: 30, left: 20, bottom: 20 }}>
+                  <defs>
+                    {/* Premium gradient fill */}
+                    <linearGradient id="premiumEquityGradient" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#6366f1" stopOpacity={0.4}/>
+                      <stop offset="50%" stopColor="#6366f1" stopOpacity={0.15}/>
+                      <stop offset="100%" stopColor="#6366f1" stopOpacity={0}/>
+                    </linearGradient>
+                    {/* Glow filter for the line */}
+                    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+                      <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+                      <feMerge>
+                        <feMergeNode in="coloredBlur"/>
+                        <feMergeNode in="SourceGraphic"/>
+                      </feMerge>
+                    </filter>
+                  </defs>
+                  <XAxis 
+                    dataKey="index" 
+                    axisLine={false}
+                    tickLine={false}
+                    tick={{ fontSize: 11, fill: '#64748b' }}
+                    interval="preserveStartEnd"
+                  />
+                  <YAxis 
+                    axisLine={false}
+                    tickLine={false}
+                    tick={{ fontSize: 11, fill: '#64748b' }}
+                    tickFormatter={(value) => value >= 1000 ? `${(value/1000).toFixed(0)}k` : value.toFixed(0)}
+                    width={60}
+                  />
+                  <RechartsTooltip 
+                    contentStyle={{ 
+                      backgroundColor: 'rgba(15, 15, 35, 0.95)',
+                      border: '1px solid rgba(99, 102, 241, 0.3)',
+                      borderRadius: '12px',
+                      boxShadow: '0 8px 32px rgba(99, 102, 241, 0.2)',
+                      padding: '12px 16px'
+                    }}
+                    labelStyle={{ color: '#94a3b8', marginBottom: '4px' }}
+                    formatter={(value: number) => [
+                      <span style={{ color: value >= 0 ? '#22c55e' : '#ef4444', fontWeight: 'bold', fontSize: '14px' }}>
+                        {formatCurrency(value)}
+                      </span>, 
+                      'Resultado'
+                    ]}
+                    cursor={{ stroke: 'rgba(99, 102, 241, 0.3)', strokeWidth: 1 }}
+                  />
+                  <Area 
+                    type="monotone" 
+                    dataKey="total" 
+                    stroke="#818cf8"
+                    strokeWidth={2.5}
+                    fill="url(#premiumEquityGradient)"
+                    filter="url(#glow)"
+                    dot={false}
+                    activeDot={{ 
+                      r: 6, 
+                      fill: '#818cf8', 
+                      stroke: '#c7d2fe', 
+                      strokeWidth: 2,
+                      filter: 'url(#glow)'
+                    }}
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
           </div>
-        </ChartCard>
+          
+          {/* Bottom fade effect */}
+          <div className="absolute bottom-0 left-0 right-0 h-12 bg-gradient-to-t from-[#0a0a1a] to-transparent pointer-events-none" />
+        </motion.div>
       </PremiumSection>
 
       {/* Monthly & Yearly Performance */}
