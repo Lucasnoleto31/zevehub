@@ -1238,6 +1238,7 @@ export type Database = {
           sell_price: number | null
           sell_qty: number | null
           side: string | null
+          strategy_id: string | null
           tet: string | null
           total: number | null
           updated_at: string
@@ -1269,6 +1270,7 @@ export type Database = {
           sell_price?: number | null
           sell_qty?: number | null
           side?: string | null
+          strategy_id?: string | null
           tet?: string | null
           total?: number | null
           updated_at?: string
@@ -1300,12 +1302,21 @@ export type Database = {
           sell_price?: number | null
           sell_qty?: number | null
           side?: string | null
+          strategy_id?: string | null
           tet?: string | null
           total?: number | null
           updated_at?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "profit_operations_strategy_id_fkey"
+            columns: ["strategy_id"]
+            isOneToOne: false
+            referencedRelation: "strategies"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       recurring_transactions: {
         Row: {
