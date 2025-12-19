@@ -18,12 +18,14 @@ import {
   Trash2,
   CheckCircle,
   XCircle,
-  AlertCircle
+  AlertCircle,
+  Plus
 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { format, parseISO } from "date-fns";
@@ -36,6 +38,21 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   BarChart,
   Bar,
@@ -79,6 +96,13 @@ interface ProfitOperation {
   operation_result_percent: number | null;
   total: number | null;
   created_at: string;
+  strategy_id: string | null;
+}
+
+interface Strategy {
+  id: string;
+  name: string;
+  description: string | null;
 }
 
 const Trading = () => {
@@ -86,6 +110,11 @@ const Trading = () => {
   const [loading, setLoading] = useState(true);
   const [userId, setUserId] = useState<string | null>(null);
   const [importing, setImporting] = useState(false);
+  const [showStrategyDialog, setShowStrategyDialog] = useState(false);
+  const [pendingOperations, setPendingOperations] = useState<any[]>([]);
+  const [selectedStrategyId, setSelectedStrategyId] = useState<string>("");
+  const [newStrategyName, setNewStrategyName] = useState("");
+  const [isCreatingNewStrategy, setIsCreatingNewStrategy] = useState(false);
   const queryClient = useQueryClient();
 
   useEffect(() => {
@@ -100,6 +129,24 @@ const Trading = () => {
     };
     checkAuth();
   }, [navigate]);
+
+  // Fetch strategies
+  const { data: strategies = [] } = useQuery({
+    queryKey: ['strategies', userId],
+    queryFn: async () => {
+      if (!userId) return [];
+      const { data, error } = await supabase
+        .from('strategies')
+        .select('*')
+        .eq('user_id', userId)
+        .eq('is_active', true)
+        .order('name');
+      
+      if (error) throw error;
+      return data as Strategy[];
+    },
+    enabled: !!userId,
+  });
 
   // Fetch operations
   const { data: operations = [], isLoading: loadingOperations } = useQuery({
@@ -256,13 +303,59 @@ const Trading = () => {
       
       if (parsedOperations.length === 0) {
         toast.error('Nenhuma operação encontrada no arquivo');
+        setImporting(false);
         return;
       }
 
-      // Add user_id to each operation
-      const operationsWithUser = parsedOperations.map(op => ({
+      // Store parsed operations and show strategy dialog
+      setPendingOperations(parsedOperations);
+      setShowStrategyDialog(true);
+    } catch (error: any) {
+      console.error('Parse error:', error);
+      toast.error('Erro ao ler arquivo: ' + error.message);
+    } finally {
+      setImporting(false);
+      event.target.value = '';
+    }
+  };
+
+  const handleConfirmImport = async () => {
+    if (!userId) return;
+    
+    let strategyId = selectedStrategyId;
+    
+    // Create new strategy if needed
+    if (isCreatingNewStrategy && newStrategyName.trim()) {
+      const { data: newStrategy, error: createError } = await supabase
+        .from('strategies')
+        .insert({
+          user_id: userId,
+          name: newStrategyName.trim(),
+          is_active: true,
+        })
+        .select()
+        .single();
+      
+      if (createError) {
+        toast.error('Erro ao criar estratégia: ' + createError.message);
+        return;
+      }
+      
+      strategyId = newStrategy.id;
+      queryClient.invalidateQueries({ queryKey: ['strategies'] });
+    }
+
+    if (!strategyId) {
+      toast.error('Selecione ou crie uma estratégia');
+      return;
+    }
+
+    try {
+      // Add user_id and strategy_id to each operation
+      const operationsWithUser = pendingOperations.map(op => ({
         ...op,
         user_id: userId,
+        strategy_id: strategyId,
       }));
 
       const { error } = await supabase
@@ -272,14 +365,26 @@ const Trading = () => {
       if (error) throw error;
 
       queryClient.invalidateQueries({ queryKey: ['profit-operations'] });
-      toast.success(`${parsedOperations.length} operações importadas com sucesso!`);
+      toast.success(`${pendingOperations.length} operações importadas com sucesso!`);
+      
+      // Reset state
+      setShowStrategyDialog(false);
+      setPendingOperations([]);
+      setSelectedStrategyId("");
+      setNewStrategyName("");
+      setIsCreatingNewStrategy(false);
     } catch (error: any) {
       console.error('Import error:', error);
-      toast.error('Erro ao importar arquivo: ' + error.message);
-    } finally {
-      setImporting(false);
-      event.target.value = '';
+      toast.error('Erro ao importar operações: ' + error.message);
     }
+  };
+
+  const handleCancelImport = () => {
+    setShowStrategyDialog(false);
+    setPendingOperations([]);
+    setSelectedStrategyId("");
+    setNewStrategyName("");
+    setIsCreatingNewStrategy(false);
   };
 
   // Calculate stats
@@ -752,6 +857,99 @@ const Trading = () => {
           )}
         </TabsContent>
       </Tabs>
+
+      {/* Strategy Selection Dialog */}
+      <Dialog open={showStrategyDialog} onOpenChange={setShowStrategyDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Selecionar Estratégia</DialogTitle>
+            <DialogDescription>
+              Escolha uma estratégia existente ou crie uma nova para associar às {pendingOperations.length} operações importadas.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            {!isCreatingNewStrategy ? (
+              <>
+                <div className="space-y-2">
+                  <Label>Estratégia existente</Label>
+                  <Select
+                    value={selectedStrategyId}
+                    onValueChange={setSelectedStrategyId}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione uma estratégia" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {strategies.map((strategy) => (
+                        <SelectItem key={strategy.id} value={strategy.id}>
+                          {strategy.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                {strategies.length === 0 && (
+                  <p className="text-sm text-muted-foreground text-center py-2">
+                    Nenhuma estratégia encontrada. Crie uma nova abaixo.
+                  </p>
+                )}
+                
+                <div className="relative">
+                  <div className="absolute inset-0 flex items-center">
+                    <span className="w-full border-t" />
+                  </div>
+                  <div className="relative flex justify-center text-xs uppercase">
+                    <span className="bg-background px-2 text-muted-foreground">ou</span>
+                  </div>
+                </div>
+                
+                <Button
+                  variant="outline"
+                  className="w-full"
+                  onClick={() => setIsCreatingNewStrategy(true)}
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Criar nova estratégia
+                </Button>
+              </>
+            ) : (
+              <div className="space-y-2">
+                <Label>Nome da nova estratégia</Label>
+                <Input
+                  placeholder="Ex: Scalping 5min, Setup 9.1..."
+                  value={newStrategyName}
+                  onChange={(e) => setNewStrategyName(e.target.value)}
+                  autoFocus
+                />
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setIsCreatingNewStrategy(false);
+                    setNewStrategyName("");
+                  }}
+                >
+                  Voltar para lista
+                </Button>
+              </div>
+            )}
+          </div>
+          
+          <DialogFooter className="flex gap-2">
+            <Button variant="outline" onClick={handleCancelImport}>
+              Cancelar
+            </Button>
+            <Button 
+              onClick={handleConfirmImport}
+              disabled={!isCreatingNewStrategy && !selectedStrategyId || isCreatingNewStrategy && !newStrategyName.trim()}
+            >
+              Confirmar Importação
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </PremiumPageLayout>
   );
 };
