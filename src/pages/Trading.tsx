@@ -2,33 +2,23 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { PremiumPageLayout, PremiumCard, PremiumSection } from "@/components/layout/PremiumPageLayout";
-import { motion } from "framer-motion";
 import { 
   TrendingUp, 
-  Target, 
-  BarChart3, 
-  Calendar,
-  Clock,
-  DollarSign,
   Activity,
-  Zap,
   Upload,
-  PieChart,
   FileSpreadsheet,
   Trash2,
-  CheckCircle,
-  XCircle,
   AlertCircle,
-  Plus
+  Plus,
+  BarChart3
 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { format, parseISO } from "date-fns";
+import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import {
   Table,
@@ -53,28 +43,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  PieChart as RechartsPieChart,
-  Pie,
-  Cell,
-  LineChart,
-  Line,
-  Legend,
-  Area,
-  AreaChart
-} from "recharts";
+import { TradingDashboard } from "@/components/trading/TradingDashboard";
 
-const itemVariants = {
-  hidden: { opacity: 0, y: 20 },
-  visible: { opacity: 1, y: 0 }
-};
 
 interface ProfitOperation {
   id: string;
@@ -392,64 +362,6 @@ const Trading = () => {
     setIsCreatingNewStrategy(false);
   };
 
-  // Calculate stats
-  const stats = {
-    totalOperations: operations.length,
-    totalResult: operations.reduce((sum, op) => sum + (op.operation_result || 0), 0),
-    wins: operations.filter(op => (op.operation_result || 0) > 0).length,
-    losses: operations.filter(op => (op.operation_result || 0) < 0).length,
-    zeros: operations.filter(op => (op.operation_result || 0) === 0).length,
-    winRate: operations.length > 0 
-      ? (operations.filter(op => (op.operation_result || 0) > 0).length / operations.length * 100) 
-      : 0,
-    avgWin: (() => {
-      const wins = operations.filter(op => (op.operation_result || 0) > 0);
-      return wins.length > 0 
-        ? wins.reduce((sum, op) => sum + (op.operation_result || 0), 0) / wins.length 
-        : 0;
-    })(),
-    avgLoss: (() => {
-      const losses = operations.filter(op => (op.operation_result || 0) < 0);
-      return losses.length > 0 
-        ? Math.abs(losses.reduce((sum, op) => sum + (op.operation_result || 0), 0) / losses.length)
-        : 0;
-    })(),
-  };
-
-  const payoff = stats.avgLoss > 0 ? (stats.avgWin / stats.avgLoss).toFixed(2) : '0';
-
-  // Chart data
-  const assetData = operations.reduce((acc: any[], op) => {
-    const existing = acc.find(a => a.asset === op.asset);
-    if (existing) {
-      existing.result += op.operation_result || 0;
-      existing.count += 1;
-    } else {
-      acc.push({ asset: op.asset, result: op.operation_result || 0, count: 1 });
-    }
-    return acc;
-  }, []);
-
-  const resultDistribution = [
-    { name: 'Ganhos', value: stats.wins, color: '#22c55e' },
-    { name: 'Perdas', value: stats.losses, color: '#ef4444' },
-    { name: 'Zero', value: stats.zeros, color: '#64748b' },
-  ].filter(d => d.value > 0);
-
-  // Cumulative result chart
-  const cumulativeData = operations
-    .slice()
-    .sort((a, b) => new Date(a.open_time).getTime() - new Date(b.open_time).getTime())
-    .reduce((acc: any[], op, index) => {
-      const prevTotal = index > 0 ? acc[index - 1].total : 0;
-      acc.push({
-        index: index + 1,
-        result: op.operation_result || 0,
-        total: prevTotal + (op.operation_result || 0),
-        date: format(new Date(op.open_time), 'dd/MM HH:mm'),
-      });
-      return acc;
-    }, []);
 
   if (loading) {
     return (
@@ -621,245 +533,8 @@ const Trading = () => {
         </TabsContent>
 
         {/* Dashboard Tab */}
-        <TabsContent value="dashboard" className="mt-6 space-y-6">
-          {operations.length === 0 ? (
-            <PremiumCard className="p-6">
-              <div className="flex flex-col items-center justify-center py-12 text-center">
-                <BarChart3 className="h-16 w-16 text-muted-foreground/50 mb-4" />
-                <h3 className="text-lg font-semibold mb-2">Sem dados para exibir</h3>
-                <p className="text-muted-foreground mb-4 max-w-md">
-                  Importe suas operações do Profit para visualizar o dashboard com estatísticas detalhadas.
-                </p>
-              </div>
-            </PremiumCard>
-          ) : (
-            <>
-              {/* Quick Stats */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <motion.div variants={itemVariants}>
-                  <Card className="bg-gradient-to-br from-blue-500/10 to-blue-500/5 border-blue-500/20">
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                        <Activity className="h-4 w-4 text-blue-500" />
-                        Total Operações
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <p className="text-2xl font-bold text-blue-500">{stats.totalOperations}</p>
-                    </CardContent>
-                  </Card>
-                </motion.div>
-
-                <motion.div variants={itemVariants}>
-                  <Card className={`bg-gradient-to-br ${stats.totalResult >= 0 ? 'from-green-500/10 to-green-500/5 border-green-500/20' : 'from-red-500/10 to-red-500/5 border-red-500/20'}`}>
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                        <DollarSign className={`h-4 w-4 ${stats.totalResult >= 0 ? 'text-green-500' : 'text-red-500'}`} />
-                        Resultado Total
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <p className={`text-2xl font-bold ${stats.totalResult >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-                        {stats.totalResult >= 0 ? '+' : ''}{stats.totalResult.toFixed(2)}
-                      </p>
-                    </CardContent>
-                  </Card>
-                </motion.div>
-
-                <motion.div variants={itemVariants}>
-                  <Card className="bg-gradient-to-br from-yellow-500/10 to-yellow-500/5 border-yellow-500/20">
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                        <Target className="h-4 w-4 text-yellow-500" />
-                        Taxa de Acerto
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <p className="text-2xl font-bold text-yellow-500">{stats.winRate.toFixed(1)}%</p>
-                    </CardContent>
-                  </Card>
-                </motion.div>
-
-                <motion.div variants={itemVariants}>
-                  <Card className="bg-gradient-to-br from-purple-500/10 to-purple-500/5 border-purple-500/20">
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                        <Zap className="h-4 w-4 text-purple-500" />
-                        Payoff
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <p className="text-2xl font-bold text-purple-500">{payoff}</p>
-                    </CardContent>
-                  </Card>
-                </motion.div>
-              </div>
-
-              {/* Secondary Stats */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <PremiumCard className="p-4">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 rounded-lg bg-green-500/10">
-                      <CheckCircle className="h-5 w-5 text-green-500" />
-                    </div>
-                    <div>
-                      <p className="text-sm text-muted-foreground">Ganhos</p>
-                      <p className="text-xl font-bold text-green-500">{stats.wins}</p>
-                    </div>
-                  </div>
-                </PremiumCard>
-
-                <PremiumCard className="p-4">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 rounded-lg bg-red-500/10">
-                      <XCircle className="h-5 w-5 text-red-500" />
-                    </div>
-                    <div>
-                      <p className="text-sm text-muted-foreground">Perdas</p>
-                      <p className="text-xl font-bold text-red-500">{stats.losses}</p>
-                    </div>
-                  </div>
-                </PremiumCard>
-
-                <PremiumCard className="p-4">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 rounded-lg bg-green-500/10">
-                      <TrendingUp className="h-5 w-5 text-green-500" />
-                    </div>
-                    <div>
-                      <p className="text-sm text-muted-foreground">Média Ganho</p>
-                      <p className="text-xl font-bold text-green-500">+{stats.avgWin.toFixed(2)}</p>
-                    </div>
-                  </div>
-                </PremiumCard>
-
-                <PremiumCard className="p-4">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 rounded-lg bg-red-500/10">
-                      <TrendingUp className="h-5 w-5 text-red-500 rotate-180" />
-                    </div>
-                    <div>
-                      <p className="text-sm text-muted-foreground">Média Perda</p>
-                      <p className="text-xl font-bold text-red-500">-{stats.avgLoss.toFixed(2)}</p>
-                    </div>
-                  </div>
-                </PremiumCard>
-              </div>
-
-              {/* Charts */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {/* Cumulative Result */}
-                <PremiumCard className="p-6">
-                  <h3 className="font-semibold mb-4">Curva de Resultado</h3>
-                  <div className="h-64">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <AreaChart data={cumulativeData}>
-                        <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-                        <XAxis 
-                          dataKey="index" 
-                          tick={{ fontSize: 12 }}
-                          className="text-muted-foreground"
-                        />
-                        <YAxis 
-                          tick={{ fontSize: 12 }}
-                          className="text-muted-foreground"
-                        />
-                        <Tooltip 
-                          contentStyle={{ 
-                            backgroundColor: 'hsl(var(--card))',
-                            border: '1px solid hsl(var(--border))',
-                            borderRadius: '8px'
-                          }}
-                          formatter={(value: number) => [value.toFixed(2), 'Resultado']}
-                        />
-                        <defs>
-                          <linearGradient id="colorTotal" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.3}/>
-                            <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0}/>
-                          </linearGradient>
-                        </defs>
-                        <Area 
-                          type="monotone" 
-                          dataKey="total" 
-                          stroke="hsl(var(--primary))" 
-                          fill="url(#colorTotal)"
-                          strokeWidth={2}
-                        />
-                      </AreaChart>
-                    </ResponsiveContainer>
-                  </div>
-                </PremiumCard>
-
-                {/* Result Distribution */}
-                <PremiumCard className="p-6">
-                  <h3 className="font-semibold mb-4">Distribuição de Resultados</h3>
-                  <div className="h-64">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <RechartsPieChart>
-                        <Pie
-                          data={resultDistribution}
-                          cx="50%"
-                          cy="50%"
-                          innerRadius={60}
-                          outerRadius={80}
-                          paddingAngle={5}
-                          dataKey="value"
-                        >
-                          {resultDistribution.map((entry, index) => (
-                            <Cell key={`cell-${index}`} fill={entry.color} />
-                          ))}
-                        </Pie>
-                        <Tooltip 
-                          contentStyle={{ 
-                            backgroundColor: 'hsl(var(--card))',
-                            border: '1px solid hsl(var(--border))',
-                            borderRadius: '8px'
-                          }}
-                        />
-                        <Legend />
-                      </RechartsPieChart>
-                    </ResponsiveContainer>
-                  </div>
-                </PremiumCard>
-
-                {/* Result by Asset */}
-                {assetData.length > 0 && (
-                  <PremiumCard className="p-6 lg:col-span-2">
-                    <h3 className="font-semibold mb-4">Resultado por Ativo</h3>
-                    <div className="h-64">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <BarChart data={assetData}>
-                          <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-                          <XAxis 
-                            dataKey="asset" 
-                            tick={{ fontSize: 12 }}
-                            className="text-muted-foreground"
-                          />
-                          <YAxis 
-                            tick={{ fontSize: 12 }}
-                            className="text-muted-foreground"
-                          />
-                          <Tooltip 
-                            contentStyle={{ 
-                              backgroundColor: 'hsl(var(--card))',
-                              border: '1px solid hsl(var(--border))',
-                              borderRadius: '8px'
-                            }}
-                            formatter={(value: number) => [value.toFixed(2), 'Resultado']}
-                          />
-                          <Bar 
-                            dataKey="result" 
-                            fill="hsl(var(--primary))"
-                            radius={[4, 4, 0, 0]}
-                          />
-                        </BarChart>
-                      </ResponsiveContainer>
-                    </div>
-                  </PremiumCard>
-                )}
-              </div>
-            </>
-          )}
+        <TabsContent value="dashboard" className="mt-6">
+          <TradingDashboard operations={operations} strategies={strategies} />
         </TabsContent>
       </Tabs>
 
