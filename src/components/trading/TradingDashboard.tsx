@@ -427,15 +427,21 @@ export const TradingDashboard = ({ operations, strategies }: TradingDashboardPro
     const negativeDays = dayValues.filter(v => v < 0).length;
     
     // Heatmap data: weekday x hour
-    const weekdayHourData: Record<string, { result: number; count: number }> = {};
+    const weekdayHourData: Record<string, { result: number; count: number; winCount: number; lossCount: number }> = {};
     ops.forEach(op => {
       const date = new Date(op.open_time);
       const weekday = date.getDay(); // 0=Sun, 1=Mon, etc
       const hour = getHours(date);
       const key = `${weekday}-${hour}`;
-      if (!weekdayHourData[key]) weekdayHourData[key] = { result: 0, count: 0 };
-      weekdayHourData[key].result += (op.operation_result || 0);
+      if (!weekdayHourData[key]) weekdayHourData[key] = { result: 0, count: 0, winCount: 0, lossCount: 0 };
+      const opResult = op.operation_result || 0;
+      weekdayHourData[key].result += opResult;
       weekdayHourData[key].count++;
+      if (opResult >= 0) {
+        weekdayHourData[key].winCount++;
+      } else {
+        weekdayHourData[key].lossCount++;
+      }
     });
     
     const monthResults: Record<string, number> = {};
@@ -1757,12 +1763,39 @@ export const TradingDashboard = ({ operations, strategies }: TradingDashboardPro
                                     {count || '-'}
                                   </div>
                                 </TooltipTrigger>
-                                <TooltipContent>
-                                  <p className="font-semibold">{['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'][weekday]} {hour}h</p>
-                                  <p className="text-muted-foreground">{count} operações</p>
-                                  <p className={result >= 0 ? 'text-emerald-400' : 'text-rose-400'}>
-                                    {formatCurrency(result)}
-                                  </p>
+                                <TooltipContent className="bg-[#0f0f23]/98 border border-white/10 p-0 rounded-xl overflow-hidden">
+                                  <div className="p-3">
+                                    <div className="flex items-center gap-2 mb-3">
+                                      <TrendingUp className="w-4 h-4 text-emerald-400" />
+                                      <span className="font-bold text-white">{['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'][weekday]} às {hour}h</span>
+                                    </div>
+                                    <div className="space-y-2 text-sm">
+                                      <div className="flex justify-between gap-8">
+                                        <span className="text-muted-foreground">Operações</span>
+                                        <span className="font-semibold text-white">{count}</span>
+                                      </div>
+                                      <div className="flex justify-between gap-8">
+                                        <span className="text-muted-foreground flex items-center gap-1.5">
+                                          <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                                          Ganhos
+                                        </span>
+                                        <span className="font-semibold text-emerald-400">{data?.winCount || 0}</span>
+                                      </div>
+                                      <div className="flex justify-between gap-8">
+                                        <span className="text-muted-foreground flex items-center gap-1.5">
+                                          <span className="w-2 h-2 rounded-full bg-rose-500" />
+                                          Perdas
+                                        </span>
+                                        <span className="font-semibold text-rose-400">{data?.lossCount || 0}</span>
+                                      </div>
+                                    </div>
+                                    <div className="mt-3 pt-3 border-t border-white/10 flex justify-between">
+                                      <span className="text-muted-foreground">Resultado</span>
+                                      <span className={cn("font-bold", result >= 0 ? "text-emerald-400" : "text-rose-400")}>
+                                        {formatCurrency(result)}
+                                      </span>
+                                    </div>
+                                  </div>
                                 </TooltipContent>
                               </Tooltip>
                             </TooltipProvider>
