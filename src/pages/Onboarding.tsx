@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { 
   TrendingUp, 
-  Users, 
+  Upload, 
   DollarSign, 
   BarChart3, 
   ArrowRight, 
@@ -14,7 +14,9 @@ import {
   Rocket,
   Target,
   Shield,
-  Zap
+  Zap,
+  Bot,
+  ShieldAlert
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -45,20 +47,34 @@ const onboardingSteps: OnboardingStep[] = [
   },
   {
     id: 2,
-    title: "Comunidade Exclusiva",
-    description: "Conecte-se com traders de elite de todo Brasil",
-    icon: <Users className="w-16 h-16" />,
+    title: "Trading Profit",
+    description: "Importe seus resultados do Profit e acompanhe sua evolução",
+    icon: <Upload className="w-16 h-16" />,
     gradient: "from-success to-success/60",
     features: [
-      "Compartilhe análises e estratégias",
-      "Sistema de ranking semanal competitivo",
-      "Conquistas e badges exclusivos",
-      "Notificações em tempo real"
+      "Importação automática de operações do Profit",
+      "Dashboard completo de performance",
+      "Análise detalhada por estratégia",
+      "Parâmetros e métricas personalizadas"
     ],
-    quote: "Juntos somos mais fortes no mercado"
+    quote: "Automatize e otimize seu processo de análise"
   },
   {
     id: 3,
+    title: "Robôs e Operações",
+    description: "Gerencie seus robôs e analise todas suas operações",
+    icon: <Bot className="w-16 h-16" />,
+    gradient: "from-accent to-accent/60",
+    features: [
+      "Registro detalhado de trades",
+      "Análise por ativo e estratégia",
+      "Histórico completo de operações",
+      "Importação via notas de corretagem"
+    ],
+    quote: "Disciplina transforma traders em vencedores"
+  },
+  {
+    id: 4,
     title: "Controle Financeiro",
     description: "Gerencie suas finanças de forma inteligente e estratégica",
     icon: <DollarSign className="w-16 h-16" />,
@@ -72,18 +88,18 @@ const onboardingSteps: OnboardingStep[] = [
     quote: "Controle financeiro é liberdade"
   },
   {
-    id: 4,
-    title: "Operações Profissionais",
-    description: "Registre e analise todas suas operações como um profissional",
-    icon: <BarChart3 className="w-16 h-16" />,
-    gradient: "from-accent to-accent/60",
+    id: 5,
+    title: "Gerenciamento de Risco",
+    description: "Calcule e controle seu risco de forma profissional",
+    icon: <ShieldAlert className="w-16 h-16" />,
+    gradient: "from-destructive to-destructive/60",
     features: [
-      "Registro detalhado de trades",
-      "Análise por ativo e estratégia",
-      "Histórico completo de operações",
-      "Metas e objetivos de trading"
+      "Calculadora de risco por operação",
+      "Definição de stop loss e take profit",
+      "Análise de payoff e taxa de acerto",
+      "Simulações de cenários"
     ],
-    quote: "Disciplina transforma traders em vencedores"
+    quote: "Gerenciar risco é preservar capital"
   }
 ];
 
