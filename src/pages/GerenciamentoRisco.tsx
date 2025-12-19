@@ -1,6 +1,4 @@
 import { useState, useMemo, useEffect } from "react";
-import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
-import { AppSidebar } from "@/components/dashboard/AppSidebar";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -40,7 +38,7 @@ import { toast } from "sonner";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import * as XLSX from "xlsx";
-import { ThemeToggle } from "@/components/ThemeToggle";
+import { PremiumPageLayout, PremiumCard, PremiumSection } from "@/components/layout/PremiumPageLayout";
 
 const GerenciamentoRisco = () => {
   const [capital, setCapital] = useState(5000);
@@ -447,65 +445,37 @@ const GerenciamentoRisco = () => {
     </TooltipProvider>
   );
 
+  const headerActions = !isLoading && (
+    <div className="flex items-center gap-2 text-sm px-3 py-1.5 rounded-full bg-muted/50">
+      {isSaving ? (
+        <>
+          <Loader2 className="h-4 w-4 text-primary animate-spin" />
+          <span className="text-muted-foreground">Salvando...</span>
+        </>
+      ) : (
+        <>
+          <Check className="h-4 w-4 text-success" />
+          <span className="text-muted-foreground">Salvo</span>
+        </>
+      )}
+    </div>
+  );
+
   return (
-    <SidebarProvider>
-      <div className="min-h-screen flex w-full bg-gradient-to-br from-background via-accent/5 to-background relative overflow-hidden">
-        {/* Background Effects */}
-        <div className="fixed inset-0 pointer-events-none overflow-hidden">
-          <div className="particle particle-1" />
-          <div className="particle particle-2" />
-          <div className="particle particle-3" />
-          <div className="glow-orb glow-orb-1" />
-          <div className="glow-orb glow-orb-2" />
-        </div>
+    <PremiumPageLayout
+      title="Gerenciamento de Risco"
+      subtitle="Calcule mão adequada e projeção mensal"
+      icon={ShieldCheck}
+      backTo="/dashboard"
+      maxWidth="full"
+      headerActions={headerActions}
+    >
 
-        <AppSidebar isAdmin={isAdmin} />
-        
-        <div className="flex-1 flex flex-col">
-          {/* Header */}
-          <header className="border-b bg-card/50 backdrop-blur-md sticky top-0 z-50">
-            <div className="px-6 py-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                  <SidebarTrigger />
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center shadow-lg">
-                      <ShieldCheck className="w-5 h-5 text-primary-foreground" />
-                    </div>
-                    <div>
-                      <h1 className="text-xl font-bold text-foreground">Gerenciamento de Risco</h1>
-                      <p className="text-sm text-muted-foreground">Calcule mão adequada e projeção mensal</p>
-                    </div>
-                  </div>
-                </div>
-                <div className="flex items-center gap-4">
-                  {!isLoading && (
-                    <div className="flex items-center gap-2 text-sm px-3 py-1.5 rounded-full bg-muted/50">
-                      {isSaving ? (
-                        <>
-                          <Loader2 className="h-4 w-4 text-primary animate-spin" />
-                          <span className="text-muted-foreground">Salvando...</span>
-                        </>
-                      ) : (
-                        <>
-                          <Check className="h-4 w-4 text-success" />
-                          <span className="text-muted-foreground">Salvo</span>
-                        </>
-                      )}
-                    </div>
-                  )}
-                  <ThemeToggle />
-                </div>
-              </div>
-            </div>
-          </header>
-
-          <main className="flex-1 p-6 overflow-auto">
-            {/* Parâmetros */}
-            <Card className="mb-6 border-border/50 bg-card/80 backdrop-blur-sm animate-fade-in">
-              <CardHeader className="pb-4">
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <Zap className="w-5 h-5 text-primary" />
+      {/* Parâmetros */}
+      <PremiumCard variant="glow">
+        <CardHeader className="pb-4">
+          <CardTitle className="text-lg flex items-center gap-2">
+            <Zap className="w-5 h-5 text-primary" />
                   Parâmetros do Operacional
                 </CardTitle>
                 <CardDescription>Configure os parâmetros para calcular seu gerenciamento de risco</CardDescription>
@@ -568,11 +538,11 @@ const GerenciamentoRisco = () => {
                       />
                     </div>
                   </div>
-                </div>
-              </CardContent>
-            </Card>
+              </div>
+            </CardContent>
+          </PremiumCard>
 
-            {/* Resumo Operacional */}
+          {/* Resumo Operacional */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
               <StatCard
                 icon={BarChart3}
@@ -602,11 +572,11 @@ const GerenciamentoRisco = () => {
                 tooltip="Fórmula: Payoff × Stop Diário"
                 variant="success"
               />
-            </div>
+          </div>
 
-            {/* Resultado Mensal */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
-              <Card className="border-border/50 bg-card/80 backdrop-blur-sm">
+          {/* Resultado Mensal */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
+            <PremiumCard>
                 <CardContent className="p-6">
                   <div className="flex items-center justify-between mb-4">
                     <p className="text-sm text-muted-foreground font-medium">Dias de Gain/Loss</p>
@@ -623,9 +593,9 @@ const GerenciamentoRisco = () => {
                     </div>
                   </div>
                 </CardContent>
-              </Card>
+            </PremiumCard>
 
-              <Card className="border-border/50 bg-card/80 backdrop-blur-sm">
+            <PremiumCard>
                 <CardContent className="p-6">
                   <div className="flex items-center justify-between mb-4">
                     <p className="text-sm text-muted-foreground font-medium">Resultado Mensal</p>
@@ -651,9 +621,9 @@ const GerenciamentoRisco = () => {
                     </div>
                   </div>
                 </CardContent>
-              </Card>
+            </PremiumCard>
 
-              <Card className="border-success/30 bg-gradient-to-br from-success/5 to-success/10">
+            <PremiumCard variant="gradient" className="border-success/30 bg-gradient-to-br from-success/5 to-success/10">
                 <CardContent className="p-6">
                   <div className="flex items-center justify-between mb-4">
                     <p className="text-sm text-muted-foreground font-medium">Resultado 6 Meses</p>
@@ -664,11 +634,11 @@ const GerenciamentoRisco = () => {
                   </p>
                   <p className="text-sm text-muted-foreground mt-2">Líquido acumulado</p>
                 </CardContent>
-              </Card>
-            </div>
+            </PremiumCard>
+          </div>
 
-            {/* Gráfico de Projeção */}
-            <Card className="mb-6 border-border/50 bg-card/80 backdrop-blur-sm">
+          {/* Gráfico de Projeção */}
+          <PremiumCard className="mb-6">
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <div>
@@ -733,11 +703,11 @@ const GerenciamentoRisco = () => {
                   </ResponsiveContainer>
                 </div>
               </CardContent>
-            </Card>
+          </PremiumCard>
 
-            {/* Tabela de Projeção */}
-            <Card className="border-border/50 bg-card/80 backdrop-blur-sm">
-              <CardHeader>
+          {/* Tabela de Projeção */}
+          <PremiumCard>
+            <CardHeader>
                 <CardTitle className="text-lg">Detalhamento Mensal</CardTitle>
               </CardHeader>
               <CardContent>
@@ -776,11 +746,8 @@ const GerenciamentoRisco = () => {
                   </Table>
                 </div>
               </CardContent>
-            </Card>
-          </main>
-        </div>
-      </div>
-    </SidebarProvider>
+            </PremiumCard>
+    </PremiumPageLayout>
   );
 };
 

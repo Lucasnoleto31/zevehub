@@ -6,7 +6,6 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { 
-  ArrowLeft, 
   Upload, 
   FileSpreadsheet, 
   RefreshCw, 
@@ -16,11 +15,11 @@ import {
   Clock,
   Download,
   Trash2,
-  AlertTriangle,
   Loader2,
   UserCheck,
   BarChart3
 } from "lucide-react";
+import { PremiumPageLayout, PremiumCard } from "@/components/layout/PremiumPageLayout";
 import {
   Table,
   TableBody,
@@ -623,102 +622,79 @@ export default function Contratos() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-accent/5 to-background p-4 md:p-6">
-      {/* Header */}
-      <div className="flex items-center gap-4 mb-6">
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => navigate("/admin")}
-          className="hover:bg-primary/10"
-        >
-          <ArrowLeft className="h-5 w-5" />
-        </Button>
-        <div>
-          <h1 className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-primary to-cyan-400 bg-clip-text text-transparent">
-            Gestão de Contratos
-          </h1>
-          <p className="text-muted-foreground text-sm">
-            Importe clientes e contratos para gerenciar acessos automaticamente
-          </p>
-        </div>
-      </div>
+    <PremiumPageLayout
+      title="Gestão de Contratos"
+      subtitle="Importe clientes e contratos para gerenciar acessos automaticamente"
+      icon={FileSpreadsheet}
+      backTo="/admin"
+      maxWidth="full"
+    >
 
       {/* Stats Cards */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
-        <Card className="bg-card/50 backdrop-blur-sm border-border/50">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-blue-500/10">
-                <Users className="h-5 w-5 text-blue-500" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold">{stats.totalClients}</p>
-                <p className="text-xs text-muted-foreground">Clientes</p>
-              </div>
+        <PremiumCard className="p-4">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 rounded-xl bg-primary/10">
+              <Users className="h-5 w-5 text-primary" />
             </div>
-          </CardContent>
-        </Card>
+            <div>
+              <p className="text-2xl font-bold">{stats.totalClients}</p>
+              <p className="text-xs text-muted-foreground">Clientes</p>
+            </div>
+          </div>
+        </PremiumCard>
 
-        <Card className="bg-card/50 backdrop-blur-sm border-border/50">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-purple-500/10">
-                <BarChart3 className="h-5 w-5 text-purple-500" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold">{stats.totalContracts}</p>
-                <p className="text-xs text-muted-foreground">Contratos</p>
-              </div>
+        <PremiumCard className="p-4">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 rounded-xl bg-accent/10">
+              <BarChart3 className="h-5 w-5 text-accent" />
             </div>
-          </CardContent>
-        </Card>
+            <div>
+              <p className="text-2xl font-bold">{stats.totalContracts}</p>
+              <p className="text-xs text-muted-foreground">Contratos</p>
+            </div>
+          </div>
+        </PremiumCard>
 
-        <Card className="bg-card/50 backdrop-blur-sm border-border/50">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-green-500/10">
-                <CheckCircle2 className="h-5 w-5 text-green-500" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold">{stats.activeClients}</p>
-                <p className="text-xs text-muted-foreground">Ativos (3m)</p>
-              </div>
+        <PremiumCard className="p-4">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 rounded-xl bg-success/10">
+              <CheckCircle2 className="h-5 w-5 text-success" />
             </div>
-          </CardContent>
-        </Card>
+            <div>
+              <p className="text-2xl font-bold">{stats.activeClients}</p>
+              <p className="text-xs text-muted-foreground">Ativos (3m)</p>
+            </div>
+          </div>
+        </PremiumCard>
 
-        <Card className="bg-card/50 backdrop-blur-sm border-border/50">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-red-500/10">
-                <XCircle className="h-5 w-5 text-red-500" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold">{stats.inactiveClients}</p>
-                <p className="text-xs text-muted-foreground">Inativos</p>
-              </div>
+        <PremiumCard className="p-4">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 rounded-xl bg-destructive/10">
+              <XCircle className="h-5 w-5 text-destructive" />
             </div>
-          </CardContent>
-        </Card>
+            <div>
+              <p className="text-2xl font-bold">{stats.inactiveClients}</p>
+              <p className="text-xs text-muted-foreground">Inativos</p>
+            </div>
+          </div>
+        </PremiumCard>
 
-        <Card className="bg-card/50 backdrop-blur-sm border-border/50">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-cyan-500/10">
-                <UserCheck className="h-5 w-5 text-cyan-500" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold">{stats.matchedProfiles}</p>
-                <p className="text-xs text-muted-foreground">No Sistema</p>
-              </div>
+        <PremiumCard className="p-4">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 rounded-xl bg-secondary/50">
+              <UserCheck className="h-5 w-5 text-secondary-foreground" />
             </div>
-          </CardContent>
-        </Card>
+            <div>
+              <p className="text-2xl font-bold">{stats.matchedProfiles}</p>
+              <p className="text-xs text-muted-foreground">No Sistema</p>
+            </div>
+          </div>
+        </PremiumCard>
       </div>
 
       <Tabs defaultValue="upload" className="space-y-6">
-        <TabsList className="bg-card/50 backdrop-blur-sm">
+        <TabsList className="bg-card/60 backdrop-blur-sm border border-border/50">
           <TabsTrigger value="upload">Importar Dados</TabsTrigger>
           <TabsTrigger value="crossref">Cruzamento</TabsTrigger>
           <TabsTrigger value="clients">Clientes ({clients.length})</TabsTrigger>
@@ -729,7 +705,7 @@ export default function Contratos() {
         <TabsContent value="upload" className="space-y-4">
           <div className="grid md:grid-cols-2 gap-4">
             {/* Clientes Upload */}
-            <Card className="bg-card/50 backdrop-blur-sm border-border/50">
+            <PremiumCard variant="glow">
               <CardHeader>
                 <CardTitle className="text-lg flex items-center gap-2">
                   <Users className="h-5 w-5 text-blue-500" />
@@ -787,10 +763,10 @@ export default function Contratos() {
                   <p><strong>Colunas esperadas:</strong> NOME, CPF, EMAIL (opcional), TELEFONE (opcional)</p>
                 </div>
               </CardContent>
-            </Card>
+            </PremiumCard>
 
             {/* Contratos Upload */}
-            <Card className="bg-card/50 backdrop-blur-sm border-border/50">
+            <PremiumCard variant="glow">
               <CardHeader>
                 <CardTitle className="text-lg flex items-center gap-2">
                   <BarChart3 className="h-5 w-5 text-purple-500" />
@@ -848,11 +824,11 @@ export default function Contratos() {
                   <p><strong>Colunas esperadas:</strong> NOME, DATA, CONTRATOS (qtd), ATIVO (opcional), PLATAFORMA (opcional)</p>
                 </div>
               </CardContent>
-            </Card>
+            </PremiumCard>
           </div>
 
           {/* Sync Button */}
-          <Card className="bg-card/50 backdrop-blur-sm border-border/50">
+          <PremiumCard variant="gradient">
             <CardContent className="p-6">
               <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
                 <div>
@@ -891,12 +867,12 @@ export default function Contratos() {
                 </ul>
               </div>
             </CardContent>
-          </Card>
+            </PremiumCard>
         </TabsContent>
 
         {/* Cross Reference Tab */}
         <TabsContent value="crossref">
-          <Card className="bg-card/50 backdrop-blur-sm border-border/50">
+          <PremiumCard>
             <CardHeader>
               <CardTitle className="text-lg">Cruzamento de Dados</CardTitle>
               <CardDescription>
@@ -978,12 +954,12 @@ export default function Contratos() {
                 </div>
               )}
             </CardContent>
-          </Card>
+          </PremiumCard>
         </TabsContent>
 
         {/* Clients Tab */}
         <TabsContent value="clients">
-          <Card className="bg-card/50 backdrop-blur-sm border-border/50">
+          <PremiumCard>
             <CardHeader>
               <CardTitle className="text-lg">Clientes Cadastrados</CardTitle>
               <CardDescription>
@@ -1030,12 +1006,12 @@ export default function Contratos() {
                 </div>
               )}
             </CardContent>
-          </Card>
+          </PremiumCard>
         </TabsContent>
 
         {/* Contracts Tab */}
         <TabsContent value="contracts">
-          <Card className="bg-card/50 backdrop-blur-sm border-border/50">
+          <PremiumCard>
             <CardHeader>
               <CardTitle className="text-lg">Contratos Importados</CardTitle>
               <CardDescription>
@@ -1086,9 +1062,9 @@ export default function Contratos() {
                 </div>
               )}
             </CardContent>
-          </Card>
+          </PremiumCard>
         </TabsContent>
       </Tabs>
-    </div>
+    </PremiumPageLayout>
   );
 }
