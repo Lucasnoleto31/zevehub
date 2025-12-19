@@ -1008,61 +1008,180 @@ export const TradingDashboard = ({ operations, strategies }: TradingDashboardPro
         </motion.div>
       </PremiumSection>
 
-      {/* Monthly & Yearly Performance */}
+      {/* Monthly & Yearly Performance - Premium Design */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <PremiumSection title="Performance Mensal" subtitle="Resultado por mês" icon={Calendar} delay={0.4}>
-          <ChartCard>
-            <div className="h-64">
+        {/* Monthly Performance */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.4 }}
+          className="relative overflow-hidden rounded-2xl"
+        >
+          <div className="absolute inset-0 bg-gradient-to-br from-[#0a0a1a] via-[#0d0d20] to-[#0a0a1a]" />
+          <div className="relative z-10 p-6">
+            {/* Header */}
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 rounded-xl bg-primary/10 ring-2 ring-primary/20">
+                  <Calendar className="w-5 h-5 text-primary" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-foreground">Performance Mensal</h3>
+                  <p className="text-sm text-muted-foreground">Resultado por mês</p>
+                </div>
+              </div>
+              <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30">
+                {stats.positiveMonths}/{stats.monthlyData.length} meses +
+              </Badge>
+            </div>
+            
+            {/* Chart */}
+            <div className="h-56">
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={stats.monthlyData}>
-                  <CartesianGrid strokeDasharray="3 3" className="stroke-border/30" />
-                  <XAxis dataKey="month" tick={{ fontSize: 10 }} className="text-muted-foreground" />
-                  <YAxis tick={{ fontSize: 12 }} className="text-muted-foreground" />
+                <BarChart data={stats.monthlyData} margin={{ top: 10, right: 10, left: 10, bottom: 10 }}>
+                  <XAxis 
+                    dataKey="month" 
+                    axisLine={false}
+                    tickLine={false}
+                    tick={{ fontSize: 11, fill: '#64748b' }}
+                  />
+                  <YAxis 
+                    axisLine={false}
+                    tickLine={false}
+                    tick={{ fontSize: 11, fill: '#64748b' }}
+                    tickFormatter={(value) => value >= 1000 ? `${(value/1000).toFixed(0)}k` : value >= -1000 ? value.toFixed(0) : `${(value/1000).toFixed(0)}k`}
+                    width={50}
+                  />
                   <RechartsTooltip 
                     contentStyle={{ 
-                      backgroundColor: 'hsl(var(--card))',
-                      border: '1px solid hsl(var(--border))',
-                      borderRadius: '12px'
+                      backgroundColor: 'rgba(15, 15, 35, 0.95)',
+                      border: '1px solid rgba(99, 102, 241, 0.3)',
+                      borderRadius: '12px',
+                      boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4)'
                     }}
                     formatter={(value: number) => [formatCurrency(value), 'Resultado']}
+                    cursor={{ fill: 'rgba(255, 255, 255, 0.05)' }}
                   />
-                  <Bar dataKey="result" radius={[6, 6, 0, 0]}>
+                  <Bar dataKey="result" radius={[6, 6, 0, 0]} maxBarSize={40}>
                     {stats.monthlyData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.result >= 0 ? '#22c55e' : '#ef4444'} />
+                      <Cell key={`cell-${index}`} fill={entry.result >= 0 ? '#4ade80' : '#f87171'} />
                     ))}
                   </Bar>
                 </BarChart>
               </ResponsiveContainer>
             </div>
-          </ChartCard>
-        </PremiumSection>
+            
+            {/* Stats Summary */}
+            <div className="grid grid-cols-3 gap-4 mt-6 pt-6 border-t border-white/5">
+              <div className="text-center">
+                <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Total</p>
+                <p className={cn(
+                  "text-lg font-bold",
+                  stats.totalResult >= 0 ? "text-emerald-400" : "text-rose-400"
+                )}>
+                  {formatCurrency(stats.totalResult)}
+                </p>
+              </div>
+              <div className="text-center">
+                <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Melhor</p>
+                <p className="text-lg font-bold text-emerald-400">
+                  {formatCurrency(Math.max(...stats.monthlyData.map(m => m.result), 0))}
+                </p>
+              </div>
+              <div className="text-center">
+                <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Pior</p>
+                <p className="text-lg font-bold text-rose-400">
+                  {formatCurrency(Math.min(...stats.monthlyData.map(m => m.result), 0))}
+                </p>
+              </div>
+            </div>
+          </div>
+        </motion.div>
 
-        <PremiumSection title="Evolução Anual" subtitle="Comparativo por ano" icon={BarChart3} delay={0.5}>
-          <ChartCard>
-            <div className="h-64">
+        {/* Yearly Performance */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.5 }}
+          className="relative overflow-hidden rounded-2xl"
+        >
+          <div className="absolute inset-0 bg-gradient-to-br from-[#0a0a1a] via-[#0d0d20] to-[#0a0a1a]" />
+          <div className="relative z-10 p-6">
+            {/* Header */}
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 rounded-xl bg-cyan-500/10 ring-2 ring-cyan-500/20">
+                  <BarChart3 className="w-5 h-5 text-cyan-400" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-foreground">Evolução Anual</h3>
+                  <p className="text-sm text-muted-foreground">Comparativo por ano</p>
+                </div>
+              </div>
+              <Badge className="bg-cyan-500/20 text-cyan-400 border-cyan-500/30">
+                {stats.yearlyData.filter(y => y.result > 0).length}/{stats.yearlyData.length} anos +
+              </Badge>
+            </div>
+            
+            {/* Chart */}
+            <div className="h-56">
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={stats.yearlyData}>
-                  <CartesianGrid strokeDasharray="3 3" className="stroke-border/30" />
-                  <XAxis dataKey="year" tick={{ fontSize: 12 }} className="text-muted-foreground" />
-                  <YAxis tick={{ fontSize: 12 }} className="text-muted-foreground" />
+                <BarChart data={stats.yearlyData} margin={{ top: 10, right: 10, left: 10, bottom: 10 }}>
+                  <XAxis 
+                    dataKey="year" 
+                    axisLine={false}
+                    tickLine={false}
+                    tick={{ fontSize: 11, fill: '#64748b' }}
+                  />
+                  <YAxis 
+                    axisLine={false}
+                    tickLine={false}
+                    tick={{ fontSize: 11, fill: '#64748b' }}
+                    tickFormatter={(value) => value >= 1000 ? `R$${(value/1000).toFixed(0)}k` : value >= -1000 ? `R$${value.toFixed(0)}` : `R$${(value/1000).toFixed(0)}k`}
+                    width={70}
+                  />
                   <RechartsTooltip 
                     contentStyle={{ 
-                      backgroundColor: 'hsl(var(--card))',
-                      border: '1px solid hsl(var(--border))',
-                      borderRadius: '12px'
+                      backgroundColor: 'rgba(15, 15, 35, 0.95)',
+                      border: '1px solid rgba(34, 211, 238, 0.3)',
+                      borderRadius: '12px',
+                      boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4)'
                     }}
                     formatter={(value: number) => [formatCurrency(value), 'Resultado']}
+                    cursor={{ fill: 'rgba(255, 255, 255, 0.05)' }}
                   />
-                  <Bar dataKey="result" radius={[6, 6, 0, 0]}>
+                  <Bar dataKey="result" radius={[6, 6, 0, 0]} maxBarSize={60}>
                     {stats.yearlyData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.result >= 0 ? '#22c55e' : '#ef4444'} />
+                      <Cell key={`cell-${index}`} fill={entry.result >= 0 ? '#22d3ee' : '#fb923c'} />
                     ))}
                   </Bar>
                 </BarChart>
               </ResponsiveContainer>
             </div>
-          </ChartCard>
-        </PremiumSection>
+            
+            {/* Stats Summary */}
+            <div className="grid grid-cols-3 gap-4 mt-6 pt-6 border-t border-white/5">
+              <div className="text-center">
+                <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Total Acumulado</p>
+                <p className="text-lg font-bold text-cyan-400">
+                  {formatCurrency(stats.totalResult)}
+                </p>
+              </div>
+              <div className="text-center">
+                <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Melhor Ano</p>
+                <p className="text-lg font-bold text-emerald-400">
+                  {formatCurrency(Math.max(...stats.yearlyData.map(y => y.result), 0))}
+                </p>
+              </div>
+              <div className="text-center">
+                <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Média/Ano</p>
+                <p className="text-lg font-bold text-amber-400">
+                  {formatCurrency(stats.yearlyData.length > 0 ? stats.yearlyData.reduce((s, y) => s + y.result, 0) / stats.yearlyData.length : 0)}
+                </p>
+              </div>
+            </div>
+          </div>
+        </motion.div>
       </div>
 
       {/* Hourly Distribution */}
