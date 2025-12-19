@@ -297,7 +297,7 @@ const StatCard = ({
         
         <motion.div 
           className={cn(
-            "text-lg sm:text-xl lg:text-2xl font-black tracking-tight leading-none truncate",
+            "text-base sm:text-lg lg:text-xl font-black tracking-tight leading-tight break-words",
             trend === "up" && "text-emerald-600 dark:text-emerald-400",
             trend === "down" && "text-rose-600 dark:text-rose-400",
             !trend && "text-foreground"
