@@ -1763,7 +1763,7 @@ export const TradingDashboard = ({ operations, strategies }: TradingDashboardPro
                                     {count || '-'}
                                   </div>
                                 </TooltipTrigger>
-                                <TooltipContent className="bg-[#0f0f23]/98 border border-white/10 p-0 rounded-xl overflow-hidden">
+                                <TooltipContent className="!bg-[#0a0a1a] border border-emerald-500/30 p-0 rounded-xl overflow-hidden shadow-xl shadow-black/50 z-50" sideOffset={5}>
                                   <div className="p-3">
                                     <div className="flex items-center gap-2 mb-3">
                                       <TrendingUp className="w-4 h-4 text-emerald-400" />
