@@ -103,20 +103,20 @@ const MetricCard = ({
   delay?: number;
 }) => {
   const colorClasses = {
-    emerald: "from-emerald-500/20 to-emerald-500/5 border-emerald-500/30 text-emerald-400",
-    rose: "from-rose-500/20 to-rose-500/5 border-rose-500/30 text-rose-400",
-    violet: "from-violet-500/20 to-violet-500/5 border-violet-500/30 text-violet-400",
-    amber: "from-amber-500/20 to-amber-500/5 border-amber-500/30 text-amber-400",
-    cyan: "from-cyan-500/20 to-cyan-500/5 border-cyan-500/30 text-cyan-400",
+    emerald: "from-emerald-500/20 to-emerald-500/5 border-emerald-500/30 text-emerald-600 dark:text-emerald-400",
+    rose: "from-rose-500/20 to-rose-500/5 border-rose-500/30 text-rose-600 dark:text-rose-400",
+    violet: "from-violet-500/20 to-violet-500/5 border-violet-500/30 text-violet-600 dark:text-violet-400",
+    amber: "from-amber-500/20 to-amber-500/5 border-amber-500/30 text-amber-600 dark:text-amber-400",
+    cyan: "from-cyan-500/20 to-cyan-500/5 border-cyan-500/30 text-cyan-600 dark:text-cyan-400",
     primary: "from-primary/20 to-primary/5 border-primary/30 text-primary",
   };
 
   const iconBgClasses = {
-    emerald: "bg-emerald-500/15 text-emerald-400 shadow-emerald-500/20",
-    rose: "bg-rose-500/15 text-rose-400 shadow-rose-500/20",
-    violet: "bg-violet-500/15 text-violet-400 shadow-violet-500/20",
-    amber: "bg-amber-500/15 text-amber-400 shadow-amber-500/20",
-    cyan: "bg-cyan-500/15 text-cyan-400 shadow-cyan-500/20",
+    emerald: "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 shadow-emerald-500/20",
+    rose: "bg-rose-500/15 text-rose-600 dark:text-rose-400 shadow-rose-500/20",
+    violet: "bg-violet-500/15 text-violet-600 dark:text-violet-400 shadow-violet-500/20",
+    amber: "bg-amber-500/15 text-amber-600 dark:text-amber-400 shadow-amber-500/20",
+    cyan: "bg-cyan-500/15 text-cyan-600 dark:text-cyan-400 shadow-cyan-500/20",
     primary: "bg-primary/15 text-primary shadow-primary/20",
   };
 
@@ -164,8 +164,8 @@ const MetricCard = ({
         {trend && (
           <div className={cn(
             "flex items-center gap-1 mt-2 text-xs font-medium",
-            trend === "up" && "text-emerald-400",
-            trend === "down" && "text-rose-400"
+            trend === "up" && "text-emerald-600 dark:text-emerald-400",
+            trend === "down" && "text-rose-600 dark:text-rose-400"
           )}>
             {trend === "up" ? (
               <ArrowUpRight className="w-3 h-3" />
@@ -209,35 +209,35 @@ const StatCard = ({
     emerald: {
       bg: "from-emerald-500/10 to-emerald-500/5",
       border: "border-emerald-500/20 hover:border-emerald-500/40",
-      icon: "bg-emerald-500/15 text-emerald-400",
+      icon: "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400",
       glow: "from-emerald-500/10 via-emerald-500/5",
       ring: "ring-emerald-500/20"
     },
     rose: {
       bg: "from-rose-500/10 to-rose-500/5",
       border: "border-rose-500/20 hover:border-rose-500/40",
-      icon: "bg-rose-500/15 text-rose-400",
+      icon: "bg-rose-500/15 text-rose-600 dark:text-rose-400",
       glow: "from-rose-500/10 via-rose-500/5",
       ring: "ring-rose-500/20"
     },
     amber: {
       bg: "from-amber-500/10 to-amber-500/5",
       border: "border-amber-500/20 hover:border-amber-500/40",
-      icon: "bg-amber-500/15 text-amber-400",
+      icon: "bg-amber-500/15 text-amber-600 dark:text-amber-400",
       glow: "from-amber-500/10 via-amber-500/5",
       ring: "ring-amber-500/20"
     },
     cyan: {
       bg: "from-cyan-500/10 to-cyan-500/5",
       border: "border-cyan-500/20 hover:border-cyan-500/40",
-      icon: "bg-cyan-500/15 text-cyan-400",
+      icon: "bg-cyan-500/15 text-cyan-600 dark:text-cyan-400",
       glow: "from-cyan-500/10 via-cyan-500/5",
       ring: "ring-cyan-500/20"
     },
     violet: {
       bg: "from-violet-500/10 to-violet-500/5",
       border: "border-violet-500/20 hover:border-violet-500/40",
-      icon: "bg-violet-500/15 text-violet-400",
+      icon: "bg-violet-500/15 text-violet-600 dark:text-violet-400",
       glow: "from-violet-500/10 via-violet-500/5",
       ring: "ring-violet-500/20"
     }
@@ -298,8 +298,8 @@ const StatCard = ({
         <motion.div 
           className={cn(
             "text-lg sm:text-xl lg:text-2xl font-black tracking-tight leading-none truncate",
-            trend === "up" && "text-emerald-400",
-            trend === "down" && "text-rose-400",
+            trend === "up" && "text-emerald-600 dark:text-emerald-400",
+            trend === "down" && "text-rose-600 dark:text-rose-400",
             !trend && "text-foreground"
           )}
           initial={{ scale: 0.9 }}
@@ -1016,10 +1016,10 @@ export const TradingDashboard = ({ operations, strategies }: TradingDashboardPro
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="relative overflow-hidden rounded-2xl"
+          className="relative overflow-hidden rounded-2xl border border-border/50"
         >
-          {/* Premium dark background */}
-          <div className="absolute inset-0 bg-gradient-to-br from-[#0a0a1a] via-[#0d0d20] to-[#0a0a1a]" />
+          {/* Premium background - adapts to theme */}
+          <div className="absolute inset-0 bg-gradient-to-br from-card via-card/95 to-accent/5" />
           
           {/* Subtle ambient glow */}
           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[80%] h-[60%] bg-primary/5 rounded-full blur-3xl" />
@@ -1049,32 +1049,32 @@ export const TradingDashboard = ({ operations, strategies }: TradingDashboardPro
                     dataKey="index" 
                     axisLine={false}
                     tickLine={false}
-                    tick={{ fontSize: 11, fill: '#64748b' }}
+                    tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }}
                     interval="preserveStartEnd"
                   />
                   <YAxis 
                     axisLine={false}
                     tickLine={false}
-                    tick={{ fontSize: 11, fill: '#64748b' }}
+                    tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }}
                     tickFormatter={(value) => value >= 1000 ? `${(value/1000).toFixed(0)}k` : value.toFixed(0)}
                     width={60}
                   />
                   <RechartsTooltip 
                     contentStyle={{ 
-                      backgroundColor: 'rgba(15, 15, 35, 0.95)',
-                      border: '1px solid rgba(99, 102, 241, 0.3)',
+                      backgroundColor: 'hsl(var(--card))',
+                      border: '1px solid hsl(var(--border))',
                       borderRadius: '12px',
-                      boxShadow: '0 8px 32px rgba(99, 102, 241, 0.2)',
+                      boxShadow: '0 8px 32px hsl(var(--foreground) / 0.1)',
                       padding: '12px 16px'
                     }}
-                    labelStyle={{ color: '#94a3b8', marginBottom: '4px' }}
+                    labelStyle={{ color: 'hsl(var(--muted-foreground))', marginBottom: '4px' }}
                     formatter={(value: number) => [
                       <span style={{ color: value >= 0 ? '#22c55e' : '#ef4444', fontWeight: 'bold', fontSize: '14px' }}>
                         {formatCurrency(value)}
                       </span>, 
                       'Resultado'
                     ]}
-                    cursor={{ stroke: 'rgba(99, 102, 241, 0.3)', strokeWidth: 1 }}
+                    cursor={{ stroke: 'hsl(var(--border))', strokeWidth: 1 }}
                   />
                   <Area 
                     type="monotone" 
@@ -1098,7 +1098,7 @@ export const TradingDashboard = ({ operations, strategies }: TradingDashboardPro
           </div>
           
           {/* Bottom fade effect */}
-          <div className="absolute bottom-0 left-0 right-0 h-12 bg-gradient-to-t from-[#0a0a1a] to-transparent pointer-events-none" />
+          <div className="absolute bottom-0 left-0 right-0 h-12 bg-gradient-to-t from-card to-transparent pointer-events-none" />
         </motion.div>
       </PremiumSection>
 
@@ -1109,9 +1109,9 @@ export const TradingDashboard = ({ operations, strategies }: TradingDashboardPro
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.4 }}
-          className="relative overflow-hidden rounded-2xl"
+          className="relative overflow-hidden rounded-2xl border border-border/50"
         >
-          <div className="absolute inset-0 bg-gradient-to-br from-[#0a0a1a] via-[#0d0d20] to-[#0a0a1a]" />
+          <div className="absolute inset-0 bg-gradient-to-br from-card via-card/95 to-accent/5" />
           <div className="relative z-10 p-6">
             {/* Header */}
             <div className="flex items-center justify-between mb-6">
@@ -1124,7 +1124,7 @@ export const TradingDashboard = ({ operations, strategies }: TradingDashboardPro
                   <p className="text-sm text-muted-foreground">Resultado por mês</p>
                 </div>
               </div>
-              <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30">
+              <Badge className="bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border-emerald-500/30">
                 {stats.positiveMonths}/{stats.monthlyData.length} meses +
               </Badge>
             </div>
@@ -1137,31 +1137,31 @@ export const TradingDashboard = ({ operations, strategies }: TradingDashboardPro
                     dataKey="month" 
                     axisLine={false}
                     tickLine={false}
-                    tick={{ fontSize: 11, fill: '#64748b' }}
+                    tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }}
                   />
                   <YAxis 
                     axisLine={false}
                     tickLine={false}
-                    tick={{ fontSize: 11, fill: '#64748b' }}
+                    tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }}
                     tickFormatter={(value) => value >= 1000 ? `${(value/1000).toFixed(0)}k` : value >= -1000 ? value.toFixed(0) : `${(value/1000).toFixed(0)}k`}
                     width={50}
                   />
                   <RechartsTooltip 
                     contentStyle={{ 
-                      backgroundColor: 'rgba(15, 15, 35, 0.95)',
-                      border: '1px solid rgba(99, 102, 241, 0.3)',
+                      backgroundColor: 'hsl(var(--card))',
+                      border: '1px solid hsl(var(--border))',
                       borderRadius: '12px',
-                      boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4)',
+                      boxShadow: '0 8px 32px hsl(var(--foreground) / 0.1)',
                       padding: '12px 16px'
                     }}
-                    labelStyle={{ color: '#ffffff', marginBottom: '4px', fontWeight: 500 }}
+                    labelStyle={{ color: 'hsl(var(--foreground))', marginBottom: '4px', fontWeight: 500 }}
                     formatter={(value: number) => [
                       <span style={{ color: value >= 0 ? '#22c55e' : '#ef4444', fontWeight: 'bold', fontSize: '14px' }}>
                         {formatCurrency(value)}
                       </span>, 
-                      <span style={{ color: '#ffffff' }}>Resultado</span>
+                      <span style={{ color: 'hsl(var(--foreground))' }}>Resultado</span>
                     ]}
-                    cursor={{ fill: 'rgba(255, 255, 255, 0.05)' }}
+                    cursor={{ fill: 'hsl(var(--muted) / 0.3)' }}
                   />
                   <Bar dataKey="result" radius={[6, 6, 0, 0]} maxBarSize={40}>
                     {stats.monthlyData.map((entry, index) => (
@@ -1173,25 +1173,25 @@ export const TradingDashboard = ({ operations, strategies }: TradingDashboardPro
             </div>
             
             {/* Stats Summary */}
-            <div className="grid grid-cols-3 gap-4 mt-6 pt-6 border-t border-white/5">
+            <div className="grid grid-cols-3 gap-4 mt-6 pt-6 border-t border-border/30">
               <div className="text-center">
                 <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Total</p>
                 <p className={cn(
                   "text-lg font-bold",
-                  stats.totalResult >= 0 ? "text-emerald-400" : "text-rose-400"
+                  stats.totalResult >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"
                 )}>
                   {formatCurrency(stats.totalResult)}
                 </p>
               </div>
               <div className="text-center">
                 <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Melhor</p>
-                <p className="text-lg font-bold text-emerald-400">
+                <p className="text-lg font-bold text-emerald-600 dark:text-emerald-400">
                   {formatCurrency(Math.max(...stats.monthlyData.map(m => m.result), 0))}
                 </p>
               </div>
               <div className="text-center">
                 <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Pior</p>
-                <p className="text-lg font-bold text-rose-400">
+                <p className="text-lg font-bold text-rose-600 dark:text-rose-400">
                   {formatCurrency(Math.min(...stats.monthlyData.map(m => m.result), 0))}
                 </p>
               </div>
@@ -1204,22 +1204,22 @@ export const TradingDashboard = ({ operations, strategies }: TradingDashboardPro
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.5 }}
-          className="relative overflow-hidden rounded-2xl"
+          className="relative overflow-hidden rounded-2xl border border-border/50"
         >
-          <div className="absolute inset-0 bg-gradient-to-br from-[#0a0a1a] via-[#0d0d20] to-[#0a0a1a]" />
+          <div className="absolute inset-0 bg-gradient-to-br from-card via-card/95 to-accent/5" />
           <div className="relative z-10 p-6">
             {/* Header */}
             <div className="flex items-center justify-between mb-6">
               <div className="flex items-center gap-3">
                 <div className="p-2.5 rounded-xl bg-cyan-500/10 ring-2 ring-cyan-500/20">
-                  <BarChart3 className="w-5 h-5 text-cyan-400" />
+                  <BarChart3 className="w-5 h-5 text-cyan-600 dark:text-cyan-400" />
                 </div>
                 <div>
                   <h3 className="text-lg font-bold text-foreground">Evolução Anual</h3>
                   <p className="text-sm text-muted-foreground">Comparativo por ano</p>
                 </div>
               </div>
-              <Badge className="bg-cyan-500/20 text-cyan-400 border-cyan-500/30">
+              <Badge className="bg-cyan-500/20 text-cyan-600 dark:text-cyan-400 border-cyan-500/30">
                 {stats.yearlyData.filter(y => y.result > 0).length}/{stats.yearlyData.length} anos +
               </Badge>
             </div>
@@ -1232,31 +1232,31 @@ export const TradingDashboard = ({ operations, strategies }: TradingDashboardPro
                     dataKey="year" 
                     axisLine={false}
                     tickLine={false}
-                    tick={{ fontSize: 11, fill: '#64748b' }}
+                    tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }}
                   />
                   <YAxis 
                     axisLine={false}
                     tickLine={false}
-                    tick={{ fontSize: 11, fill: '#64748b' }}
+                    tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }}
                     tickFormatter={(value) => value >= 1000 ? `R$${(value/1000).toFixed(0)}k` : value >= -1000 ? `R$${value.toFixed(0)}` : `R$${(value/1000).toFixed(0)}k`}
                     width={70}
                   />
                   <RechartsTooltip 
                     contentStyle={{ 
-                      backgroundColor: 'rgba(15, 15, 35, 0.95)',
-                      border: '1px solid rgba(34, 211, 238, 0.3)',
+                      backgroundColor: 'hsl(var(--card))',
+                      border: '1px solid hsl(var(--border))',
                       borderRadius: '12px',
-                      boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4)',
+                      boxShadow: '0 8px 32px hsl(var(--foreground) / 0.1)',
                       padding: '12px 16px'
                     }}
-                    labelStyle={{ color: '#ffffff', marginBottom: '4px', fontWeight: 500 }}
+                    labelStyle={{ color: 'hsl(var(--foreground))', marginBottom: '4px', fontWeight: 500 }}
                     formatter={(value: number) => [
                       <span style={{ color: value >= 0 ? '#22c55e' : '#ef4444', fontWeight: 'bold', fontSize: '14px' }}>
                         {formatCurrency(value)}
                       </span>, 
-                      <span style={{ color: '#ffffff' }}>Resultado</span>
+                      <span style={{ color: 'hsl(var(--foreground))' }}>Resultado</span>
                     ]}
-                    cursor={{ fill: 'rgba(255, 255, 255, 0.05)' }}
+                    cursor={{ fill: 'hsl(var(--muted) / 0.3)' }}
                   />
                   <Bar dataKey="result" radius={[6, 6, 0, 0]} maxBarSize={60}>
                     {stats.yearlyData.map((entry, index) => (
@@ -1268,22 +1268,22 @@ export const TradingDashboard = ({ operations, strategies }: TradingDashboardPro
             </div>
             
             {/* Stats Summary */}
-            <div className="grid grid-cols-3 gap-4 mt-6 pt-6 border-t border-white/5">
+            <div className="grid grid-cols-3 gap-4 mt-6 pt-6 border-t border-border/30">
               <div className="text-center">
                 <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Total Acumulado</p>
-                <p className="text-lg font-bold text-cyan-400">
+                <p className="text-lg font-bold text-cyan-600 dark:text-cyan-400">
                   {formatCurrency(stats.totalResult)}
                 </p>
               </div>
               <div className="text-center">
                 <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Melhor Ano</p>
-                <p className="text-lg font-bold text-emerald-400">
+                <p className="text-lg font-bold text-emerald-600 dark:text-emerald-400">
                   {formatCurrency(Math.max(...stats.yearlyData.map(y => y.result), 0))}
                 </p>
               </div>
               <div className="text-center">
                 <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Média/Ano</p>
-                <p className="text-lg font-bold text-amber-400">
+                <p className="text-lg font-bold text-amber-600 dark:text-amber-400">
                   {formatCurrency(stats.yearlyData.length > 0 ? stats.yearlyData.reduce((s, y) => s + y.result, 0) / stats.yearlyData.length : 0)}
                 </p>
               </div>
@@ -1297,7 +1297,7 @@ export const TradingDashboard = ({ operations, strategies }: TradingDashboardPro
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.6, delay: 0.6, ease: [0.22, 1, 0.36, 1] }}
-        className="relative overflow-hidden rounded-2xl border border-white/10 bg-[#0a0a1a]/90 backdrop-blur-xl p-6"
+        className="relative overflow-hidden rounded-2xl border border-border/50 bg-card backdrop-blur-xl p-6"
       >
         {/* Animated gradient mesh background */}
         <div className="absolute inset-0 opacity-30">
@@ -1310,18 +1310,18 @@ export const TradingDashboard = ({ operations, strategies }: TradingDashboardPro
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-3">
               <div className="p-2 rounded-xl bg-amber-500/15 shadow-lg shadow-amber-500/20">
-                <Clock className="w-5 h-5 text-amber-400" />
+                <Clock className="w-5 h-5 text-amber-600 dark:text-amber-400" />
               </div>
               <div>
-                <h3 className="text-lg font-bold text-white">Distribuição por Horário</h3>
+                <h3 className="text-lg font-bold text-foreground">Distribuição por Horário</h3>
                 <p className="text-xs text-muted-foreground">Performance e volume de operações por hora</p>
               </div>
             </div>
             <Badge className={cn(
               "px-3 py-1.5 text-sm font-bold border-0",
               stats.totalResult >= 0 
-                ? "bg-emerald-500/20 text-emerald-400" 
-                : "bg-rose-500/20 text-rose-400"
+                ? "bg-emerald-500/20 text-emerald-600 dark:text-emerald-400" 
+                : "bg-rose-500/20 text-rose-600 dark:text-rose-400"
             )}>
               {formatCurrency(stats.totalResult)}
             </Badge>
@@ -1333,76 +1333,48 @@ export const TradingDashboard = ({ operations, strategies }: TradingDashboardPro
               <ComposedChart data={stats.hourlyData}>
                 <XAxis 
                   dataKey="hour" 
-                  tick={{ fontSize: 11, fill: '#64748b' }}
-                  axisLine={{ stroke: 'rgba(255,255,255,0.1)' }}
+                  tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }}
+                  axisLine={{ stroke: 'hsl(var(--border))' }}
                   tickLine={false}
                 />
                 <YAxis 
                   yAxisId="left" 
-                  tick={{ fontSize: 10, fill: '#64748b' }}
+                  tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }}
                   axisLine={false}
                   tickLine={false}
-                  label={{ value: 'Operações', angle: -90, position: 'insideLeft', fill: '#64748b', fontSize: 10 }}
+                  label={{ value: 'Operações', angle: -90, position: 'insideLeft', fill: 'hsl(var(--muted-foreground))', fontSize: 10 }}
                 />
                 <YAxis 
                   yAxisId="right" 
                   orientation="right"
-                  tick={{ fontSize: 10, fill: '#64748b' }}
+                  tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }}
                   axisLine={false}
                   tickLine={false}
                   tickFormatter={(value) => `R$${(value / 1000).toFixed(0)}k`}
-                  label={{ value: 'Resultado (R$)', angle: 90, position: 'insideRight', fill: '#64748b', fontSize: 10 }}
+                  label={{ value: 'Resultado (R$)', angle: 90, position: 'insideRight', fill: 'hsl(var(--muted-foreground))', fontSize: 10 }}
                 />
                 <RechartsTooltip 
-                  content={({ active, payload, label }) => {
-                    if (!active || !payload || !payload.length) return null;
-                    const data = payload[0]?.payload;
-                    if (!data) return null;
-                    return (
-                      <div style={{
-                        backgroundColor: 'rgba(15, 15, 35, 0.98)',
-                        border: '1px solid rgba(251, 191, 36, 0.4)',
-                        borderRadius: '12px',
-                        boxShadow: '0 8px 32px rgba(0, 0, 0, 0.5)',
-                        padding: '14px 18px',
-                        minWidth: '180px'
-                      }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '10px' }}>
-                          <Clock style={{ width: '16px', height: '16px', color: '#fbbf24' }} />
-                          <span style={{ color: '#ffffff', fontWeight: 'bold', fontSize: '16px' }}>{label}</span>
-                        </div>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <span style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#94a3b8' }}>
-                              <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#22c55e' }} />
-                              Positivas:
-                            </span>
-                            <span style={{ color: '#22c55e', fontWeight: 'bold' }}>{data.winCount}</span>
-                          </div>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <span style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#94a3b8' }}>
-                              <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#ef4444' }} />
-                              Negativas:
-                            </span>
-                            <span style={{ color: '#ef4444', fontWeight: 'bold' }}>{data.lossCount}</span>
-                          </div>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <span style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#94a3b8' }}>
-                              <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#64748b', border: '2px solid #94a3b8' }} />
-                              Taxa Acerto:
-                            </span>
-                            <span style={{ color: '#22c55e', fontWeight: 'bold' }}>{data.winRate.toFixed(1)}%</span>
-                          </div>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <span style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#94a3b8' }}>
-                              <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#fbbf24' }} />
-                              Resultado:
-                            </span>
-                            <span style={{ color: data.result >= 0 ? '#22c55e' : '#ef4444', fontWeight: 'bold' }}>{formatCurrency(data.result)}</span>
-                          </div>
-                        </div>
-                      </div>
-                    );
+                  contentStyle={{
+                    backgroundColor: 'hsl(var(--card))',
+                    border: '1px solid hsl(var(--border))',
+                    borderRadius: '12px',
+                    boxShadow: '0 8px 32px hsl(var(--foreground) / 0.1)',
+                    padding: '14px 18px',
+                    minWidth: '180px'
+                  }}
+                  labelFormatter={(label) => <span style={{ color: 'hsl(var(--foreground))', fontWeight: 'bold', fontSize: '16px' }}>{label}</span>}
+                  formatter={(value: number, name: string, props: any) => {
+                    const data = props.payload;
+                    if (name === 'result') {
+                      return [<span style={{ color: value >= 0 ? '#22c55e' : '#ef4444', fontWeight: 'bold' }}>{formatCurrency(value)}</span>, 'Resultado'];
+                    }
+                    if (name === 'wins') {
+                      return [<span style={{ color: '#22c55e', fontWeight: 'bold' }}>{value}</span>, 'Positivas'];
+                    }
+                    if (name === 'losses') {
+                      return [<span style={{ color: '#ef4444', fontWeight: 'bold' }}>{value}</span>, 'Negativas'];
+                    }
+                    return [value, name];
                   }}
                 />
                 <Bar yAxisId="left" dataKey="wins" stackId="stack" fill="#22c55e" radius={[0, 0, 0, 0]} name="wins" />
@@ -1421,24 +1393,24 @@ export const TradingDashboard = ({ operations, strategies }: TradingDashboardPro
           </div>
 
           {/* Stats Summary */}
-          <div className="grid grid-cols-4 gap-4 mt-6 pt-6 border-t border-white/5">
+          <div className="grid grid-cols-4 gap-4 mt-6 pt-6 border-t border-border/30">
             <div className="text-center">
               <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Total Ops</p>
-              <p className="text-lg font-bold text-white">
+              <p className="text-lg font-bold text-foreground">
                 {stats.hourlyData.reduce((sum, h) => sum + h.count, 0)}
               </p>
             </div>
             <div className="text-center">
               <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Resultado</p>
-              <p className={cn("text-lg font-bold", stats.totalResult >= 0 ? "text-emerald-400" : "text-rose-400")}>
+              <p className={cn("text-lg font-bold", stats.totalResult >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400")}>
                 {formatCurrency(stats.totalResult)}
               </p>
             </div>
             <div className="text-center">
               <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 flex items-center justify-center gap-1">
-                <ArrowUpRight className="w-3 h-3 text-emerald-400" /> Melhor
+                <ArrowUpRight className="w-3 h-3 text-emerald-600 dark:text-emerald-400" /> Melhor
               </p>
-              <p className="text-lg font-bold text-emerald-400">
+              <p className="text-lg font-bold text-emerald-600 dark:text-emerald-400">
                 {(() => {
                   const best = stats.hourlyData.reduce((max, h) => h.result > max.result ? h : max, stats.hourlyData[0] || { hour: '-', result: 0 });
                   return `${best.hour} (${formatCurrency(best.result)})`;
@@ -1447,9 +1419,9 @@ export const TradingDashboard = ({ operations, strategies }: TradingDashboardPro
             </div>
             <div className="text-center">
               <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 flex items-center justify-center gap-1">
-                <ArrowDownRight className="w-3 h-3 text-rose-400" /> Pior
+                <ArrowDownRight className="w-3 h-3 text-rose-600 dark:text-rose-400" /> Pior
               </p>
-              <p className="text-lg font-bold text-rose-400">
+              <p className="text-lg font-bold text-rose-600 dark:text-rose-400">
                 {(() => {
                   const worst = stats.hourlyData.reduce((min, h) => h.result < min.result ? h : min, stats.hourlyData[0] || { hour: '-', result: 0 });
                   return `${worst.hour} (${formatCurrency(worst.result)})`;
@@ -1465,7 +1437,7 @@ export const TradingDashboard = ({ operations, strategies }: TradingDashboardPro
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.6, delay: 0.7, ease: [0.22, 1, 0.36, 1] }}
-        className="relative overflow-hidden rounded-2xl border border-white/10 bg-[#0a0a1a]/90 backdrop-blur-xl p-6"
+        className="relative overflow-hidden rounded-2xl border border-border/50 bg-card backdrop-blur-xl p-6"
       >
         {/* Background effects */}
         <div className="absolute inset-0 opacity-20">
@@ -1477,10 +1449,10 @@ export const TradingDashboard = ({ operations, strategies }: TradingDashboardPro
           {/* Header */}
           <div className="flex items-start gap-3 mb-6">
             <div className="p-2 rounded-xl bg-violet-500/15 shadow-lg shadow-violet-500/20">
-              <Activity className="w-5 h-5 text-violet-400" />
+              <Activity className="w-5 h-5 text-violet-600 dark:text-violet-400" />
             </div>
             <div>
-              <h3 className="text-lg font-bold text-white">Métricas Avançadas</h3>
+              <h3 className="text-lg font-bold text-foreground">Métricas Avançadas</h3>
               <p className="text-xs text-muted-foreground">Indicadores de risco e performance ajustada</p>
             </div>
           </div>
@@ -1735,29 +1707,29 @@ export const TradingDashboard = ({ operations, strategies }: TradingDashboardPro
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.8, ease: [0.22, 1, 0.36, 1] }}
-          className="relative overflow-hidden rounded-2xl border border-white/10 bg-[#0a0a1a]/90 backdrop-blur-xl p-6"
+          className="relative overflow-hidden rounded-2xl border border-border/50 bg-card backdrop-blur-xl p-6"
         >
           <div className="relative z-10">
             {/* Header */}
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-3">
                 <div className="p-2 rounded-xl bg-amber-500/15 shadow-lg shadow-amber-500/20">
-                  <Activity className="w-5 h-5 text-amber-400" />
+                  <Activity className="w-5 h-5 text-amber-600 dark:text-amber-400" />
                 </div>
                 <div>
-                  <h3 className="text-lg font-bold text-white">Heatmap de Performance</h3>
+                  <h3 className="text-lg font-bold text-foreground">Heatmap de Performance</h3>
                   <p className="text-xs text-muted-foreground">Análise por horário e dia da semana</p>
                 </div>
               </div>
             </div>
 
             {/* Stats Row */}
-            <div className="flex items-center gap-6 mb-4 text-sm">
-              <span className="text-muted-foreground">Total: <span className="text-white font-semibold">{stats.totalOperations} operações</span></span>
-              <span className="text-muted-foreground">Resultado: <span className={cn("font-semibold", stats.totalResult >= 0 ? "text-emerald-400" : "text-rose-400")}>{formatCurrency(stats.totalResult)}</span></span>
+            <div className="flex items-center gap-6 mb-4 text-sm flex-wrap">
+              <span className="text-muted-foreground">Total: <span className="text-foreground font-semibold">{stats.totalOperations} operações</span></span>
+              <span className="text-muted-foreground">Resultado: <span className={cn("font-semibold", stats.totalResult >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400")}>{formatCurrency(stats.totalResult)}</span></span>
               <span className="text-muted-foreground flex items-center gap-1">
-                <Trophy className="w-3 h-3 text-amber-400" />
-                Melhor: <span className="text-amber-400 font-semibold">
+                <Trophy className="w-3 h-3 text-amber-600 dark:text-amber-400" />
+                Melhor: <span className="text-amber-600 dark:text-amber-400 font-semibold">
                   {(() => {
                     let best = { key: '', count: 0 };
                     Object.entries(stats.weekdayHourData).forEach(([key, data]) => {
@@ -1793,7 +1765,7 @@ export const TradingDashboard = ({ operations, strategies }: TradingDashboardPro
                         const count = data?.count || 0;
                         const result = data?.result || 0;
                         const bgColor = count === 0 
-                          ? 'rgba(100, 116, 139, 0.1)' 
+                          ? 'hsl(var(--muted) / 0.3)' 
                           : result >= 0 
                             ? `rgba(34, 197, 94, ${Math.min(0.3 + (count / 100) * 0.5, 0.8)})` 
                             : `rgba(239, 68, 68, ${Math.min(0.3 + (count / 100) * 0.5, 0.8)})`;
@@ -1816,40 +1788,40 @@ export const TradingDashboard = ({ operations, strategies }: TradingDashboardPro
                                       "aspect-square rounded-lg flex items-center justify-center text-xs font-bold cursor-pointer transition-all min-w-[50px] min-h-[40px]",
                                       isBest && "ring-2 ring-amber-400"
                                     )}
-                                    style={{ backgroundColor: bgColor, color: count > 0 ? '#fff' : '#64748b' }}
+                                    style={{ backgroundColor: bgColor, color: count > 0 ? '#fff' : 'hsl(var(--muted-foreground))' }}
                                   >
                                     {count || '-'}
                                   </div>
                                 </TooltipTrigger>
-                                <TooltipContent className="!bg-[#0a0a1a] border border-emerald-500/30 p-0 rounded-xl overflow-hidden shadow-xl shadow-black/50 z-50" sideOffset={5}>
+                                <TooltipContent className="bg-card border border-border p-0 rounded-xl overflow-hidden shadow-xl z-50" sideOffset={5}>
                                   <div className="p-3">
                                     <div className="flex items-center gap-2 mb-3">
-                                      <TrendingUp className="w-4 h-4 text-emerald-400" />
-                                      <span className="font-bold text-white">{['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'][weekday]} às {hour}h</span>
+                                      <TrendingUp className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                                      <span className="font-bold text-foreground">{['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'][weekday]} às {hour}h</span>
                                     </div>
                                     <div className="space-y-2 text-sm">
                                       <div className="flex justify-between gap-8">
                                         <span className="text-muted-foreground">Operações</span>
-                                        <span className="font-semibold text-white">{count}</span>
+                                        <span className="font-semibold text-foreground">{count}</span>
                                       </div>
                                       <div className="flex justify-between gap-8">
                                         <span className="text-muted-foreground flex items-center gap-1.5">
                                           <span className="w-2 h-2 rounded-full bg-emerald-500" />
                                           Ganhos
                                         </span>
-                                        <span className="font-semibold text-emerald-400">{data?.winCount || 0}</span>
+                                        <span className="font-semibold text-emerald-600 dark:text-emerald-400">{data?.winCount || 0}</span>
                                       </div>
                                       <div className="flex justify-between gap-8">
                                         <span className="text-muted-foreground flex items-center gap-1.5">
                                           <span className="w-2 h-2 rounded-full bg-rose-500" />
                                           Perdas
                                         </span>
-                                        <span className="font-semibold text-rose-400">{data?.lossCount || 0}</span>
+                                        <span className="font-semibold text-rose-600 dark:text-rose-400">{data?.lossCount || 0}</span>
                                       </div>
                                     </div>
-                                    <div className="mt-3 pt-3 border-t border-white/10 flex justify-between">
+                                    <div className="mt-3 pt-3 border-t border-border flex justify-between">
                                       <span className="text-muted-foreground">Resultado</span>
-                                      <span className={cn("font-bold", result >= 0 ? "text-emerald-400" : "text-rose-400")}>
+                                      <span className={cn("font-bold", result >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400")}>
                                         {formatCurrency(result)}
                                       </span>
                                     </div>
@@ -1867,13 +1839,13 @@ export const TradingDashboard = ({ operations, strategies }: TradingDashboardPro
             </div>
 
             {/* Legend */}
-            <div className="flex items-center gap-6 mt-4 pt-4 border-t border-white/5">
+            <div className="flex items-center gap-6 mt-4 pt-4 border-t border-border/30">
               <div className="flex items-center gap-2">
                 <div className="w-4 h-4 rounded bg-rose-500/60"></div>
                 <span className="text-xs text-muted-foreground">Prejuízo</span>
               </div>
               <div className="flex items-center gap-2">
-                <div className="w-4 h-4 rounded bg-slate-500/20 border border-slate-500/30"></div>
+                <div className="w-4 h-4 rounded bg-muted/30 border border-muted-foreground/30"></div>
                 <span className="text-xs text-muted-foreground">Sem dados</span>
               </div>
               <div className="flex items-center gap-2">
@@ -1889,16 +1861,16 @@ export const TradingDashboard = ({ operations, strategies }: TradingDashboardPro
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.9, ease: [0.22, 1, 0.36, 1] }}
-          className="relative overflow-hidden rounded-2xl border border-white/10 bg-[#0a0a1a]/90 backdrop-blur-xl p-6"
+          className="relative overflow-hidden rounded-2xl border border-border/50 bg-card backdrop-blur-xl p-6"
         >
           <div className="relative z-10">
             {/* Header */}
             <div className="flex items-center gap-3 mb-4">
               <div className="p-2 rounded-xl bg-amber-500/15 shadow-lg shadow-amber-500/20">
-                <Trophy className="w-5 h-5 text-amber-400" />
+                <Trophy className="w-5 h-5 text-amber-600 dark:text-amber-400" />
               </div>
               <div>
-                <h3 className="text-lg font-bold text-white">Ranking de Performance</h3>
+                <h3 className="text-lg font-bold text-foreground">Ranking de Performance</h3>
                 <p className="text-xs text-muted-foreground">Melhores e piores dias de trading</p>
               </div>
             </div>
@@ -1911,7 +1883,7 @@ export const TradingDashboard = ({ operations, strategies }: TradingDashboardPro
                   "flex-1 py-2.5 px-4 rounded-lg text-sm font-semibold transition-all flex items-center justify-center gap-2",
                   rankingTab === 'best' 
                     ? "bg-emerald-500 text-white" 
-                    : "bg-white/5 text-muted-foreground hover:bg-white/10"
+                    : "bg-muted/50 text-muted-foreground hover:bg-muted"
                 )}
               >
                 <Trophy className="w-4 h-4" />
@@ -1923,7 +1895,7 @@ export const TradingDashboard = ({ operations, strategies }: TradingDashboardPro
                   "flex-1 py-2.5 px-4 rounded-lg text-sm font-semibold transition-all flex items-center justify-center gap-2",
                   rankingTab === 'worst' 
                     ? "bg-rose-500 text-white" 
-                    : "bg-white/5 text-muted-foreground hover:bg-white/10"
+                    : "bg-muted/50 text-muted-foreground hover:bg-muted"
                 )}
               >
                 <ArrowDownRight className="w-4 h-4" />
@@ -1935,7 +1907,7 @@ export const TradingDashboard = ({ operations, strategies }: TradingDashboardPro
             <div className="space-y-2">
               {(rankingTab === 'best' ? stats.bestDays : stats.worstDays).map((day, idx) => {
                 const avgPerOp = day.count > 0 ? day.result / day.count : 0;
-                const medalColors = ['text-amber-400', 'text-slate-300', 'text-amber-700'];
+                const medalColors = ['text-amber-500', 'text-slate-400', 'text-amber-700'];
                 const isPositive = day.result >= 0;
                 
                 return (
@@ -1955,7 +1927,7 @@ export const TradingDashboard = ({ operations, strategies }: TradingDashboardPro
                       {/* Medal/Position */}
                       <div className={cn(
                         "w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold",
-                        idx < 3 ? "bg-white/10" : "bg-white/5"
+                        idx < 3 ? "bg-muted/50" : "bg-muted/30"
                       )}>
                         {idx < 3 ? (
                           <Trophy className={cn("w-4 h-4", medalColors[idx])} />
@@ -1966,7 +1938,7 @@ export const TradingDashboard = ({ operations, strategies }: TradingDashboardPro
                       
                       {/* Date & Count */}
                       <div>
-                        <p className="text-sm font-medium text-white flex items-center gap-1.5">
+                        <p className="text-sm font-medium text-foreground flex items-center gap-1.5">
                           <CalendarDays className="w-3 h-3 text-muted-foreground" />
                           {format(parseISO(day.date), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
                         </p>
@@ -1976,12 +1948,12 @@ export const TradingDashboard = ({ operations, strategies }: TradingDashboardPro
                     
                     {/* Result */}
                     <div className="text-right">
-                      <p className={cn("text-lg font-bold", isPositive ? "text-emerald-400" : "text-rose-400")}>
+                      <p className={cn("text-lg font-bold", isPositive ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400")}>
                         {isPositive ? '+' : ''}{formatCurrency(day.result)}
                       </p>
                       <Badge className={cn(
                         "text-[10px] px-1.5 py-0.5 border-0",
-                        avgPerOp >= 0 ? "bg-emerald-500/20 text-emerald-400" : "bg-rose-500/20 text-rose-400"
+                        avgPerOp >= 0 ? "bg-emerald-500/20 text-emerald-600 dark:text-emerald-400" : "bg-rose-500/20 text-rose-600 dark:text-rose-400"
                       )}>
                         {avgPerOp >= 0 ? '+' : ''}{formatCurrency(avgPerOp)}/op
                       </Badge>
@@ -1992,13 +1964,13 @@ export const TradingDashboard = ({ operations, strategies }: TradingDashboardPro
             </div>
 
             {/* Total */}
-            <div className="mt-4 pt-4 border-t border-white/5 flex items-center justify-between">
+            <div className="mt-4 pt-4 border-t border-border/30 flex items-center justify-between">
               <span className="text-sm text-muted-foreground">Total Top 5</span>
               <span className={cn(
                 "text-lg font-bold",
                 (rankingTab === 'best' ? stats.bestDays : stats.worstDays).reduce((s, d) => s + d.result, 0) >= 0 
-                  ? "text-emerald-400" 
-                  : "text-rose-400"
+                  ? "text-emerald-600 dark:text-emerald-400" 
+                  : "text-rose-600 dark:text-rose-400"
               )}>
                 {(() => {
                   const total = (rankingTab === 'best' ? stats.bestDays : stats.worstDays).reduce((s, d) => s + d.result, 0);
