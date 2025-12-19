@@ -17,6 +17,7 @@ import Financas from "./pages/Financas";
 import GerenciamentoRisco from "./pages/GerenciamentoRisco";
 import Onboarding from "./pages/Onboarding";
 import Contratos from "./pages/Contratos";
+import Trading from "./pages/Trading";
 import NotFound from "./pages/NotFound";
 import { useEffect } from "react";
 import { registerServiceWorker } from "@/lib/register-sw";
@@ -47,6 +48,7 @@ const App = () => {
                 <Route path="/contratos" element={<Contratos />} />
                 <Route path="/operations" element={<Operations />} />
                 <Route path="/operation/:id" element={<OperationDetail />} />
+                <Route path="/trading" element={<Trading />} />
                 <Route path="/profile" element={<Profile />} />
                 <Route path="/financas" element={<Financas />} />
                 <Route path="/risco" element={<GerenciamentoRisco />} />
