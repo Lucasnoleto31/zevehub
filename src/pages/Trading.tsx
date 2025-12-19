@@ -130,9 +130,9 @@ const Trading = () => {
     checkAuth();
   }, [navigate]);
 
-  // Fetch strategies
+  // Fetch strategies (only manual, not robot strategies)
   const { data: strategies = [] } = useQuery({
-    queryKey: ['strategies', userId],
+    queryKey: ['strategies-manual', userId],
     queryFn: async () => {
       if (!userId) return [];
       const { data, error } = await supabase
@@ -140,6 +140,7 @@ const Trading = () => {
         .select('*')
         .eq('user_id', userId)
         .eq('is_active', true)
+        .eq('type', 'manual')
         .order('name');
       
       if (error) throw error;
@@ -332,6 +333,7 @@ const Trading = () => {
           user_id: userId,
           name: newStrategyName.trim(),
           is_active: true,
+          type: 'manual',
         })
         .select()
         .single();
@@ -342,7 +344,7 @@ const Trading = () => {
       }
       
       strategyId = newStrategy.id;
-      queryClient.invalidateQueries({ queryKey: ['strategies'] });
+      queryClient.invalidateQueries({ queryKey: ['strategies-manual'] });
     }
 
     if (!strategyId) {
