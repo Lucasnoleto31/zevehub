@@ -540,17 +540,19 @@ export const TradingDashboard = ({ operations, strategies }: TradingDashboardPro
       .map(([year, result]) => ({ year, result }))
       .sort((a, b) => a.year.localeCompare(b.year));
 
-    const hourlyResults: Record<number, { total: number; count: number; wins: number; losses: number }> = {};
+    const hourlyResults: Record<number, { total: number; count: number; wins: number; losses: number; winCount: number; lossCount: number }> = {};
     ops.forEach(op => {
       const hour = getHours(new Date(op.open_time));
-      if (!hourlyResults[hour]) hourlyResults[hour] = { total: 0, count: 0, wins: 0, losses: 0 };
+      if (!hourlyResults[hour]) hourlyResults[hour] = { total: 0, count: 0, wins: 0, losses: 0, winCount: 0, lossCount: 0 };
       const result = op.operation_result || 0;
       hourlyResults[hour].total += result;
       hourlyResults[hour].count++;
       if (result >= 0) {
         hourlyResults[hour].wins += result;
+        hourlyResults[hour].winCount++;
       } else {
         hourlyResults[hour].losses += Math.abs(result);
+        hourlyResults[hour].lossCount++;
       }
     });
     const hourlyData = Array.from({ length: 24 }, (_, hour) => ({
@@ -559,6 +561,9 @@ export const TradingDashboard = ({ operations, strategies }: TradingDashboardPro
       count: hourlyResults[hour]?.count || 0,
       wins: hourlyResults[hour]?.wins || 0,
       losses: hourlyResults[hour]?.losses || 0,
+      winCount: hourlyResults[hour]?.winCount || 0,
+      lossCount: hourlyResults[hour]?.lossCount || 0,
+      winRate: hourlyResults[hour] ? (hourlyResults[hour].winCount / hourlyResults[hour].count) * 100 : 0,
       avg: hourlyResults[hour] ? hourlyResults[hour].total / hourlyResults[hour].count : 0
     })).filter(h => h.count > 0);
 
@@ -1268,26 +1273,56 @@ export const TradingDashboard = ({ operations, strategies }: TradingDashboardPro
                   label={{ value: 'Resultado (R$)', angle: 90, position: 'insideRight', fill: '#64748b', fontSize: 10 }}
                 />
                 <RechartsTooltip 
-                  contentStyle={{ 
-                    backgroundColor: 'rgba(15, 15, 35, 0.95)',
-                    border: '1px solid rgba(251, 191, 36, 0.3)',
-                    borderRadius: '12px',
-                    boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4)',
-                    padding: '12px 16px'
+                  content={({ active, payload, label }) => {
+                    if (!active || !payload || !payload.length) return null;
+                    const data = payload[0]?.payload;
+                    if (!data) return null;
+                    return (
+                      <div style={{
+                        backgroundColor: 'rgba(15, 15, 35, 0.98)',
+                        border: '1px solid rgba(251, 191, 36, 0.4)',
+                        borderRadius: '12px',
+                        boxShadow: '0 8px 32px rgba(0, 0, 0, 0.5)',
+                        padding: '14px 18px',
+                        minWidth: '180px'
+                      }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '10px' }}>
+                          <Clock style={{ width: '16px', height: '16px', color: '#fbbf24' }} />
+                          <span style={{ color: '#ffffff', fontWeight: 'bold', fontSize: '16px' }}>{label}</span>
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <span style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#94a3b8' }}>
+                              <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#22c55e' }} />
+                              Positivas:
+                            </span>
+                            <span style={{ color: '#22c55e', fontWeight: 'bold' }}>{data.winCount}</span>
+                          </div>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <span style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#94a3b8' }}>
+                              <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#ef4444' }} />
+                              Negativas:
+                            </span>
+                            <span style={{ color: '#ef4444', fontWeight: 'bold' }}>{data.lossCount}</span>
+                          </div>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <span style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#94a3b8' }}>
+                              <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#64748b', border: '2px solid #94a3b8' }} />
+                              Taxa Acerto:
+                            </span>
+                            <span style={{ color: '#22c55e', fontWeight: 'bold' }}>{data.winRate.toFixed(1)}%</span>
+                          </div>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <span style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#94a3b8' }}>
+                              <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#fbbf24' }} />
+                              Resultado:
+                            </span>
+                            <span style={{ color: data.result >= 0 ? '#22c55e' : '#ef4444', fontWeight: 'bold' }}>{formatCurrency(data.result)}</span>
+                          </div>
+                        </div>
+                      </div>
+                    );
                   }}
-                  labelStyle={{ color: '#ffffff', marginBottom: '8px', fontWeight: 500 }}
-                  formatter={(value: number, name: string) => [
-                    <span style={{ 
-                      color: name === 'wins' ? '#22c55e' : name === 'losses' ? '#ef4444' : '#fbbf24', 
-                      fontWeight: 'bold', 
-                      fontSize: '14px' 
-                    }}>
-                      {name === 'count' ? value : formatCurrency(value)}
-                    </span>, 
-                    <span style={{ color: '#ffffff' }}>
-                      {name === 'wins' ? 'Ganhos' : name === 'losses' ? 'Perdas' : name === 'result' ? 'Resultado' : 'Operações'}
-                    </span>
-                  ]}
                 />
                 <Bar yAxisId="left" dataKey="wins" stackId="stack" fill="#22c55e" radius={[0, 0, 0, 0]} name="wins" />
                 <Bar yAxisId="left" dataKey="losses" stackId="stack" fill="#ef4444" radius={[4, 4, 0, 0]} name="losses" />
