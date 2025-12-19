@@ -24,12 +24,16 @@ import {
   BarChart2,
   Trophy,
   Sparkles,
-  LineChart as LineChartIcon
+  LineChart as LineChartIcon,
+  CalendarIcon
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar as CalendarComponent } from "@/components/ui/calendar";
+import { Button } from "@/components/ui/button";
 import { useCountUp } from "@/hooks/useCountUp";
 import {
   AreaChart,
@@ -375,6 +379,10 @@ export const TradingDashboard = ({ operations, strategies }: TradingDashboardPro
   const [periodFilter, setPeriodFilter] = useState<string>("all");
   const [strategyFilter, setStrategyFilter] = useState<string>("all");
   const [rankingTab, setRankingTab] = useState<'best' | 'worst'>('best');
+  const [customDateRange, setCustomDateRange] = useState<{ from: Date | undefined; to: Date | undefined }>({
+    from: undefined,
+    to: undefined
+  });
 
   // Filter operations
   const filteredOperations = useMemo(() => {
@@ -397,10 +405,18 @@ export const TradingDashboard = ({ operations, strategies }: TradingDashboardPro
     } else if (periodFilter === "ytd") {
       const start = new Date(now.getFullYear(), 0, 1);
       filtered = filtered.filter(op => new Date(op.open_time) >= start);
+    } else if (periodFilter === "custom" && customDateRange.from) {
+      const start = customDateRange.from;
+      const end = customDateRange.to || new Date();
+      end.setHours(23, 59, 59, 999);
+      filtered = filtered.filter(op => {
+        const opDate = new Date(op.open_time);
+        return opDate >= start && opDate <= end;
+      });
     }
 
     return filtered;
-  }, [operations, periodFilter, strategyFilter]);
+  }, [operations, periodFilter, strategyFilter, customDateRange]);
 
   // Calculate all statistics
   const stats = useMemo(() => {
@@ -738,8 +754,48 @@ export const TradingDashboard = ({ operations, strategies }: TradingDashboardPro
                   <SelectItem value="30d">Últimos 30 dias</SelectItem>
                   <SelectItem value="90d">Últimos 90 dias</SelectItem>
                   <SelectItem value="ytd">Ano atual</SelectItem>
+                  <SelectItem value="custom">Personalizado</SelectItem>
                 </SelectContent>
               </Select>
+              
+              {periodFilter === "custom" && (
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        "w-auto justify-start text-left font-normal bg-card/50 border-border/50",
+                        !customDateRange.from && "text-muted-foreground"
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {customDateRange.from ? (
+                        customDateRange.to ? (
+                          <>
+                            {format(customDateRange.from, "dd/MM/yy", { locale: ptBR })} - {format(customDateRange.to, "dd/MM/yy", { locale: ptBR })}
+                          </>
+                        ) : (
+                          format(customDateRange.from, "dd/MM/yyyy", { locale: ptBR })
+                        )
+                      ) : (
+                        <span>Selecione as datas</span>
+                      )}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <CalendarComponent
+                      initialFocus
+                      mode="range"
+                      defaultMonth={customDateRange.from}
+                      selected={{ from: customDateRange.from, to: customDateRange.to }}
+                      onSelect={(range) => setCustomDateRange({ from: range?.from, to: range?.to })}
+                      numberOfMonths={2}
+                      locale={ptBR}
+                      className="pointer-events-auto"
+                    />
+                  </PopoverContent>
+                </Popover>
+              )}
               <Select value={strategyFilter} onValueChange={setStrategyFilter}>
                 <SelectTrigger className="w-48 bg-card/50 border-border/50">
                   <SelectValue placeholder="Estratégia" />
