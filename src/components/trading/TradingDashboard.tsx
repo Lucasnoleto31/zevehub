@@ -1060,12 +1060,12 @@ export const TradingDashboard = ({ operations, strategies }: TradingDashboardPro
                       boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4)',
                       padding: '12px 16px'
                     }}
-                    labelStyle={{ color: '#94a3b8', marginBottom: '4px' }}
+                    labelStyle={{ color: '#ffffff', marginBottom: '4px', fontWeight: 500 }}
                     formatter={(value: number) => [
                       <span style={{ color: value >= 0 ? '#22c55e' : '#ef4444', fontWeight: 'bold', fontSize: '14px' }}>
                         {formatCurrency(value)}
                       </span>, 
-                      'Resultado'
+                      <span style={{ color: '#ffffff' }}>Resultado</span>
                     ]}
                     cursor={{ fill: 'rgba(255, 255, 255, 0.05)' }}
                   />
@@ -1155,12 +1155,12 @@ export const TradingDashboard = ({ operations, strategies }: TradingDashboardPro
                       boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4)',
                       padding: '12px 16px'
                     }}
-                    labelStyle={{ color: '#94a3b8', marginBottom: '4px' }}
+                    labelStyle={{ color: '#ffffff', marginBottom: '4px', fontWeight: 500 }}
                     formatter={(value: number) => [
                       <span style={{ color: value >= 0 ? '#22c55e' : '#ef4444', fontWeight: 'bold', fontSize: '14px' }}>
                         {formatCurrency(value)}
                       </span>, 
-                      'Resultado'
+                      <span style={{ color: '#ffffff' }}>Resultado</span>
                     ]}
                     cursor={{ fill: 'rgba(255, 255, 255, 0.05)' }}
                   />
