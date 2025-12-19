@@ -374,6 +374,7 @@ const ChartCard = ({ children, className = "" }: { children: React.ReactNode; cl
 export const TradingDashboard = ({ operations, strategies }: TradingDashboardProps) => {
   const [periodFilter, setPeriodFilter] = useState<string>("all");
   const [strategyFilter, setStrategyFilter] = useState<string>("all");
+  const [rankingTab, setRankingTab] = useState<'best' | 'worst'>('best');
 
   // Filter operations
   const filteredOperations = useMemo(() => {
@@ -414,14 +415,28 @@ export const TradingDashboard = ({ operations, strategies }: TradingDashboardPro
     const avgLoss = losses.length > 0 ? Math.abs(losses.reduce((s, r) => s + r, 0) / losses.length) : 0;
     const payoff = avgLoss > 0 ? avgWin / avgLoss : 0;
     
-    const dayResults: Record<string, number> = {};
+    const dayResults: Record<string, { result: number; count: number }> = {};
     ops.forEach(op => {
       const day = format(new Date(op.open_time), 'yyyy-MM-dd');
-      dayResults[day] = (dayResults[day] || 0) + (op.operation_result || 0);
+      if (!dayResults[day]) dayResults[day] = { result: 0, count: 0 };
+      dayResults[day].result += (op.operation_result || 0);
+      dayResults[day].count++;
     });
-    const dayValues = Object.values(dayResults);
+    const dayValues = Object.values(dayResults).map(d => d.result);
     const positiveDays = dayValues.filter(v => v > 0).length;
     const negativeDays = dayValues.filter(v => v < 0).length;
+    
+    // Heatmap data: weekday x hour
+    const weekdayHourData: Record<string, { result: number; count: number }> = {};
+    ops.forEach(op => {
+      const date = new Date(op.open_time);
+      const weekday = date.getDay(); // 0=Sun, 1=Mon, etc
+      const hour = getHours(date);
+      const key = `${weekday}-${hour}`;
+      if (!weekdayHourData[key]) weekdayHourData[key] = { result: 0, count: 0 };
+      weekdayHourData[key].result += (op.operation_result || 0);
+      weekdayHourData[key].count++;
+    });
     
     const monthResults: Record<string, number> = {};
     ops.forEach(op => {
@@ -472,13 +487,13 @@ export const TradingDashboard = ({ operations, strategies }: TradingDashboardPro
     let cumulative = 0;
     let maxBalance = 0;
     let minBalance = 0;
-    const equityCurve = sortedDays.map(([date, dailyResult], idx) => {
-      cumulative += dailyResult;
+    const equityCurve = sortedDays.map(([date, dailyData], idx) => {
+      cumulative += dailyData.result;
       maxBalance = Math.max(maxBalance, cumulative);
       minBalance = Math.min(minBalance, cumulative);
       return {
         index: idx + 1,
-        result: dailyResult,
+        result: dailyData.result,
         total: cumulative,
         date: format(parseISO(date), 'dd/MM', { locale: ptBR })
       };
@@ -513,7 +528,7 @@ export const TradingDashboard = ({ operations, strategies }: TradingDashboardPro
       ? (winRate / 100) * avgWin - ((100 - winRate) / 100) * avgLoss 
       : 0;
     
-    const dailyResults = Object.values(dayResults);
+    const dailyResults = Object.values(dayResults).map(d => d.result);
     const dailyMean = dailyResults.length > 0 ? dailyResults.reduce((s, v) => s + v, 0) / dailyResults.length : 0;
     const dailyVariance = dailyResults.length > 0 
       ? dailyResults.reduce((sum, r) => sum + Math.pow(r - dailyMean, 2), 0) / dailyResults.length 
@@ -567,16 +582,17 @@ export const TradingDashboard = ({ operations, strategies }: TradingDashboardPro
       avg: hourlyResults[hour] ? hourlyResults[hour].total / hourlyResults[hour].count : 0
     })).filter(h => h.count > 0);
 
-    const calendarData = Object.entries(dayResults).map(([date, result]) => ({
+    const calendarData = Object.entries(dayResults).map(([date, data]) => ({
       date,
-      result,
+      result: data.result,
+      count: data.count,
       dayOfWeek: format(parseISO(date), 'EEE', { locale: ptBR }),
       day: format(parseISO(date), 'dd'),
       month: format(parseISO(date), 'MMM', { locale: ptBR })
     }));
 
     const rankedDays = Object.entries(dayResults)
-      .map(([date, result]) => ({ date, result }))
+      .map(([date, data]) => ({ date, result: data.result, count: data.count }))
       .sort((a, b) => b.result - a.result);
     const bestDays = rankedDays.slice(0, 5);
     const worstDays = rankedDays.slice(-5).reverse();
@@ -614,7 +630,8 @@ export const TradingDashboard = ({ operations, strategies }: TradingDashboardPro
       calendarData,
       bestDays,
       worstDays,
-      dayResults
+      dayResults,
+      weekdayHourData
     };
   }, [filteredOperations]);
 
@@ -1647,92 +1664,259 @@ export const TradingDashboard = ({ operations, strategies }: TradingDashboardPro
         </div>
       </motion.div>
 
-      {/* Calendar Heatmap */}
-      <PremiumSection title="Calendário de Performance" subtitle="Heatmap dos resultados diários" icon={CalendarDays} delay={0.8}>
-        <ChartCard>
-          <div className="grid grid-cols-7 gap-1.5">
-            {['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'].map(day => (
-              <div key={day} className="text-center text-xs text-muted-foreground font-semibold py-2">
-                {day}
-              </div>
-            ))}
-            {stats.calendarData.slice(-35).map((day, idx) => {
-              const intensity = Math.min(Math.abs(day.result) / 500, 1);
-              const bgColor = day.result > 0 
-                ? `rgba(34, 197, 94, ${0.2 + intensity * 0.6})` 
-                : day.result < 0 
-                  ? `rgba(239, 68, 68, ${0.2 + intensity * 0.6})`
-                  : 'rgba(100, 116, 139, 0.1)';
-              return (
-                <TooltipProvider key={idx}>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <div 
-                        className="aspect-square rounded-lg flex items-center justify-center text-xs font-semibold cursor-pointer hover:ring-2 hover:ring-primary/50 transition-all"
-                        style={{ backgroundColor: bgColor }}
-                      >
-                        {day.day}
-                      </div>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p className="font-semibold">{format(parseISO(day.date), 'dd/MM/yyyy', { locale: ptBR })}</p>
-                      <p className={day.result >= 0 ? 'text-emerald-400' : 'text-rose-400'}>
-                        {day.result >= 0 ? '+' : ''}{formatCurrency(day.result)}
-                      </p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-              );
-            })}
-          </div>
-        </ChartCard>
-      </PremiumSection>
-
-      {/* Best & Worst Days Ranking */}
+      {/* Heatmap & Ranking Side by Side */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <PremiumSection title="Melhores Dias" subtitle="Top 5 dias com maior resultado" icon={Award} delay={0.9}>
-          <ChartCard>
-            <div className="space-y-3">
-              {stats.bestDays.map((day, idx) => (
-                <motion.div 
-                  key={day.date} 
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: idx * 0.1 }}
-                  className="flex items-center justify-between p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20 hover:border-emerald-500/40 transition-all"
-                >
-                  <div className="flex items-center gap-4">
-                    <span className="text-2xl font-black text-emerald-400">#{idx + 1}</span>
-                    <span className="text-sm font-medium">{format(parseISO(day.date), 'dd/MM/yyyy', { locale: ptBR })}</span>
-                  </div>
-                  <span className="text-lg font-bold text-emerald-400">+{formatCurrency(day.result)}</span>
-                </motion.div>
-              ))}
+        {/* Heatmap de Performance */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.8, ease: [0.22, 1, 0.36, 1] }}
+          className="relative overflow-hidden rounded-2xl border border-white/10 bg-[#0a0a1a]/90 backdrop-blur-xl p-6"
+        >
+          <div className="relative z-10">
+            {/* Header */}
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-xl bg-amber-500/15 shadow-lg shadow-amber-500/20">
+                  <Activity className="w-5 h-5 text-amber-400" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-white">Heatmap de Performance</h3>
+                  <p className="text-xs text-muted-foreground">Análise por horário e dia da semana</p>
+                </div>
+              </div>
             </div>
-          </ChartCard>
-        </PremiumSection>
 
-        <PremiumSection title="Piores Dias" subtitle="Top 5 dias com menor resultado" icon={TrendingDown} delay={1.0}>
-          <ChartCard>
-            <div className="space-y-3">
-              {stats.worstDays.map((day, idx) => (
-                <motion.div 
-                  key={day.date} 
-                  initial={{ opacity: 0, x: 20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: idx * 0.1 }}
-                  className="flex items-center justify-between p-4 rounded-xl bg-rose-500/10 border border-rose-500/20 hover:border-rose-500/40 transition-all"
-                >
-                  <div className="flex items-center gap-4">
-                    <span className="text-2xl font-black text-rose-400">#{idx + 1}</span>
-                    <span className="text-sm font-medium">{format(parseISO(day.date), 'dd/MM/yyyy', { locale: ptBR })}</span>
-                  </div>
-                  <span className="text-lg font-bold text-rose-400">{formatCurrency(day.result)}</span>
-                </motion.div>
-              ))}
+            {/* Stats Row */}
+            <div className="flex items-center gap-6 mb-4 text-sm">
+              <span className="text-muted-foreground">Total: <span className="text-white font-semibold">{stats.totalOperations} operações</span></span>
+              <span className="text-muted-foreground">Resultado: <span className={cn("font-semibold", stats.totalResult >= 0 ? "text-emerald-400" : "text-rose-400")}>{formatCurrency(stats.totalResult)}</span></span>
+              <span className="text-muted-foreground flex items-center gap-1">
+                <Trophy className="w-3 h-3 text-amber-400" />
+                Melhor: <span className="text-amber-400 font-semibold">
+                  {(() => {
+                    let best = { key: '', count: 0 };
+                    Object.entries(stats.weekdayHourData).forEach(([key, data]) => {
+                      if (data.count > best.count) best = { key, count: data.count };
+                    });
+                    if (!best.key) return '-';
+                    const [wd, h] = best.key.split('-');
+                    const dayNames = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+                    return `${dayNames[parseInt(wd)]} ${h}h`;
+                  })()}
+                </span>
+              </span>
             </div>
-          </ChartCard>
-        </PremiumSection>
+
+            {/* Heatmap Grid */}
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr>
+                    <th className="w-12"></th>
+                    {['Seg', 'Ter', 'Qua', 'Qui', 'Sex'].map(day => (
+                      <th key={day} className="text-center text-xs text-muted-foreground font-semibold py-2 px-1">{day}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {[9, 10, 11, 12, 13, 14, 15, 16, 17].map(hour => (
+                    <tr key={hour}>
+                      <td className="text-xs text-muted-foreground font-semibold py-1 pr-2 text-right">{hour}h</td>
+                      {[1, 2, 3, 4, 5].map(weekday => {
+                        const key = `${weekday}-${hour}`;
+                        const data = stats.weekdayHourData[key];
+                        const count = data?.count || 0;
+                        const result = data?.result || 0;
+                        const bgColor = count === 0 
+                          ? 'rgba(100, 116, 139, 0.1)' 
+                          : result >= 0 
+                            ? `rgba(34, 197, 94, ${Math.min(0.3 + (count / 100) * 0.5, 0.8)})` 
+                            : `rgba(239, 68, 68, ${Math.min(0.3 + (count / 100) * 0.5, 0.8)})`;
+                        
+                        // Find the best cell
+                        let bestKey = '';
+                        let maxCount = 0;
+                        Object.entries(stats.weekdayHourData).forEach(([k, d]) => {
+                          if (d.count > maxCount) { maxCount = d.count; bestKey = k; }
+                        });
+                        const isBest = key === bestKey && count > 0;
+                        
+                        return (
+                          <td key={weekday} className="p-1">
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <div 
+                                    className={cn(
+                                      "aspect-square rounded-lg flex items-center justify-center text-xs font-bold cursor-pointer transition-all min-w-[50px] min-h-[40px]",
+                                      isBest && "ring-2 ring-amber-400"
+                                    )}
+                                    style={{ backgroundColor: bgColor, color: count > 0 ? '#fff' : '#64748b' }}
+                                  >
+                                    {count || '-'}
+                                  </div>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p className="font-semibold">{['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'][weekday]} {hour}h</p>
+                                  <p className="text-muted-foreground">{count} operações</p>
+                                  <p className={result >= 0 ? 'text-emerald-400' : 'text-rose-400'}>
+                                    {formatCurrency(result)}
+                                  </p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Legend */}
+            <div className="flex items-center gap-6 mt-4 pt-4 border-t border-white/5">
+              <div className="flex items-center gap-2">
+                <div className="w-4 h-4 rounded bg-rose-500/60"></div>
+                <span className="text-xs text-muted-foreground">Prejuízo</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-4 h-4 rounded bg-slate-500/20 border border-slate-500/30"></div>
+                <span className="text-xs text-muted-foreground">Sem dados</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-4 h-4 rounded bg-emerald-500/60"></div>
+                <span className="text-xs text-muted-foreground">Lucro</span>
+              </div>
+            </div>
+          </div>
+        </motion.div>
+
+        {/* Ranking de Performance */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.9, ease: [0.22, 1, 0.36, 1] }}
+          className="relative overflow-hidden rounded-2xl border border-white/10 bg-[#0a0a1a]/90 backdrop-blur-xl p-6"
+        >
+          <div className="relative z-10">
+            {/* Header */}
+            <div className="flex items-center gap-3 mb-4">
+              <div className="p-2 rounded-xl bg-amber-500/15 shadow-lg shadow-amber-500/20">
+                <Trophy className="w-5 h-5 text-amber-400" />
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-white">Ranking de Performance</h3>
+                <p className="text-xs text-muted-foreground">Melhores e piores dias de trading</p>
+              </div>
+            </div>
+
+            {/* Tabs */}
+            <div className="flex gap-2 mb-4">
+              <button 
+                onClick={() => setRankingTab('best')}
+                className={cn(
+                  "flex-1 py-2.5 px-4 rounded-lg text-sm font-semibold transition-all flex items-center justify-center gap-2",
+                  rankingTab === 'best' 
+                    ? "bg-emerald-500 text-white" 
+                    : "bg-white/5 text-muted-foreground hover:bg-white/10"
+                )}
+              >
+                <Trophy className="w-4 h-4" />
+                Melhores Dias
+              </button>
+              <button 
+                onClick={() => setRankingTab('worst')}
+                className={cn(
+                  "flex-1 py-2.5 px-4 rounded-lg text-sm font-semibold transition-all flex items-center justify-center gap-2",
+                  rankingTab === 'worst' 
+                    ? "bg-rose-500 text-white" 
+                    : "bg-white/5 text-muted-foreground hover:bg-white/10"
+                )}
+              >
+                <ArrowDownRight className="w-4 h-4" />
+                Piores Dias
+              </button>
+            </div>
+
+            {/* List */}
+            <div className="space-y-2">
+              {(rankingTab === 'best' ? stats.bestDays : stats.worstDays).map((day, idx) => {
+                const avgPerOp = day.count > 0 ? day.result / day.count : 0;
+                const medalColors = ['text-amber-400', 'text-slate-300', 'text-amber-700'];
+                const isPositive = day.result >= 0;
+                
+                return (
+                  <motion.div 
+                    key={day.date} 
+                    initial={{ opacity: 0, x: rankingTab === 'best' ? -20 : 20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: idx * 0.05 }}
+                    className={cn(
+                      "flex items-center justify-between p-3 rounded-xl transition-all",
+                      isPositive 
+                        ? "bg-emerald-500/10 border border-emerald-500/20 hover:border-emerald-500/40"
+                        : "bg-rose-500/10 border border-rose-500/20 hover:border-rose-500/40"
+                    )}
+                  >
+                    <div className="flex items-center gap-3">
+                      {/* Medal/Position */}
+                      <div className={cn(
+                        "w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold",
+                        idx < 3 ? "bg-white/10" : "bg-white/5"
+                      )}>
+                        {idx < 3 ? (
+                          <Trophy className={cn("w-4 h-4", medalColors[idx])} />
+                        ) : (
+                          <span className="text-muted-foreground">{idx + 1}</span>
+                        )}
+                      </div>
+                      
+                      {/* Date & Count */}
+                      <div>
+                        <p className="text-sm font-medium text-white flex items-center gap-1.5">
+                          <CalendarDays className="w-3 h-3 text-muted-foreground" />
+                          {format(parseISO(day.date), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
+                        </p>
+                        <p className="text-xs text-muted-foreground">{day.count} operações</p>
+                      </div>
+                    </div>
+                    
+                    {/* Result */}
+                    <div className="text-right">
+                      <p className={cn("text-lg font-bold", isPositive ? "text-emerald-400" : "text-rose-400")}>
+                        {isPositive ? '+' : ''}{formatCurrency(day.result)}
+                      </p>
+                      <Badge className={cn(
+                        "text-[10px] px-1.5 py-0.5 border-0",
+                        avgPerOp >= 0 ? "bg-emerald-500/20 text-emerald-400" : "bg-rose-500/20 text-rose-400"
+                      )}>
+                        {avgPerOp >= 0 ? '+' : ''}{formatCurrency(avgPerOp)}/op
+                      </Badge>
+                    </div>
+                  </motion.div>
+                );
+              })}
+            </div>
+
+            {/* Total */}
+            <div className="mt-4 pt-4 border-t border-white/5 flex items-center justify-between">
+              <span className="text-sm text-muted-foreground">Total Top 5</span>
+              <span className={cn(
+                "text-lg font-bold",
+                (rankingTab === 'best' ? stats.bestDays : stats.worstDays).reduce((s, d) => s + d.result, 0) >= 0 
+                  ? "text-emerald-400" 
+                  : "text-rose-400"
+              )}>
+                {(() => {
+                  const total = (rankingTab === 'best' ? stats.bestDays : stats.worstDays).reduce((s, d) => s + d.result, 0);
+                  return `${total >= 0 ? '+' : ''}${formatCurrency(total)}`;
+                })()}
+              </span>
+            </div>
+          </div>
+        </motion.div>
       </div>
     </div>
   );
