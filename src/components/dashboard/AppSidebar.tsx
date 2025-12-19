@@ -78,6 +78,7 @@ export function AppSidebar({ isAdmin }: AppSidebarProps) {
     <Sidebar
       className={`${collapsed ? "w-14" : "w-60"} bg-black border-r border-white/10`}
       collapsible="icon"
+      data-tour="sidebar"
     >
       <SidebarContent className="bg-black">
         <SidebarGroup>

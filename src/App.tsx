@@ -6,6 +6,9 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { ThemeProvider } from "next-themes";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import OfflineIndicator from "@/components/OfflineIndicator";
+import { TourProvider } from "@/contexts/TourContext";
+import { TourOverlay } from "@/components/tour/TourOverlay";
+import { TourLauncher } from "@/components/tour/TourLauncher";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
@@ -35,27 +38,31 @@ const App = () => {
       <QueryClientProvider client={queryClient}>
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
           <TooltipProvider>
-            <Toaster />
-            <Sonner />
-            <OfflineIndicator />
-            <BrowserRouter>
-              <Routes>
-                <Route path="/" element={<Index />} />
-                <Route path="/auth" element={<Auth />} />
-                <Route path="/onboarding" element={<Onboarding />} />
-                <Route path="/dashboard" element={<Dashboard />} />
-                <Route path="/admin" element={<Admin />} />
-                <Route path="/contratos" element={<Contratos />} />
-                <Route path="/operations" element={<Operations />} />
-                <Route path="/operation/:id" element={<OperationDetail />} />
-                <Route path="/trading" element={<Trading />} />
-                <Route path="/profile" element={<Profile />} />
-                <Route path="/financas" element={<Financas />} />
-                <Route path="/risco" element={<GerenciamentoRisco />} />
-                {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-                <Route path="*" element={<NotFound />} />
-              </Routes>
-            </BrowserRouter>
+            <TourProvider>
+              <Toaster />
+              <Sonner />
+              <OfflineIndicator />
+              <TourOverlay />
+              <TourLauncher />
+              <BrowserRouter>
+                <Routes>
+                  <Route path="/" element={<Index />} />
+                  <Route path="/auth" element={<Auth />} />
+                  <Route path="/onboarding" element={<Onboarding />} />
+                  <Route path="/dashboard" element={<Dashboard />} />
+                  <Route path="/admin" element={<Admin />} />
+                  <Route path="/contratos" element={<Contratos />} />
+                  <Route path="/operations" element={<Operations />} />
+                  <Route path="/operation/:id" element={<OperationDetail />} />
+                  <Route path="/trading" element={<Trading />} />
+                  <Route path="/profile" element={<Profile />} />
+                  <Route path="/financas" element={<Financas />} />
+                  <Route path="/risco" element={<GerenciamentoRisco />} />
+                  {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+                  <Route path="*" element={<NotFound />} />
+                </Routes>
+              </BrowserRouter>
+            </TourProvider>
           </TooltipProvider>
         </ThemeProvider>
       </QueryClientProvider>
