@@ -8,6 +8,7 @@ import {
   Wallet,
   ShieldCheck,
   FileSpreadsheet,
+  TrendingUp,
 } from "lucide-react";
 
 import {
@@ -38,6 +39,12 @@ const menuItems = [
     url: "/operations",
     icon: LineChart,
     color: "text-green-500",
+  },
+  {
+    title: "Trading",
+    url: "/trading",
+    icon: TrendingUp,
+    color: "text-purple-500",
   },
   {
     title: "Finanças",
