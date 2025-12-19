@@ -1057,9 +1057,16 @@ export const TradingDashboard = ({ operations, strategies }: TradingDashboardPro
                       backgroundColor: 'rgba(15, 15, 35, 0.95)',
                       border: '1px solid rgba(99, 102, 241, 0.3)',
                       borderRadius: '12px',
-                      boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4)'
+                      boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4)',
+                      padding: '12px 16px'
                     }}
-                    formatter={(value: number) => [formatCurrency(value), 'Resultado']}
+                    labelStyle={{ color: '#94a3b8', marginBottom: '4px' }}
+                    formatter={(value: number) => [
+                      <span style={{ color: value >= 0 ? '#22c55e' : '#ef4444', fontWeight: 'bold', fontSize: '14px' }}>
+                        {formatCurrency(value)}
+                      </span>, 
+                      'Resultado'
+                    ]}
                     cursor={{ fill: 'rgba(255, 255, 255, 0.05)' }}
                   />
                   <Bar dataKey="result" radius={[6, 6, 0, 0]} maxBarSize={40}>
@@ -1145,9 +1152,16 @@ export const TradingDashboard = ({ operations, strategies }: TradingDashboardPro
                       backgroundColor: 'rgba(15, 15, 35, 0.95)',
                       border: '1px solid rgba(34, 211, 238, 0.3)',
                       borderRadius: '12px',
-                      boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4)'
+                      boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4)',
+                      padding: '12px 16px'
                     }}
-                    formatter={(value: number) => [formatCurrency(value), 'Resultado']}
+                    labelStyle={{ color: '#94a3b8', marginBottom: '4px' }}
+                    formatter={(value: number) => [
+                      <span style={{ color: value >= 0 ? '#22c55e' : '#ef4444', fontWeight: 'bold', fontSize: '14px' }}>
+                        {formatCurrency(value)}
+                      </span>, 
+                      'Resultado'
+                    ]}
                     cursor={{ fill: 'rgba(255, 255, 255, 0.05)' }}
                   />
                   <Bar dataKey="result" radius={[6, 6, 0, 0]} maxBarSize={60}>
