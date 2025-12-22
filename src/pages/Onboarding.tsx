@@ -6,7 +6,6 @@ import {
   TrendingUp, 
   Upload, 
   DollarSign, 
-  BarChart3, 
   ArrowRight, 
   ArrowLeft,
   Check,
@@ -16,7 +15,8 @@ import {
   Shield,
   Zap,
   Bot,
-  ShieldAlert
+  ShieldAlert,
+  ExternalLink
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -28,6 +28,7 @@ interface OnboardingStep {
   gradient: string;
   features: string[];
   quote: string;
+  path: string;
 }
 
 const onboardingSteps: OnboardingStep[] = [
@@ -43,7 +44,8 @@ const onboardingSteps: OnboardingStep[] = [
       "Métricas de lucro/perda em tempo real",
       "Análise de estratégias vencedoras"
     ],
-    quote: "Dados precisos são a base de decisões inteligentes"
+    quote: "Dados precisos são a base de decisões inteligentes",
+    path: "/dashboard"
   },
   {
     id: 2,
@@ -57,7 +59,8 @@ const onboardingSteps: OnboardingStep[] = [
       "Análise detalhada por estratégia",
       "Parâmetros e métricas personalizadas"
     ],
-    quote: "Automatize e otimize seu processo de análise"
+    quote: "Automatize e otimize seu processo de análise",
+    path: "/trading"
   },
   {
     id: 3,
@@ -71,7 +74,8 @@ const onboardingSteps: OnboardingStep[] = [
       "Histórico completo de operações",
       "Importação via notas de corretagem"
     ],
-    quote: "Disciplina transforma traders em vencedores"
+    quote: "Disciplina transforma traders em vencedores",
+    path: "/operations"
   },
   {
     id: 4,
@@ -85,7 +89,8 @@ const onboardingSteps: OnboardingStep[] = [
       "Metas financeiras personalizadas",
       "Relatórios e gráficos detalhados"
     ],
-    quote: "Controle financeiro é liberdade"
+    quote: "Controle financeiro é liberdade",
+    path: "/financas"
   },
   {
     id: 5,
@@ -99,7 +104,8 @@ const onboardingSteps: OnboardingStep[] = [
       "Análise de payoff e taxa de acerto",
       "Simulações de cenários"
     ],
-    quote: "Gerenciar risco é preservar capital"
+    quote: "Gerenciar risco é preservar capital",
+    path: "/risco"
   }
 ];
 
@@ -186,6 +192,11 @@ const Onboarding = () => {
   const handleFinish = () => {
     localStorage.setItem("onboarding_completed", "true");
     navigate("/dashboard");
+  };
+
+  const handleExplorePage = () => {
+    localStorage.setItem("onboarding_completed", "true");
+    navigate(step.path);
   };
 
   return (
@@ -426,6 +437,23 @@ const Onboarding = () => {
             variants={itemVariants}
             className="mt-8 space-y-6"
           >
+            {/* Explore page button */}
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: 0.3 }}
+              className="flex justify-center"
+            >
+              <Button
+                variant="outline"
+                onClick={handleExplorePage}
+                className={`gap-2 px-6 py-3 h-auto border-2 hover:scale-105 transition-all duration-300 bg-gradient-to-r ${step.gradient} bg-clip-text text-transparent border-primary/30 hover:border-primary/60`}
+              >
+                <ExternalLink className="w-4 h-4 text-primary" />
+                <span className="font-semibold">Explorar {step.title}</span>
+              </Button>
+            </motion.div>
+
             {/* Step indicators */}
             <div className="flex justify-center gap-3">
               {onboardingSteps.map((_, index) => (
