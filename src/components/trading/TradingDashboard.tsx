@@ -27,7 +27,7 @@ import {
   LineChart as LineChartIcon,
   CalendarIcon
 } from "lucide-react";
-import { TradingCashflowPrediction } from "./TradingCashflowPrediction";
+
 import { cn } from "@/lib/utils";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
@@ -1987,10 +1987,6 @@ export const TradingDashboard = ({ operations, strategies }: TradingDashboardPro
         </motion.div>
       </div>
 
-      {/* Cashflow Prediction Section */}
-      <div className="mt-8">
-        <TradingCashflowPrediction />
-      </div>
     </div>
   );
 };
