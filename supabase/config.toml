@@ -3,6 +3,9 @@ project_id = "zsylxitrkmaihpfvnjny"
 [functions.predict-cashflow]
 verify_jwt = true
 
+[functions.predict-trading-cashflow]
+verify_jwt = true
+
 [functions.process-recurring]
 verify_jwt = false
 
