@@ -29,7 +29,6 @@ const signUpSchema = z.object({
   phone: z.string().min(10, { message: "Telefone deve ter no mínimo 10 dígitos" }).regex(/^\d+$/, { message: "Telefone deve conter apenas números" }),
   cpf: z.string().min(11, { message: "CPF deve ter 11 dígitos" }).max(11, { message: "CPF deve ter 11 dígitos" }).regex(/^\d+$/, { message: "CPF deve conter apenas números" }),
   hasGenialAccount: z.boolean(),
-  genialId: z.string().optional(),
   acceptTerms: z.boolean().refine((val) => val === true, { message: "Você deve aceitar os termos de uso" }),
 });
 
@@ -74,7 +73,6 @@ const Auth = () => {
     phone: "", 
     cpf: "",
     hasGenialAccount: false,
-    genialId: "",
     acceptTerms: false 
   });
   const [signInData, setSignInData] = useState({ email: "", password: "" });
@@ -159,7 +157,6 @@ const Auth = () => {
           phone: validatedData.phone,
           cpf: validatedData.cpf,
           has_genial_account: validatedData.hasGenialAccount,
-          genial_id: validatedData.genialId || null,
           access_status: "pendente",
         }).eq("id", data.user.id);
 
@@ -869,42 +866,18 @@ const Auth = () => {
                     </div>
                   </div>
 
-                  <div className="space-y-3 p-4 rounded-2xl bg-muted/30 border border-border/50">
-                    <div className="flex items-center justify-between">
-                      <Label htmlFor="has-genial" className="text-sm font-medium text-foreground">
-                        Possui conta na Genial Investimentos?
-                      </Label>
-                      <Switch
-                        id="has-genial"
-                        checked={signUpData.hasGenialAccount}
-                        onCheckedChange={(checked) => {
-                          setSignUpData({ ...signUpData, hasGenialAccount: checked, genialId: checked ? signUpData.genialId : "" });
-                        }}
-                        disabled={loading}
-                      />
-                    </div>
-                    
-                    {signUpData.hasGenialAccount && (
-                      <div className="space-y-2 animate-fade-in">
-                        <Label htmlFor="signup-genial-id" className="text-sm font-medium text-foreground">
-                          ID da conta Genial
-                        </Label>
-                        <Input
-                          id="signup-genial-id"
-                          type="text"
-                          placeholder="Seu ID na Genial"
-                          value={signUpData.genialId}
-                          onChange={(e) => {
-                            setSignUpData({ ...signUpData, genialId: e.target.value });
-                          }}
-                          disabled={loading}
-                          className="h-12 bg-background/50 border-border/50 focus:border-primary rounded-xl"
-                        />
-                        <p className="text-xs text-muted-foreground">
-                          Informe o ID da sua conta na Genial para agilizar a aprovação
-                        </p>
-                      </div>
-                    )}
+                  <div className="flex items-center justify-between p-4 rounded-2xl bg-muted/30 border border-border/50">
+                    <Label htmlFor="has-genial" className="text-sm font-medium text-foreground">
+                      Possui conta na Genial Investimentos?
+                    </Label>
+                    <Switch
+                      id="has-genial"
+                      checked={signUpData.hasGenialAccount}
+                      onCheckedChange={(checked) => {
+                        setSignUpData({ ...signUpData, hasGenialAccount: checked });
+                      }}
+                      disabled={loading}
+                    />
                   </div>
 
                   <div className="space-y-2">
