@@ -10,7 +10,8 @@ import {
   Trash2,
   AlertCircle,
   Plus,
-  BarChart3
+  BarChart3,
+  Download
 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
@@ -409,14 +410,38 @@ const Trading = () => {
                     Selecione o arquivo CSV exportado do Profit Chart. O formato deve ser separado por ponto-e-vírgula (;).
                   </p>
                 </div>
-                <div className="flex items-center gap-4">
-                  <Input
-                    type="file"
-                    accept=".csv"
-                    onChange={handleFileUpload}
-                    disabled={importing}
-                    className="max-w-xs"
-                  />
+                <div className="flex flex-col items-center gap-4">
+                  <div className="flex items-center gap-4">
+                    <Input
+                      type="file"
+                      accept=".csv"
+                      onChange={handleFileUpload}
+                      disabled={importing}
+                      className="max-w-xs"
+                    />
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      const csvContent = `Conta:;12345
+Titular:;Nome do Titular
+Data:;01/01/2025
+
+Ativo;Abertura;Fechamento;Duração;Qtd.C;Qtd.V;Lado;Preço C;Preço V;Preço Merc.;MEP;MEN;Agente C;Agente V;Média;Res.Int.Bruto;Res.Int.%;Res.Op.;Res.Op.%;TET;Total
+WINJ25;01/01/2025 09:00:00;01/01/2025 09:05:30;00:05:30;1;1;C;125.000;125.100;125.050;100;50;-;-;125.050;100,00;0,08%;100,00;0,08%;-;100,00
+WINJ25;01/01/2025 10:15:00;01/01/2025 10:22:45;00:07:45;2;2;V;125.200;125.050;125.125;-150;-75;-;-;125.125;-150,00;-0,12%;-150,00;-0,12%;-;-150,00`;
+                      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+                      const link = document.createElement('a');
+                      link.href = URL.createObjectURL(blob);
+                      link.download = 'modelo_profit.csv';
+                      link.click();
+                    }}
+                    className="gap-2"
+                  >
+                    <Download className="h-4 w-4" />
+                    Baixar Modelo CSV
+                  </Button>
                 </div>
                 {importing && (
                   <div className="flex items-center gap-2 text-muted-foreground">
