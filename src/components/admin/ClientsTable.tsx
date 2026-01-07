@@ -1,9 +1,10 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Settings, Eye, Pencil, Check, X, Ban, Unlock } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Settings, Eye, Pencil, Check, X, Ban, Unlock, Search, MessageCircle } from "lucide-react";
 import { toast } from "sonner";
 import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -40,6 +41,26 @@ const ClientsTable = ({ onUpdate }: ClientsTableProps) => {
   const [loading, setLoading] = useState(true);
   const [editingClient, setEditingClient] = useState<Client | null>(null);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [searchTerm, setSearchTerm] = useState("");
+
+  const filteredClients = useMemo(() => {
+    if (!searchTerm.trim()) return clients;
+    
+    const term = searchTerm.toLowerCase();
+    return clients.filter((client) => 
+      client.full_name?.toLowerCase().includes(term) ||
+      client.email?.toLowerCase().includes(term) ||
+      client.cpf?.includes(term) ||
+      client.phone?.includes(term) ||
+      client.genial_id?.toLowerCase().includes(term)
+    );
+  }, [clients, searchTerm]);
+
+  const formatPhoneForWhatsApp = (phone: string | null) => {
+    if (!phone) return null;
+    // Remove tudo que não é número
+    return phone.replace(/\D/g, "");
+  };
 
   useEffect(() => {
     loadClients();
@@ -200,11 +221,29 @@ const ClientsTable = ({ onUpdate }: ClientsTableProps) => {
         }}
       />
       
-      <div className="rounded-md border">
+      <div className="p-4 border-b">
+        <div className="relative max-w-sm">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Buscar por nome, email, CPF, telefone..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-9"
+          />
+        </div>
+        {searchTerm && (
+          <p className="text-sm text-muted-foreground mt-2">
+            {filteredClients.length} {filteredClients.length === 1 ? "resultado" : "resultados"} encontrado{filteredClients.length !== 1 && "s"}
+          </p>
+        )}
+      </div>
+      
+      <div className="rounded-md border-0">
         <Table>
         <TableHeader>
           <TableRow>
             <TableHead>Cliente</TableHead>
+            <TableHead>Telefone</TableHead>
             <TableHead>E-mail</TableHead>
             <TableHead>Acesso</TableHead>
             <TableHead>Conta Genial</TableHead>
@@ -214,7 +253,7 @@ const ClientsTable = ({ onUpdate }: ClientsTableProps) => {
           </TableRow>
         </TableHeader>
         <TableBody>
-          {clients.map((client) => (
+          {filteredClients.map((client) => (
             <TableRow key={client.id}>
               <TableCell className="font-medium">
                 <div>
@@ -223,6 +262,29 @@ const ClientsTable = ({ onUpdate }: ClientsTableProps) => {
                     <p className="text-xs text-muted-foreground">CPF: {client.cpf}</p>
                   )}
                 </div>
+              </TableCell>
+              <TableCell>
+                {client.phone ? (
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm">{client.phone}</span>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7 text-green-500 hover:text-green-600 hover:bg-green-500/10"
+                      onClick={() => {
+                        const phone = formatPhoneForWhatsApp(client.phone);
+                        if (phone) {
+                          window.open(`https://wa.me/${phone}`, "_blank");
+                        }
+                      }}
+                      title="Abrir WhatsApp"
+                    >
+                      <MessageCircle className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ) : (
+                  <span className="text-muted-foreground text-sm">-</span>
+                )}
               </TableCell>
               <TableCell>{client.email}</TableCell>
               <TableCell>{getAccessStatusBadge(client.access_status)}</TableCell>
