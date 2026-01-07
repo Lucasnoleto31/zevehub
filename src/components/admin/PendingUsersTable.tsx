@@ -1,9 +1,10 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Check, X, Download } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Check, X, Download, Search, MessageCircle } from "lucide-react";
 import * as XLSX from "xlsx";
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -41,6 +42,25 @@ const PendingUsersTable = ({ onUpdate }: PendingUsersTableProps) => {
   const [selectedUser, setSelectedUser] = useState<PendingUser | null>(null);
   const [showRejectDialog, setShowRejectDialog] = useState(false);
   const [rejectReason, setRejectReason] = useState("");
+  const [searchTerm, setSearchTerm] = useState("");
+
+  const filteredUsers = useMemo(() => {
+    if (!searchTerm.trim()) return users;
+    
+    const term = searchTerm.toLowerCase();
+    return users.filter((user) => 
+      user.full_name?.toLowerCase().includes(term) ||
+      user.email?.toLowerCase().includes(term) ||
+      user.cpf?.includes(term) ||
+      user.phone?.includes(term) ||
+      user.genial_id?.toLowerCase().includes(term)
+    );
+  }, [users, searchTerm]);
+
+  const formatPhoneForWhatsApp = (phone: string | null) => {
+    if (!phone) return null;
+    return phone.replace(/\D/g, "");
+  };
 
   useEffect(() => {
     loadPendingUsers();
@@ -173,12 +193,27 @@ const PendingUsersTable = ({ onUpdate }: PendingUsersTableProps) => {
 
   return (
     <>
-      <div className="flex justify-end mb-4">
+      <div className="flex flex-col sm:flex-row justify-between gap-4 mb-4">
+        <div className="relative max-w-sm">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Buscar por nome, email, CPF, telefone..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-9"
+          />
+        </div>
         <Button onClick={exportToExcel} variant="outline" size="sm" className="gap-2">
           <Download className="w-4 h-4" />
           Exportar Excel
         </Button>
       </div>
+
+      {searchTerm && (
+        <p className="text-sm text-muted-foreground mb-4">
+          {filteredUsers.length} {filteredUsers.length === 1 ? "resultado" : "resultados"} encontrado{filteredUsers.length !== 1 && "s"}
+        </p>
+      )}
 
       <Dialog open={showRejectDialog} onOpenChange={setShowRejectDialog}>
         <DialogContent>
@@ -224,7 +259,7 @@ const PendingUsersTable = ({ onUpdate }: PendingUsersTableProps) => {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {users.map((user) => (
+            {filteredUsers.map((user) => (
               <TableRow key={user.id}>
                 <TableCell className="font-medium">
                   {user.full_name || "Sem nome"}
@@ -245,7 +280,29 @@ const PendingUsersTable = ({ onUpdate }: PendingUsersTableProps) => {
                     <Badge variant="secondary">Não</Badge>
                   )}
                 </TableCell>
-                <TableCell>{user.phone || "-"}</TableCell>
+                <TableCell>
+                  {user.phone ? (
+                    <div className="flex items-center gap-2">
+                      <span>{user.phone}</span>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 text-green-500 hover:text-green-600 hover:bg-green-500/10"
+                        onClick={() => {
+                          const phone = formatPhoneForWhatsApp(user.phone);
+                          if (phone) {
+                            window.open(`https://wa.me/${phone}`, "_blank");
+                          }
+                        }}
+                        title="Abrir WhatsApp"
+                      >
+                        <MessageCircle className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ) : (
+                    "-"
+                  )}
+                </TableCell>
                 <TableCell className="text-sm text-muted-foreground">
                   {format(new Date(user.created_at), "dd/MM/yyyy HH:mm", { locale: ptBR })}
                 </TableCell>
