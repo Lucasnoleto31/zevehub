@@ -127,19 +127,22 @@ const OperationsDashboard = ({ userId }: OperationsDashboardProps) => {
 
       setOperations(allOperations);
       
-      const excludedStrategies = [
-        'zero a zero', 
-        'zero a zero (ze)', 
-        'front running', 
-        'devolvida', 
-        'fomo', 
-        'lateralidade'
+      // Estratégias permitidas no dashboard de Robôs (whitelist)
+      const allowedStrategies = [
+        'alaska & square',
+        'apollo',
+        'ares',
+        'artemis',
+        'orion',
+        'pegasus',
+        'ventture',
+        'zeus'
       ];
       
       const strategies = Array.from(new Set(
         allOperations
           .map(op => op.strategy)
-          .filter(s => s && s.trim() !== '' && !excludedStrategies.includes(s.toLowerCase()))
+          .filter(s => s && s.trim() !== '' && allowedStrategies.includes(s.toLowerCase()))
       )) as string[];
       setAvailableStrategies(strategies.sort());
     } catch (error) {
@@ -158,7 +161,22 @@ const OperationsDashboard = ({ userId }: OperationsDashboardProps) => {
     const now = new Date();
     now.setHours(0, 0, 0, 0);
     
-    let filtered = [...operations];
+    // Estratégias permitidas no dashboard de Robôs (whitelist)
+    const allowedStrategies = [
+      'alaska & square',
+      'apollo',
+      'ares',
+      'artemis',
+      'orion',
+      'pegasus',
+      'ventture',
+      'zeus'
+    ];
+    
+    // Filtra apenas operações com estratégias permitidas
+    let filtered = operations.filter(op => 
+      op.strategy && allowedStrategies.includes(op.strategy.toLowerCase())
+    );
 
     switch (dateFilter) {
       case "today":
