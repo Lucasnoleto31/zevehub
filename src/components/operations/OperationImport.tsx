@@ -300,10 +300,12 @@ const OperationImport = ({ userId }: OperationImportProps) => {
     setProgress(0);
 
     try {
-      const batchSize = 100;
+      // Batch menor para evitar timeout do banco de dados
+      const batchSize = 10;
       const batches = Math.ceil(pendingOperations.length / batchSize);
       let successCount = 0;
       let errorCount = 0;
+      const failedOperations: string[] = [];
 
       for (let i = 0; i < batches; i++) {
         const start = i * batchSize;
@@ -318,20 +320,32 @@ const OperationImport = ({ userId }: OperationImportProps) => {
           };
         });
 
-        const { error } = await supabase
-          .from("trading_operations")
-          .insert(operationsWithUserId);
+        try {
+          const { error } = await supabase
+            .from("trading_operations")
+            .insert(operationsWithUserId);
 
-        if (error) {
-          console.error(`Erro no lote ${i + 1}:`, error);
+          if (error) {
+            console.error(`Erro no lote ${i + 1}:`, error);
+            errorCount += batch.length;
+            failedOperations.push(`Lote ${i + 1}: ${error.message}`);
+          } else {
+            successCount += batch.length;
+          }
+        } catch (batchError: any) {
+          console.error(`Exceção no lote ${i + 1}:`, batchError);
           errorCount += batch.length;
-        } else {
-          successCount += batch.length;
+          failedOperations.push(`Lote ${i + 1}: ${batchError.message || 'Erro desconhecido'}`);
         }
 
         // Atualizar progresso
         const currentProgress = Math.round(((i + 1) / batches) * 100);
         setProgress(currentProgress);
+
+        // Pequeno delay entre batches para evitar sobrecarga
+        if (i < batches - 1) {
+          await new Promise(resolve => setTimeout(resolve, 100));
+        }
       }
 
       setResults({ success: successCount, errors: errorCount });
@@ -341,6 +355,7 @@ const OperationImport = ({ userId }: OperationImportProps) => {
       }
       if (errorCount > 0) {
         toast.error(`${errorCount} operação(ões) falharam na importação`);
+        setErrorList(prev => [...prev, ...failedOperations]);
       }
 
       // Limpar preview
