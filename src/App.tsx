@@ -19,7 +19,7 @@ import Profile from "./pages/Profile";
 import Financas from "./pages/Financas";
 import GerenciamentoRisco from "./pages/GerenciamentoRisco";
 import Onboarding from "./pages/Onboarding";
-import Contratos from "./pages/Contratos";
+
 import Trading from "./pages/Trading";
 import NotFound from "./pages/NotFound";
 import { useEffect } from "react";
@@ -51,7 +51,7 @@ const App = () => {
                   <Route path="/onboarding" element={<Onboarding />} />
                   <Route path="/dashboard" element={<Dashboard />} />
                   <Route path="/admin" element={<Admin />} />
-                  <Route path="/contratos" element={<Contratos />} />
+                  
                   <Route path="/operations" element={<Operations />} />
                   <Route path="/operation/:id" element={<OperationDetail />} />
                   <Route path="/trading" element={<Trading />} />
