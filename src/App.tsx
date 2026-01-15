@@ -19,6 +19,7 @@ import Profile from "./pages/Profile";
 import Financas from "./pages/Financas";
 import GerenciamentoRisco from "./pages/GerenciamentoRisco";
 import Onboarding from "./pages/Onboarding";
+import Mensagens from "./pages/Mensagens";
 
 import Trading from "./pages/Trading";
 import NotFound from "./pages/NotFound";
@@ -58,6 +59,7 @@ const App = () => {
                   <Route path="/profile" element={<Profile />} />
                   <Route path="/financas" element={<Financas />} />
                   <Route path="/risco" element={<GerenciamentoRisco />} />
+                  <Route path="/mensagens" element={<Mensagens />} />
                   {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                   <Route path="*" element={<NotFound />} />
                 </Routes>

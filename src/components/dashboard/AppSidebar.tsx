@@ -7,8 +7,8 @@ import {
   Shield,
   Wallet,
   ShieldCheck,
-  
   TrendingUp,
+  Mail,
 } from "lucide-react";
 
 import {
@@ -57,6 +57,12 @@ const menuItems = [
     url: "/risco",
     icon: ShieldCheck,
     color: "text-cyan-500",
+  },
+  {
+    title: "Mensagens",
+    url: "/mensagens",
+    icon: Mail,
+    color: "text-pink-500",
   },
   {
     title: "Perfil",
