@@ -106,13 +106,37 @@ const PendingUsersTable = ({ onUpdate }: PendingUsersTableProps) => {
 
       if (error) throw error;
 
-      // Criar notificação para o usuário
+      // Criar mensagem de boas-vindas personalizada
+      const welcomeMessage = `Olá, ${user.full_name || 'Cliente'}, tudo bem?
+
+Aqui é o Artur, da Genial.
+
+Obrigado por acessar o ZEVE HUB sua aprovação já está concluída ✅
+
+Quero te fazer um convite simples e sem custo:
+participar da nossa assessoria Zeve Investimentos.
+
+👉 É totalmente gratuita
+👉 Corretagem ZERO
+👉 Sem fidelidade ou obrigação
+
+Ao se vincular, você passa a contar com uma estrutura profissional para te acompanhar no mercado, com foco em organização, controle de risco e evolução consistente.
+
+Para ativar, é bem rápido:
+vou te enviar um PDF com o passo a passo leva menos de 2 minutos.
+
+🔍 Quando for procurar, é só buscar por Zeve Investimentos 9.
+
+Qualquer dúvida, fico à disposição por aqui.
+Vamos avançar no seu próximo nível no mercado. 🚀`;
+
       await supabase.from("messages").insert({
         user_id: user.id,
-        title: "Acesso Temporário Aprovado!",
-        content: "Seu acesso ao Zeve Hub foi liberado por 3 dias! Após esse período, entre em contato com seu assessor para continuar usando a plataforma.",
+        title: "Bem-vindo ao ZEVE HUB! ✅",
+        content: welcomeMessage,
         priority: "high",
         is_global: false,
+        created_by: session?.user.id,
       });
 
       toast.success(`Acesso temporário de 3 dias liberado para ${user.full_name || user.email}!`);
@@ -151,14 +175,40 @@ const PendingUsersTable = ({ onUpdate }: PendingUsersTableProps) => {
 
       if (error) throw error;
 
-      // Criar notificações para todos os usuários
-      const notifications = users.map(user => ({
-        user_id: user.id,
-        title: "Acesso Temporário Aprovado!",
-        content: "Seu acesso ao Zeve Hub foi liberado por 3 dias! Após esse período, entre em contato com seu assessor para continuar usando a plataforma.",
-        priority: "high",
-        is_global: false,
-      }));
+      // Criar mensagens de boas-vindas personalizadas para todos
+      const notifications = users.map(user => {
+        const welcomeMessage = `Olá, ${user.full_name || 'Cliente'}, tudo bem?
+
+Aqui é o Artur, da Genial.
+
+Obrigado por acessar o ZEVE HUB sua aprovação já está concluída ✅
+
+Quero te fazer um convite simples e sem custo:
+participar da nossa assessoria Zeve Investimentos.
+
+👉 É totalmente gratuita
+👉 Corretagem ZERO
+👉 Sem fidelidade ou obrigação
+
+Ao se vincular, você passa a contar com uma estrutura profissional para te acompanhar no mercado, com foco em organização, controle de risco e evolução consistente.
+
+Para ativar, é bem rápido:
+vou te enviar um PDF com o passo a passo leva menos de 2 minutos.
+
+🔍 Quando for procurar, é só buscar por Zeve Investimentos 9.
+
+Qualquer dúvida, fico à disposição por aqui.
+Vamos avançar no seu próximo nível no mercado. 🚀`;
+
+        return {
+          user_id: user.id,
+          title: "Bem-vindo ao ZEVE HUB! ✅",
+          content: welcomeMessage,
+          priority: "high",
+          is_global: false,
+          created_by: session?.user.id,
+        };
+      });
 
       await supabase.from("messages").insert(notifications);
 
