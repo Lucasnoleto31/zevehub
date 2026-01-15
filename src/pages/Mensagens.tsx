@@ -65,6 +65,7 @@ const Mensagens = () => {
         .from("messages")
         .select("*")
         .or(`user_id.eq.${userId},is_global.eq.true`)
+        .not("created_by", "is", null)
         .order("created_at", { ascending: false });
 
       if (error) throw error;
