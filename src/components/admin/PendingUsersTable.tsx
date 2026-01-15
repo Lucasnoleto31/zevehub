@@ -89,12 +89,17 @@ const PendingUsersTable = ({ onUpdate }: PendingUsersTableProps) => {
     try {
       const { data: { session } } = await supabase.auth.getSession();
       
+      // Calcular expiração de 3 dias
+      const trialExpiresAt = new Date();
+      trialExpiresAt.setDate(trialExpiresAt.getDate() + 3);
+      
       const { error } = await supabase
         .from("profiles")
         .update({
           access_status: "aprovado",
           access_approved_at: new Date().toISOString(),
           access_approved_by: session?.user.id,
+          trial_expires_at: trialExpiresAt.toISOString(),
         })
         .eq("id", user.id);
 
@@ -103,13 +108,13 @@ const PendingUsersTable = ({ onUpdate }: PendingUsersTableProps) => {
       // Criar notificação para o usuário
       await supabase.from("messages").insert({
         user_id: user.id,
-        title: "Acesso Aprovado!",
-        content: "Seu acesso ao Zeve Hub foi liberado! Bem-vindo à plataforma.",
+        title: "Acesso Temporário Aprovado!",
+        content: "Seu acesso ao Zeve Hub foi liberado por 3 dias! Após esse período, entre em contato com seu assessor para continuar usando a plataforma.",
         priority: "high",
         is_global: false,
       });
 
-      toast.success(`Acesso de ${user.full_name || user.email} aprovado com sucesso!`);
+      toast.success(`Acesso temporário de 3 dias liberado para ${user.full_name || user.email}!`);
       loadPendingUsers();
       onUpdate();
     } catch (error) {
