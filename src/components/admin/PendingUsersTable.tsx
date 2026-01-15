@@ -1,10 +1,10 @@
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Check, X, Download, Search, MessageCircle, CheckCheck, Loader2 } from "lucide-react";
+import { Check, X, Download, Search, MessageCircle, CheckCheck, Loader2, FileText, Upload } from "lucide-react";
 import * as XLSX from "xlsx";
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -18,6 +18,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
 
 interface PendingUser {
   id: string;
@@ -42,8 +43,12 @@ const PendingUsersTable = ({ onUpdate }: PendingUsersTableProps) => {
   const [approveAllLoading, setApproveAllLoading] = useState(false);
   const [selectedUser, setSelectedUser] = useState<PendingUser | null>(null);
   const [showRejectDialog, setShowRejectDialog] = useState(false);
+  const [showApproveDialog, setShowApproveDialog] = useState(false);
   const [rejectReason, setRejectReason] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
+  const [approvalPdf, setApprovalPdf] = useState<File | null>(null);
+  const [uploadingPdf, setUploadingPdf] = useState(false);
+  const approvalFileInputRef = useRef<HTMLInputElement>(null);
 
   const filteredUsers = useMemo(() => {
     if (!searchTerm.trim()) return users;
@@ -85,10 +90,54 @@ const PendingUsersTable = ({ onUpdate }: PendingUsersTableProps) => {
     }
   };
 
-  const handleApprove = async (user: PendingUser) => {
-    setActionLoading(user.id);
+  const openApproveDialog = (user: PendingUser) => {
+    setSelectedUser(user);
+    setApprovalPdf(null);
+    setShowApproveDialog(true);
+  };
+
+  const handleApprovalPdfChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.type !== "application/pdf") {
+        toast.error("Por favor, selecione apenas arquivos PDF");
+        return;
+      }
+      if (file.size > 10 * 1024 * 1024) {
+        toast.error("O arquivo deve ter no máximo 10MB");
+        return;
+      }
+      setApprovalPdf(file);
+    }
+  };
+
+  const handleApprove = async () => {
+    if (!selectedUser) return;
+    
+    setUploadingPdf(true);
+    setActionLoading(selectedUser.id);
+    
     try {
       const { data: { session } } = await supabase.auth.getSession();
+      
+      // Upload PDF if selected
+      let attachmentUrl: string | null = null;
+      if (approvalPdf) {
+        const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.pdf`;
+        const filePath = `attachments/${fileName}`;
+        
+        const { error: uploadError } = await supabase.storage
+          .from("message-attachments")
+          .upload(filePath, approvalPdf);
+        
+        if (uploadError) throw uploadError;
+        
+        const { data: { publicUrl } } = supabase.storage
+          .from("message-attachments")
+          .getPublicUrl(filePath);
+        
+        attachmentUrl = publicUrl;
+      }
       
       // Calcular expiração de 3 dias
       const trialExpiresAt = new Date();
@@ -102,12 +151,12 @@ const PendingUsersTable = ({ onUpdate }: PendingUsersTableProps) => {
           access_approved_by: session?.user.id,
           trial_expires_at: trialExpiresAt.toISOString(),
         })
-        .eq("id", user.id);
+        .eq("id", selectedUser.id);
 
       if (error) throw error;
 
       // Criar mensagem de boas-vindas personalizada
-      const welcomeMessage = `Olá, ${user.full_name || 'Cliente'}, tudo bem?
+      const welcomeMessage = `Olá, ${selectedUser.full_name || 'Cliente'}, tudo bem?
 
 Aqui é o Artur, da Genial.
 
@@ -131,15 +180,19 @@ Qualquer dúvida, fico à disposição por aqui.
 Vamos avançar no seu próximo nível no mercado. 🚀`;
 
       await supabase.from("messages").insert({
-        user_id: user.id,
+        user_id: selectedUser.id,
         title: "Bem-vindo ao ZEVE HUB! ✅",
         content: welcomeMessage,
         priority: "high",
         is_global: false,
         created_by: session?.user.id,
+        attachment_url: attachmentUrl,
       });
 
-      toast.success(`Acesso temporário de 3 dias liberado para ${user.full_name || user.email}!`);
+      toast.success(`Acesso temporário de 3 dias liberado para ${selectedUser.full_name || selectedUser.email}!`);
+      setShowApproveDialog(false);
+      setSelectedUser(null);
+      setApprovalPdf(null);
       loadPendingUsers();
       onUpdate();
     } catch (error) {
@@ -147,6 +200,7 @@ Vamos avançar no seu próximo nível no mercado. 🚀`;
       toast.error("Erro ao aprovar usuário");
     } finally {
       setActionLoading(null);
+      setUploadingPdf(false);
     }
   };
 
@@ -364,6 +418,78 @@ Vamos avançar no seu próximo nível no mercado. 🚀`;
         </DialogContent>
       </Dialog>
 
+      <Dialog open={showApproveDialog} onOpenChange={setShowApproveDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Aprovar Usuário</DialogTitle>
+            <DialogDescription>
+              Você está aprovando o acesso de {selectedUser?.full_name || selectedUser?.email}.
+              Opcionalmente, anexe o PDF com o passo a passo da vinculação:
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Anexar PDF (opcional)</Label>
+              <div className="flex items-center gap-2">
+                <Input
+                  ref={approvalFileInputRef}
+                  type="file"
+                  accept=".pdf"
+                  onChange={handleApprovalPdfChange}
+                  className="hidden"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => approvalFileInputRef.current?.click()}
+                  className="gap-2"
+                >
+                  <Upload className="w-4 h-4" />
+                  Selecionar PDF
+                </Button>
+                {approvalPdf && (
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <FileText className="w-4 h-4" />
+                    <span className="truncate max-w-[200px]">{approvalPdf.name}</span>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setApprovalPdf(null)}
+                      className="h-6 w-6 p-0 text-destructive hover:text-destructive"
+                    >
+                      <X className="w-4 h-4" />
+                    </Button>
+                  </div>
+                )}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Máximo 10MB. O PDF será anexado à mensagem de boas-vindas.
+              </p>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowApproveDialog(false)}>
+              Cancelar
+            </Button>
+            <Button 
+              onClick={handleApprove}
+              disabled={actionLoading === selectedUser?.id || uploadingPdf}
+              className="gap-2"
+            >
+              {uploadingPdf ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Check className="w-4 h-4" />
+              )}
+              Confirmar Aprovação
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <div className="rounded-md border">
         <Table>
           <TableHeader>
@@ -430,7 +556,7 @@ Vamos avançar no seu próximo nível no mercado. 🚀`;
                     <Button
                       variant="default"
                       size="sm"
-                      onClick={() => handleApprove(user)}
+                      onClick={() => openApproveDialog(user)}
                       disabled={actionLoading === user.id}
                       className="gap-1"
                     >
