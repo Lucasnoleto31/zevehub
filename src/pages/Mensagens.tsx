@@ -6,6 +6,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
   Mail, 
@@ -15,7 +21,10 @@ import {
   CheckCircle2, 
   Clock,
   Inbox,
-  CheckCheck
+  CheckCheck,
+  FileText,
+  Download,
+  ExternalLink
 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -29,6 +38,7 @@ interface Message {
   read: boolean | null;
   created_at: string;
   is_global: boolean | null;
+  attachment_url: string | null;
 }
 
 const Mensagens = () => {
@@ -36,6 +46,8 @@ const Mensagens = () => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(true);
   const [userId, setUserId] = useState<string | null>(null);
+  const [selectedMessage, setSelectedMessage] = useState<Message | null>(null);
+  const [dialogOpen, setDialogOpen] = useState(false);
 
   useEffect(() => {
     checkAuth();
@@ -120,6 +132,14 @@ const Mensagens = () => {
     } catch (error) {
       console.error("Erro ao marcar todas como lidas:", error);
       toast.error("Erro ao marcar mensagens como lidas");
+    }
+  };
+
+  const openMessage = (message: Message) => {
+    setSelectedMessage(message);
+    setDialogOpen(true);
+    if (!message.read) {
+      markAsRead(message.id);
     }
   };
 
@@ -250,7 +270,7 @@ const Mensagens = () => {
                       className={`bg-card/50 backdrop-blur-sm transition-all hover:bg-card/70 cursor-pointer ${
                         isUnread ? "border-l-4 border-l-primary" : ""
                       }`}
-                      onClick={() => !message.read && markAsRead(message.id)}
+                      onClick={() => openMessage(message)}
                     >
                       <CardHeader className="pb-2">
                         <div className="flex items-start justify-between gap-4">
@@ -276,6 +296,12 @@ const Mensagens = () => {
                                     Global
                                   </Badge>
                                 )}
+                                {message.attachment_url && (
+                                  <Badge variant="outline" className="text-xs gap-1">
+                                    <FileText className="w-3 h-3" />
+                                    PDF
+                                  </Badge>
+                                )}
                                 {isUnread && (
                                   <Badge variant="default" className="text-xs bg-primary">
                                     Nova
@@ -290,7 +316,7 @@ const Mensagens = () => {
                         </div>
                       </CardHeader>
                       <CardContent>
-                        <p className={`text-sm ${isUnread ? "text-foreground" : "text-muted-foreground"}`}>
+                        <p className={`text-sm line-clamp-2 ${isUnread ? "text-foreground" : "text-muted-foreground"}`}>
                           {message.content}
                         </p>
                       </CardContent>
@@ -302,6 +328,85 @@ const Mensagens = () => {
           </AnimatePresence>
         )}
       </div>
+
+      {/* Dialog para visualização completa */}
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <DialogContent className="sm:max-w-[600px] max-h-[80vh] overflow-y-auto">
+          {selectedMessage && (
+            <>
+              <DialogHeader>
+                <div className="flex items-start gap-3">
+                  <div className={`p-2 rounded-lg ${getPriorityConfig(selectedMessage.priority).bg}`}>
+                    <MailOpen className={`w-5 h-5 ${getPriorityConfig(selectedMessage.priority).color}`} />
+                  </div>
+                  <div className="flex-1 space-y-1">
+                    <DialogTitle className="text-xl">{selectedMessage.title}</DialogTitle>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <Badge variant={getPriorityConfig(selectedMessage.priority).badgeVariant}>
+                        {getPriorityConfig(selectedMessage.priority).label}
+                      </Badge>
+                      {selectedMessage.is_global && (
+                        <Badge variant="secondary">Global</Badge>
+                      )}
+                      <span className="text-xs text-muted-foreground">
+                        {format(new Date(selectedMessage.created_at), "dd 'de' MMMM 'de' yyyy 'às' HH:mm", { locale: ptBR })}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </DialogHeader>
+
+              <div className="space-y-4 mt-4">
+                {/* Conteúdo da mensagem */}
+                <div className="prose prose-sm dark:prose-invert max-w-none">
+                  <p className="text-foreground whitespace-pre-wrap leading-relaxed">
+                    {selectedMessage.content}
+                  </p>
+                </div>
+
+                {/* Anexo PDF */}
+                {selectedMessage.attachment_url && (
+                  <div className="border rounded-lg p-4 bg-muted/30">
+                    <div className="flex items-center gap-3">
+                      <div className="p-3 rounded-lg bg-red-500/10">
+                        <FileText className="w-8 h-8 text-red-500" />
+                      </div>
+                      <div className="flex-1">
+                        <p className="font-medium">Anexo PDF</p>
+                        <p className="text-sm text-muted-foreground">
+                          Clique para visualizar ou baixar
+                        </p>
+                      </div>
+                      <div className="flex gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="gap-2"
+                          onClick={() => window.open(selectedMessage.attachment_url!, "_blank")}
+                        >
+                          <ExternalLink className="w-4 h-4" />
+                          Abrir
+                        </Button>
+                        <Button
+                          variant="default"
+                          size="sm"
+                          className="gap-2"
+                          asChild
+                        >
+                          <a href={selectedMessage.attachment_url} download>
+                            <Download className="w-4 h-4" />
+                            Baixar
+                          </a>
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
     </PremiumPageLayout>
   );
 };
