@@ -4,14 +4,24 @@ import { supabase } from "@/integrations/supabase/client";
 import { User } from "@supabase/supabase-js";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { LogOut, TrendingUp } from "lucide-react";
+import { LogOut, TrendingUp, Mail, AlertTriangle, Bell, CheckCircle2, Clock, FileText, Download, ExternalLink, ChevronLeft, ChevronRight } from "lucide-react";
 import { motion } from "framer-motion";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/dashboard/AppSidebar";
 import { RestrictedAccess } from "@/components/dashboard/RestrictedAccess";
 import { TradingDashboard } from "@/components/trading/TradingDashboard";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
 
 interface ProfitOperation {
   id: string;
@@ -28,6 +38,16 @@ interface Strategy {
   name: string;
 }
 
+interface UnreadMessage {
+  id: string;
+  title: string;
+  content: string;
+  priority: string | null;
+  created_at: string;
+  is_global: boolean | null;
+  attachment_url: string | null;
+}
+
 const Dashboard = () => {
   const navigate = useNavigate();
   const [user, setUser] = useState<User | null>(null);
@@ -37,6 +57,9 @@ const Dashboard = () => {
   const [accessStatus, setAccessStatus] = useState<string>("aprovado");
   const [operations, setOperations] = useState<ProfitOperation[]>([]);
   const [strategies, setStrategies] = useState<Strategy[]>([]);
+  const [unreadMessages, setUnreadMessages] = useState<UnreadMessage[]>([]);
+  const [showMessagesDialog, setShowMessagesDialog] = useState(false);
+  const [currentMessageIndex, setCurrentMessageIndex] = useState(0);
 
   useEffect(() => {
     checkUser();
@@ -129,6 +152,20 @@ const Dashboard = () => {
         setStrategies(strategiesData || []);
       }
 
+      // Fetch unread messages from admin
+      const { data: messagesData } = await supabase
+        .from("messages")
+        .select("id, title, content, priority, created_at, is_global, attachment_url")
+        .or(`user_id.eq.${session.user.id},is_global.eq.true`)
+        .not("created_by", "is", null)
+        .eq("read", false)
+        .order("created_at", { ascending: false });
+
+      if (messagesData && messagesData.length > 0) {
+        setUnreadMessages(messagesData);
+        setShowMessagesDialog(true);
+      }
+
     } catch (error) {
       console.error("Erro ao carregar dados:", error);
     } finally {
@@ -141,6 +178,56 @@ const Dashboard = () => {
     toast.success("Logout realizado com sucesso");
     navigate("/auth");
   };
+
+  const getPriorityConfig = (priority: string | null) => {
+    switch (priority) {
+      case "urgent":
+        return { icon: AlertTriangle, color: "text-red-500", bg: "bg-red-500/10", label: "Urgente", badgeVariant: "destructive" as const };
+      case "high":
+        return { icon: Bell, color: "text-orange-500", bg: "bg-orange-500/10", label: "Alta", badgeVariant: "default" as const };
+      case "low":
+        return { icon: Clock, color: "text-muted-foreground", bg: "bg-muted/50", label: "Baixa", badgeVariant: "secondary" as const };
+      default:
+        return { icon: CheckCircle2, color: "text-blue-500", bg: "bg-blue-500/10", label: "Normal", badgeVariant: "outline" as const };
+    }
+  };
+
+  const markCurrentMessageAsRead = async () => {
+    if (unreadMessages.length === 0) return;
+    
+    const currentMessage = unreadMessages[currentMessageIndex];
+    await supabase
+      .from("messages")
+      .update({ read: true })
+      .eq("id", currentMessage.id);
+  };
+
+  const handleNextMessage = async () => {
+    await markCurrentMessageAsRead();
+    if (currentMessageIndex < unreadMessages.length - 1) {
+      setCurrentMessageIndex(prev => prev + 1);
+    }
+  };
+
+  const handlePrevMessage = () => {
+    if (currentMessageIndex > 0) {
+      setCurrentMessageIndex(prev => prev - 1);
+    }
+  };
+
+  const handleCloseMessages = async () => {
+    // Mark all messages as read
+    const messageIds = unreadMessages.map(m => m.id);
+    await supabase
+      .from("messages")
+      .update({ read: true })
+      .in("id", messageIds);
+    
+    setShowMessagesDialog(false);
+    setUnreadMessages([]);
+  };
+
+  const currentMessage = unreadMessages[currentMessageIndex];
 
   const isAdmin = roles.includes("admin");
   const hasFullAccess = accessStatus === "aprovado" || isAdmin;
@@ -271,6 +358,100 @@ const Dashboard = () => {
           </main>
         </div>
       </div>
+
+      {/* Messages Dialog */}
+      <Dialog open={showMessagesDialog} onOpenChange={setShowMessagesDialog}>
+        <DialogContent className="sm:max-w-[600px] max-h-[80vh] overflow-y-auto">
+          {currentMessage && (
+            <>
+              <DialogHeader>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className={`p-2 rounded-lg ${getPriorityConfig(currentMessage.priority).bg}`}>
+                      <Mail className={`w-5 h-5 ${getPriorityConfig(currentMessage.priority).color}`} />
+                    </div>
+                    <Badge variant="secondary">
+                      {currentMessageIndex + 1} de {unreadMessages.length}
+                    </Badge>
+                  </div>
+                  <Badge variant={getPriorityConfig(currentMessage.priority).badgeVariant}>
+                    {getPriorityConfig(currentMessage.priority).label}
+                  </Badge>
+                </div>
+                <DialogTitle className="text-xl mt-3">{currentMessage.title}</DialogTitle>
+                <p className="text-xs text-muted-foreground">
+                  {format(new Date(currentMessage.created_at), "dd 'de' MMMM 'de' yyyy 'às' HH:mm", { locale: ptBR })}
+                </p>
+              </DialogHeader>
+
+              <div className="space-y-4 mt-4">
+                <div className="prose prose-sm dark:prose-invert max-w-none">
+                  <p className="text-foreground whitespace-pre-wrap leading-relaxed">
+                    {currentMessage.content}
+                  </p>
+                </div>
+
+                {currentMessage.attachment_url && (
+                  <div className="border rounded-lg p-4 bg-muted/30">
+                    <div className="flex items-center gap-3">
+                      <div className="p-3 rounded-lg bg-red-500/10">
+                        <FileText className="w-8 h-8 text-red-500" />
+                      </div>
+                      <div className="flex-1">
+                        <p className="font-medium">Anexo PDF</p>
+                        <p className="text-sm text-muted-foreground">Clique para visualizar</p>
+                      </div>
+                      <div className="flex gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="gap-2"
+                          onClick={() => window.open(currentMessage.attachment_url!, "_blank")}
+                        >
+                          <ExternalLink className="w-4 h-4" />
+                          Abrir
+                        </Button>
+                        <Button variant="default" size="sm" className="gap-2" asChild>
+                          <a href={currentMessage.attachment_url} download>
+                            <Download className="w-4 h-4" />
+                            Baixar
+                          </a>
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <DialogFooter className="mt-6 flex-col sm:flex-row gap-2">
+                <div className="flex gap-2 w-full sm:w-auto">
+                  <Button
+                    variant="outline"
+                    onClick={handlePrevMessage}
+                    disabled={currentMessageIndex === 0}
+                    className="flex-1 sm:flex-none gap-2"
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                    Anterior
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={handleNextMessage}
+                    disabled={currentMessageIndex === unreadMessages.length - 1}
+                    className="flex-1 sm:flex-none gap-2"
+                  >
+                    Próxima
+                    <ChevronRight className="w-4 h-4" />
+                  </Button>
+                </div>
+                <Button onClick={handleCloseMessages} className="w-full sm:w-auto">
+                  {unreadMessages.length === 1 ? "Continuar para o Dashboard" : "Marcar todas como lidas e continuar"}
+                </Button>
+              </DialogFooter>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
     </SidebarProvider>
   );
 };
