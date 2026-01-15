@@ -1392,6 +1392,95 @@ export type Database = {
           },
         ]
       }
+      reel_interactions: {
+        Row: {
+          created_at: string
+          id: string
+          liked: boolean
+          reel_id: string
+          updated_at: string
+          user_id: string
+          watch_time_seconds: number | null
+          watched: boolean
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          liked?: boolean
+          reel_id: string
+          updated_at?: string
+          user_id: string
+          watch_time_seconds?: number | null
+          watched?: boolean
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          liked?: boolean
+          reel_id?: string
+          updated_at?: string
+          user_id?: string
+          watch_time_seconds?: number | null
+          watched?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reel_interactions_reel_id_fkey"
+            columns: ["reel_id"]
+            isOneToOne: false
+            referencedRelation: "reels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      reels: {
+        Row: {
+          category: string
+          created_at: string
+          created_by: string | null
+          description: string | null
+          duration_seconds: number | null
+          id: string
+          is_active: boolean
+          likes_count: number
+          thumbnail_url: string | null
+          title: string
+          updated_at: string
+          video_url: string
+          views_count: number
+        }
+        Insert: {
+          category?: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          duration_seconds?: number | null
+          id?: string
+          is_active?: boolean
+          likes_count?: number
+          thumbnail_url?: string | null
+          title: string
+          updated_at?: string
+          video_url: string
+          views_count?: number
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          duration_seconds?: number | null
+          id?: string
+          is_active?: boolean
+          likes_count?: number
+          thumbnail_url?: string | null
+          title?: string
+          updated_at?: string
+          video_url?: string
+          views_count?: number
+        }
+        Relationships: []
+      }
       registered_clients: {
         Row: {
           cpf: string

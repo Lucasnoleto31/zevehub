@@ -9,6 +9,7 @@ import {
   ShieldCheck,
   TrendingUp,
   Mail,
+  Film,
 } from "lucide-react";
 
 import {
@@ -63,6 +64,12 @@ const menuItems = [
     url: "/mensagens",
     icon: Mail,
     color: "text-pink-500",
+  },
+  {
+    title: "Reels",
+    url: "/reels",
+    icon: Film,
+    color: "text-rose-500",
   },
   {
     title: "Perfil",

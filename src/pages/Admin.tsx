@@ -3,12 +3,13 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
-import { Users, Settings, Clock, CheckCircle, Ban } from "lucide-react";
+import { Users, Settings, Clock, CheckCircle, Ban, Film } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import ClientsTable from "@/components/admin/ClientsTable";
 import PendingUsersTable from "@/components/admin/PendingUsersTable";
 import PermissionsManager from "@/components/admin/PermissionsManager";
 import CreateMessageDialog from "@/components/admin/CreateMessageDialog";
+import { ReelsManager } from "@/components/admin/ReelsManager";
 import { PremiumPageLayout, PremiumCard, PremiumLoader } from "@/components/layout/PremiumPageLayout";
 import { motion } from "framer-motion";
 
@@ -224,6 +225,13 @@ const Admin = () => {
             >
               Logs de Acesso
             </TabsTrigger>
+            <TabsTrigger 
+              value="reels"
+              className="gap-2 data-[state=active]:bg-background data-[state=active]:shadow-lg rounded-xl font-semibold transition-all duration-300"
+            >
+              <Film className="w-4 h-4" />
+              Reels
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="pending" className="space-y-4">
@@ -285,6 +293,20 @@ const Admin = () => {
                 <p className="text-muted-foreground text-center py-8">
                   Funcionalidade em desenvolvimento
                 </p>
+              </CardContent>
+            </PremiumCard>
+          </TabsContent>
+
+          <TabsContent value="reels" className="space-y-4">
+            <PremiumCard variant="gradient">
+              <CardHeader className="p-0 pb-4">
+                <CardTitle>Gerenciar Reels</CardTitle>
+                <CardDescription>
+                  Publique e gerencie vídeos educacionais curtos
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="p-0">
+                <ReelsManager />
               </CardContent>
             </PremiumCard>
           </TabsContent>
