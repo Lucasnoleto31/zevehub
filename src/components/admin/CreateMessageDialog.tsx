@@ -107,19 +107,46 @@ const CreateMessageDialog = ({ clients, onMessageCreated }: CreateMessageDialogP
         }
       }
 
-      const { error } = await supabase.from("messages").insert({
-        title: formData.title,
-        content: formData.content,
-        priority: formData.priority,
-        is_global: formData.isGlobal,
-        user_id: formData.isGlobal ? null : formData.userId,
-        created_by: user?.id,
-        attachment_url: attachmentUrl,
-      });
+      if (formData.isGlobal) {
+        // Create individual messages for each client with personalized content
+        const messagesToInsert = clients.map((client) => {
+          const personalizedContent = `Olá ${client.full_name || 'Cliente'},\n\n${formData.content}`;
+          return {
+            title: formData.title,
+            content: personalizedContent,
+            priority: formData.priority,
+            is_global: false,
+            user_id: client.id,
+            created_by: user?.id,
+            attachment_url: attachmentUrl,
+          };
+        });
 
-      if (error) throw error;
+        const { error } = await supabase.from("messages").insert(messagesToInsert);
+        if (error) throw error;
 
-      toast.success("Mensagem enviada com sucesso!");
+        toast.success(`Mensagem enviada para ${clients.length} clientes!`);
+      } else {
+        // Single message for specific user
+        const selectedClient = clients.find(c => c.id === formData.userId);
+        const personalizedContent = selectedClient 
+          ? `Olá ${selectedClient.full_name || 'Cliente'},\n\n${formData.content}`
+          : formData.content;
+
+        const { error } = await supabase.from("messages").insert({
+          title: formData.title,
+          content: personalizedContent,
+          priority: formData.priority,
+          is_global: false,
+          user_id: formData.userId,
+          created_by: user?.id,
+          attachment_url: attachmentUrl,
+        });
+
+        if (error) throw error;
+        toast.success("Mensagem enviada com sucesso!");
+      }
+
       setFormData({
         title: "",
         content: "",
