@@ -22,7 +22,6 @@ import Onboarding from "./pages/Onboarding";
 import Mensagens from "./pages/Mensagens";
 
 import Trading from "./pages/Trading";
-import Reels from "./pages/Reels";
 import NotFound from "./pages/NotFound";
 import { useEffect } from "react";
 import { registerServiceWorker } from "@/lib/register-sw";
@@ -57,7 +56,6 @@ const App = () => {
                   <Route path="/operations" element={<Operations />} />
                   <Route path="/operation/:id" element={<OperationDetail />} />
                   <Route path="/trading" element={<Trading />} />
-                  <Route path="/reels" element={<Reels />} />
                   <Route path="/profile" element={<Profile />} />
                   <Route path="/financas" element={<Financas />} />
                   <Route path="/risco" element={<GerenciamentoRisco />} />
