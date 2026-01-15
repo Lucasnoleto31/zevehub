@@ -59,8 +59,38 @@ const Dashboard = () => {
         .eq("id", session.user.id)
         .single();
 
-      setProfile(profileData);
-      setAccessStatus(profileData?.access_status || "pendente");
+      // Verificar se o trial expirou
+      if (profileData?.trial_expires_at && profileData?.access_status === "aprovado") {
+        const trialExpires = new Date(profileData.trial_expires_at);
+        if (trialExpires < new Date()) {
+          // Bloquear automaticamente
+          await supabase
+            .from("profiles")
+            .update({ 
+              access_status: "bloqueado",
+              trial_expires_at: null 
+            })
+            .eq("id", session.user.id);
+          
+          // Criar notificação
+          await supabase.from("messages").insert({
+            user_id: session.user.id,
+            title: "Período de Teste Expirado",
+            content: "Seu período de teste de 3 dias expirou. Entre em contato com seu assessor pelo WhatsApp +55 62 98181-0004 para continuar usando a plataforma.",
+            priority: "high",
+            is_global: false,
+          });
+          
+          setAccessStatus("bloqueado");
+          setProfile({ ...profileData, access_status: "bloqueado" });
+        } else {
+          setProfile(profileData);
+          setAccessStatus(profileData?.access_status || "pendente");
+        }
+      } else {
+        setProfile(profileData);
+        setAccessStatus(profileData?.access_status || "pendente");
+      }
 
       const { data: rolesData } = await supabase
         .from("user_roles")

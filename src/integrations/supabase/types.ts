@@ -1147,6 +1147,7 @@ export type Database = {
           totp_enabled: boolean | null
           totp_secret: string | null
           totp_verified_at: string | null
+          trial_expires_at: string | null
           updated_at: string
         }
         Insert: {
@@ -1177,6 +1178,7 @@ export type Database = {
           totp_enabled?: boolean | null
           totp_secret?: string | null
           totp_verified_at?: string | null
+          trial_expires_at?: string | null
           updated_at?: string
         }
         Update: {
@@ -1207,6 +1209,7 @@ export type Database = {
           totp_enabled?: boolean | null
           totp_secret?: string | null
           totp_verified_at?: string | null
+          trial_expires_at?: string | null
           updated_at?: string
         }
         Relationships: []
@@ -1874,6 +1877,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      block_expired_trial_users: { Args: never; Returns: number }
       check_and_award_badges: {
         Args: { p_user_id: string }
         Returns: {
