@@ -4,7 +4,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Check, X, Download, Search, MessageCircle } from "lucide-react";
+import { Check, X, Download, Search, MessageCircle, CheckCheck, Loader2 } from "lucide-react";
 import * as XLSX from "xlsx";
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -39,6 +39,7 @@ const PendingUsersTable = ({ onUpdate }: PendingUsersTableProps) => {
   const [users, setUsers] = useState<PendingUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [approveAllLoading, setApproveAllLoading] = useState(false);
   const [selectedUser, setSelectedUser] = useState<PendingUser | null>(null);
   const [showRejectDialog, setShowRejectDialog] = useState(false);
   const [rejectReason, setRejectReason] = useState("");
@@ -125,6 +126,53 @@ const PendingUsersTable = ({ onUpdate }: PendingUsersTableProps) => {
     }
   };
 
+  const handleApproveAll = async () => {
+    if (users.length === 0) return;
+    
+    setApproveAllLoading(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      // Calcular expiração de 3 dias
+      const trialExpiresAt = new Date();
+      trialExpiresAt.setDate(trialExpiresAt.getDate() + 3);
+      
+      const userIds = users.map(u => u.id);
+      
+      const { error } = await supabase
+        .from("profiles")
+        .update({
+          access_status: "aprovado",
+          access_approved_at: new Date().toISOString(),
+          access_approved_by: session?.user.id,
+          trial_expires_at: trialExpiresAt.toISOString(),
+        })
+        .in("id", userIds);
+
+      if (error) throw error;
+
+      // Criar notificações para todos os usuários
+      const notifications = users.map(user => ({
+        user_id: user.id,
+        title: "Acesso Temporário Aprovado!",
+        content: "Seu acesso ao Zeve Hub foi liberado por 3 dias! Após esse período, entre em contato com seu assessor para continuar usando a plataforma.",
+        priority: "high",
+        is_global: false,
+      }));
+
+      await supabase.from("messages").insert(notifications);
+
+      toast.success(`${users.length} usuário(s) aprovado(s) com trial de 3 dias!`);
+      loadPendingUsers();
+      onUpdate();
+    } catch (error) {
+      console.error("Erro ao aprovar todos os usuários:", error);
+      toast.error("Erro ao aprovar todos os usuários");
+    } finally {
+      setApproveAllLoading(false);
+    }
+  };
+
   const handleReject = async () => {
     if (!selectedUser) return;
     
@@ -208,10 +256,26 @@ const PendingUsersTable = ({ onUpdate }: PendingUsersTableProps) => {
             className="pl-9"
           />
         </div>
-        <Button onClick={exportToExcel} variant="outline" size="sm" className="gap-2">
-          <Download className="w-4 h-4" />
-          Exportar Excel
-        </Button>
+        <div className="flex gap-2">
+          <Button 
+            onClick={handleApproveAll} 
+            variant="default" 
+            size="sm" 
+            className="gap-2 bg-emerald-600 hover:bg-emerald-700"
+            disabled={approveAllLoading || users.length === 0}
+          >
+            {approveAllLoading ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <CheckCheck className="w-4 h-4" />
+            )}
+            Aprovar Todos ({users.length})
+          </Button>
+          <Button onClick={exportToExcel} variant="outline" size="sm" className="gap-2">
+            <Download className="w-4 h-4" />
+            Exportar Excel
+          </Button>
+        </div>
       </div>
 
       {searchTerm && (
