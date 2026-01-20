@@ -1494,6 +1494,57 @@ export type Database = {
         }
         Relationships: []
       }
+      tax_calculations: {
+        Row: {
+          accumulated_loss: number
+          created_at: string
+          darf_generated_at: string | null
+          gross_profit: number
+          id: string
+          is_paid: boolean
+          month: number
+          notes: string | null
+          paid_at: string | null
+          tax_due: number
+          taxable_base: number
+          updated_at: string
+          user_id: string
+          year: number
+        }
+        Insert: {
+          accumulated_loss?: number
+          created_at?: string
+          darf_generated_at?: string | null
+          gross_profit?: number
+          id?: string
+          is_paid?: boolean
+          month: number
+          notes?: string | null
+          paid_at?: string | null
+          tax_due?: number
+          taxable_base?: number
+          updated_at?: string
+          user_id: string
+          year: number
+        }
+        Update: {
+          accumulated_loss?: number
+          created_at?: string
+          darf_generated_at?: string | null
+          gross_profit?: number
+          id?: string
+          is_paid?: boolean
+          month?: number
+          notes?: string | null
+          paid_at?: string | null
+          tax_due?: number
+          taxable_base?: number
+          updated_at?: string
+          user_id?: string
+          year?: number
+        }
+        Relationships: []
+      }
       trading_goals: {
         Row: {
           created_at: string
