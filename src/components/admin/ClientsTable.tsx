@@ -246,7 +246,7 @@ const ClientsTable = ({ onUpdate }: ClientsTableProps) => {
             <TableHead>Telefone</TableHead>
             <TableHead>E-mail</TableHead>
             <TableHead>Acesso</TableHead>
-            <TableHead>Conta Genial</TableHead>
+            <TableHead>Nossa Assessoria?</TableHead>
             <TableHead>Perfil</TableHead>
             <TableHead>Último Acesso</TableHead>
             <TableHead className="text-right">Ações</TableHead>
@@ -289,18 +289,12 @@ const ClientsTable = ({ onUpdate }: ClientsTableProps) => {
               <TableCell>{client.email}</TableCell>
               <TableCell>{getAccessStatusBadge(client.access_status)}</TableCell>
               <TableCell>
-                {client.has_genial_account ? (
-                  <div className="flex flex-col">
-                    <Badge variant="default" className="w-fit bg-green-500">Sim</Badge>
-                    {client.genial_id && (
-                      <span className="text-xs text-muted-foreground mt-1">
-                        ID: {client.genial_id}
-                      </span>
-                    )}
-                  </div>
-                ) : (
-                  <Badge variant="secondary">Não</Badge>
-                )}
+                <Badge 
+                  variant={client.has_genial_account ? "default" : "secondary"} 
+                  className={client.has_genial_account ? "bg-green-500 hover:bg-green-600" : ""}
+                >
+                  {client.has_genial_account ? "Sim" : "Não"}
+                </Badge>
               </TableCell>
               <TableCell>
                 <div className="flex gap-1 flex-wrap">
