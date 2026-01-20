@@ -9,6 +9,7 @@ import {
   ShieldCheck,
   TrendingUp,
   Mail,
+  Calculator,
 } from "lucide-react";
 
 import {
@@ -57,6 +58,12 @@ const menuItems = [
     url: "/risco",
     icon: ShieldCheck,
     color: "text-cyan-500",
+  },
+  {
+    title: "Calculadora IR",
+    url: "/impostos",
+    icon: Calculator,
+    color: "text-red-500",
   },
   {
     title: "Mensagens",
