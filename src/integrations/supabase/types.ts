@@ -547,6 +547,60 @@ export type Database = {
         }
         Relationships: []
       }
+      economic_events: {
+        Row: {
+          actual_value: string | null
+          category: string
+          country: string
+          created_at: string
+          description: string | null
+          event_date: string
+          event_time: string | null
+          forecast_value: string | null
+          id: string
+          impact: string
+          is_recurring: boolean
+          previous_value: string | null
+          recurrence_pattern: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          actual_value?: string | null
+          category?: string
+          country?: string
+          created_at?: string
+          description?: string | null
+          event_date: string
+          event_time?: string | null
+          forecast_value?: string | null
+          id?: string
+          impact?: string
+          is_recurring?: boolean
+          previous_value?: string | null
+          recurrence_pattern?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          actual_value?: string | null
+          category?: string
+          country?: string
+          created_at?: string
+          description?: string | null
+          event_date?: string
+          event_time?: string | null
+          forecast_value?: string | null
+          id?: string
+          impact?: string
+          is_recurring?: boolean
+          previous_value?: string | null
+          recurrence_pattern?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       finance_categories: {
         Row: {
           color: string | null

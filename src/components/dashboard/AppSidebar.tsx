@@ -10,6 +10,7 @@ import {
   TrendingUp,
   Mail,
   Calculator,
+  Calendar,
 } from "lucide-react";
 
 import {
@@ -64,6 +65,12 @@ const menuItems = [
     url: "/impostos",
     icon: Calculator,
     color: "text-red-500",
+  },
+  {
+    title: "Calendário",
+    url: "/calendario",
+    icon: Calendar,
+    color: "text-emerald-500",
   },
   {
     title: "Mensagens",
