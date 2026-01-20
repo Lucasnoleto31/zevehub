@@ -22,6 +22,7 @@ interface Client {
   full_name: string;
   phone: string | null;
   status: string;
+  has_genial_account?: boolean | null;
   roles?: string[];
 }
 
@@ -46,6 +47,7 @@ const ClientEditDialog = ({ client, open, onClose, onUpdate }: ClientEditDialogP
     full_name: client?.full_name || "",
     phone: client?.phone || "",
     status: client?.status || "active",
+    has_genial_account: client?.has_genial_account ?? false,
   });
   const [selectedRoles, setSelectedRoles] = useState<string[]>(client?.roles || []);
 
@@ -61,6 +63,7 @@ const ClientEditDialog = ({ client, open, onClose, onUpdate }: ClientEditDialogP
           full_name: formData.full_name,
           phone: formData.phone,
           status: formData.status,
+          has_genial_account: formData.has_genial_account,
         })
         .eq("id", client.id);
 
@@ -175,6 +178,22 @@ const ClientEditDialog = ({ client, open, onClose, onUpdate }: ClientEditDialogP
                 </SelectContent>
               </Select>
             </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="has_genial_account">Nossa Assessoria?</Label>
+            <Select 
+              value={formData.has_genial_account ? "sim" : "nao"} 
+              onValueChange={(value) => setFormData({ ...formData, has_genial_account: value === "sim" })}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="sim">Sim</SelectItem>
+                <SelectItem value="nao">Não</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
           <Separator />
