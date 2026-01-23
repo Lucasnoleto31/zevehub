@@ -8,6 +8,7 @@ import RobosFilters from "./RobosFilters";
 import RobosQuickStats from "./RobosQuickStats";
 import RobosCharts from "./RobosCharts";
 import RobosStrategyCards from "./RobosStrategyCards";
+import StrategyOptimizer from "./StrategyOptimizer";
 import PerformanceHeatmap from "@/components/dashboard/PerformanceHeatmap";
 import TopPerformanceDays from "@/components/dashboard/TopPerformanceDays";
 import AdvancedMetrics from "@/components/dashboard/AdvancedMetrics";
@@ -611,6 +612,24 @@ const OperationsDashboard = ({ userId }: OperationsDashboardProps) => {
     );
   }
 
+  const handleApplyOptimizedConfig = (config: {
+    strategy: string;
+    hours: string[];
+    weekdays: string[];
+    months: string[];
+  }) => {
+    setStrategyFilter([config.strategy]);
+    if (config.hours.length > 0) {
+      setHourFilter(config.hours);
+    }
+    if (config.weekdays.length > 0) {
+      setWeekdayFilter(config.weekdays);
+    }
+    if (config.months.length > 0) {
+      setMonthFilter(config.months);
+    }
+  };
+
   return (
     <div className="space-y-8">
       {/* Hero Section */}
@@ -625,6 +644,14 @@ const OperationsDashboard = ({ userId }: OperationsDashboardProps) => {
         monthlyConsistency={stats.monthlyConsistency}
         positiveMonths={stats.positiveMonths}
         negativeMonths={stats.negativeMonths}
+      />
+
+      {/* Strategy Optimizer - Melhor Configuração por Robô */}
+      <StrategyOptimizer
+        operations={operations}
+        strategies={availableStrategies}
+        onApplyConfig={handleApplyOptimizedConfig}
+        onOpenFilters={() => setFiltersOpen(true)}
       />
 
       {/* Filters */}
