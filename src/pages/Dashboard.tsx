@@ -99,7 +99,7 @@ const Dashboard = () => {
           await supabase.from("messages").insert({
             user_id: session.user.id,
             title: "Período de Teste Expirado",
-            content: "Seu período de teste de 3 dias expirou. Entre em contato com seu assessor pelo WhatsApp +55 62 98181-0004 para continuar usando a plataforma.",
+            content: "Seu período de teste de 3 dias expirou. Entre em contato com seu assessor pelo WhatsApp +55 62 9994-4855 para continuar usando a plataforma.",
             priority: "high",
             is_global: false,
           });
