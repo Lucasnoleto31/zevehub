@@ -52,25 +52,29 @@ const DeleteOperationsByStrategy = ({ userId }: DeleteOperationsByStrategyProps)
   };
 
   const deleteBatch = async (strategy: string): Promise<number> => {
-    const BATCH_SIZE = 5; // Reduzido de 25 para 5
-    const MAX_RETRIES = 3;
+    const BATCH_SIZE = 1; // Ultra pequeno - 1 registro por vez
+    const MAX_RETRIES = 5;
     let totalDeleted = 0;
+    let consecutiveFailures = 0;
 
     // Loop até não haver mais operações
     while (true) {
-      // Buscar apenas BATCH_SIZE IDs por vez (evita timeout no SELECT)
+      // Buscar apenas 1 ID por vez
       const { data: operations, error: fetchError } = await supabase
         .from("trading_operations")
         .select("id")
         .eq("strategy", strategy)
         .limit(BATCH_SIZE);
 
-      if (fetchError) throw fetchError;
+      if (fetchError) {
+        console.error("Erro no SELECT:", fetchError);
+        throw fetchError;
+      }
       
       // Se não há mais operações, terminar
       if (!operations || operations.length === 0) break;
 
-      const ids = operations.map(op => op.id);
+      const id = operations[0].id;
       let retries = 0;
       let success = false;
 
@@ -79,33 +83,46 @@ const DeleteOperationsByStrategy = ({ userId }: DeleteOperationsByStrategyProps)
         const { error } = await supabase
           .from("trading_operations")
           .delete()
-          .in("id", ids);
+          .eq("id", id);
 
         if (!error) {
           success = true;
-        } else if (error.message.includes("timeout")) {
+          consecutiveFailures = 0;
+        } else if (error.message.includes("timeout") || error.message.includes("canceling")) {
           retries++;
-          console.log(`Timeout no lote, tentativa ${retries}/${MAX_RETRIES}...`);
-          await new Promise(r => setTimeout(r, 1000 * retries));
+          console.log(`Timeout/Cancel no registro ${id}, tentativa ${retries}/${MAX_RETRIES}...`);
+          // Esperar mais tempo a cada retry
+          await new Promise(r => setTimeout(r, 2000 * retries));
         } else {
+          console.error("Erro ao deletar:", error);
           throw error;
         }
       }
 
       if (!success) {
-        throw new Error("Falha após múltiplas tentativas de timeout");
+        consecutiveFailures++;
+        console.log(`Falha no registro ${id}, pulando... (${consecutiveFailures} falhas consecutivas)`);
+        
+        // Se muitas falhas consecutivas, parar
+        if (consecutiveFailures >= 10) {
+          throw new Error(`Muitas falhas consecutivas (${consecutiveFailures}). Tente novamente mais tarde.`);
+        }
+        
+        // Esperar mais e continuar com próximo registro
+        await new Promise(r => setTimeout(r, 3000));
+        continue;
       }
 
-      totalDeleted += ids.length;
+      totalDeleted += 1;
       setDeletedCount(totalDeleted);
       
-      // Atualizar progresso (estimativa baseada no total inicial)
+      // Atualizar progresso
       if (totalCount > 0) {
         setProgress(Math.min(Math.round((totalDeleted / totalCount) * 100), 99));
       }
 
-      // Delay maior entre lotes para evitar sobrecarga
-      await new Promise(r => setTimeout(r, 500));
+      // Delay entre exclusões para não sobrecarregar
+      await new Promise(r => setTimeout(r, 300));
     }
 
     setProgress(100);
