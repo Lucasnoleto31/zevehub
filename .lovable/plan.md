@@ -1,14 +1,14 @@
 
 
-# Plano: Implementar Exclusão em Lotes para Evitar Timeout
+# Plano: Corrigir Exclusão em Lotes com Paginação
 
-## Problema Identificado
+## Problema Atual
 
-A exclusão de ~1.991 operações do Apollo está falhando por **timeout** do banco de dados. Uma única operação DELETE com muitos registros excede o limite de tempo permitido.
+O timeout está ocorrendo na consulta inicial `SELECT id FROM trading_operations WHERE strategy = 'Apollo'` que tenta buscar todos os 1.991 IDs de uma vez.
 
 ## Solução
 
-Modificar o componente `DeleteOperationsByStrategy` para excluir operações **em lotes menores** (100-200 por vez), garantindo que cada operação complete antes do timeout.
+Implementar **paginação completa** - buscar e excluir pequenos lotes iterativamente, sem nunca carregar todos os IDs na memória.
 
 ---
 
@@ -16,86 +16,77 @@ Modificar o componente `DeleteOperationsByStrategy` para excluir operações **e
 
 ### Arquivo: `src/components/operations/DeleteOperationsByStrategy.tsx`
 
-**Mudanças:**
-1. Implementar função de exclusão em lotes
-2. Adicionar indicador de progresso durante exclusão
-3. Excluir 100 registros por vez até completar
-
-**Nova lógica de exclusão:**
+**Nova lógica:**
 
 ```text
 ┌─────────────────────────────────────────┐
-│  1. Buscar IDs das operações a excluir  │
-│     (SELECT id WHERE strategy = X)      │
-└────────────────┬────────────────────────┘
-                 │
-                 ▼
-┌─────────────────────────────────────────┐
-│  2. Dividir em lotes de 100 IDs         │
-└────────────────┬────────────────────────┘
-                 │
-                 ▼
-┌─────────────────────────────────────────┐
-│  3. Para cada lote:                     │
-│     - DELETE WHERE id IN (lote)         │
-│     - Atualizar progresso na UI         │
-│     - Aguardar pequeno delay            │
-└────────────────┬────────────────────────┘
-                 │
-                 ▼
-┌─────────────────────────────────────────┐
-│  4. Exibir sucesso ao finalizar         │
+│  LOOP até não haver mais registros:     │
+├─────────────────────────────────────────┤
+│  1. SELECT id LIMIT 25                  │
+│     (busca apenas 25 IDs por vez)       │
+├─────────────────────────────────────────┤
+│  2. Se não houver resultados, SAIR      │
+├─────────────────────────────────────────┤
+│  3. DELETE WHERE id IN (25 IDs)         │
+├─────────────────────────────────────────┤
+│  4. Atualizar contador de progresso     │
+├─────────────────────────────────────────┤
+│  5. Delay de 200ms entre lotes          │
 └─────────────────────────────────────────┘
 ```
 
-**Código da função de exclusão em lotes:**
+**Código corrigido:**
 
 ```typescript
-const deleteBatch = async (strategy: string) => {
-  const BATCH_SIZE = 100;
+const deleteBatch = async (strategy: string): Promise<number> => {
+  const BATCH_SIZE = 25;
   let totalDeleted = 0;
-  
-  // Buscar todos os IDs da estratégia
-  const { data: operations, error: fetchError } = await supabase
-    .from("trading_operations")
-    .select("id")
-    .eq("strategy", strategy);
-  
-  if (fetchError) throw fetchError;
-  if (!operations?.length) return 0;
-  
-  const totalToDelete = operations.length;
-  const ids = operations.map(op => op.id);
-  
-  // Excluir em lotes
-  for (let i = 0; i < ids.length; i += BATCH_SIZE) {
-    const batch = ids.slice(i, i + BATCH_SIZE);
+
+  // Loop até não haver mais operações
+  while (true) {
+    // Buscar apenas BATCH_SIZE IDs por vez
+    const { data: operations, error: fetchError } = await supabase
+      .from("trading_operations")
+      .select("id")
+      .eq("strategy", strategy)
+      .limit(BATCH_SIZE);
+
+    if (fetchError) throw fetchError;
     
+    // Se não há mais operações, terminar
+    if (!operations || operations.length === 0) break;
+
+    const ids = operations.map(op => op.id);
+
+    // Excluir este lote
     const { error } = await supabase
       .from("trading_operations")
       .delete()
-      .in("id", batch);
-    
+      .in("id", ids);
+
     if (error) throw error;
+
+    totalDeleted += ids.length;
+    setDeletedCount(totalDeleted);
     
-    totalDeleted += batch.length;
-    setProgress(Math.round((totalDeleted / totalToDelete) * 100));
-    
-    // Pequeno delay entre lotes
-    await new Promise(r => setTimeout(r, 100));
+    // Atualizar progresso (estimativa baseada no total inicial)
+    if (totalCount > 0) {
+      setProgress(Math.min(Math.round((totalDeleted / totalCount) * 100), 99));
+    }
+
+    // Delay entre lotes
+    await new Promise(r => setTimeout(r, 200));
   }
-  
+
+  setProgress(100);
   return totalDeleted;
 };
 ```
 
----
-
-## Interface Atualizada
-
-- Adicionar estado `progress` para mostrar % de exclusão
-- Mostrar "Excluindo... 45%" durante o processo
-- Barra de progresso visual opcional
+**Mudanças adicionais:**
+- Buscar contagem total antes de iniciar (para barra de progresso)
+- Usar `while(true)` com `break` quando não houver mais registros
+- Cada iteração busca e exclui apenas 25 registros
 
 ---
 
@@ -103,7 +94,7 @@ const deleteBatch = async (strategy: string) => {
 
 | Antes | Depois |
 |-------|--------|
-| Timeout com datasets grandes | Exclusão confiável de qualquer tamanho |
-| Sem feedback de progresso | Indicador de % completado |
-| Falha silenciosa | Mensagens claras de erro/sucesso |
+| SELECT de todos os IDs (timeout) | SELECT de 25 IDs por vez |
+| Falha com datasets grandes | Funciona com qualquer tamanho |
+| Progresso impreciso | Progresso em tempo real |
 
