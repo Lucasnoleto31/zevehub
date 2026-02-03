@@ -1,110 +1,61 @@
 
+# Plano: Restringir Estratégias para Apenas 3
 
-# Plano: Corrigir Timeout com Índice + Batch Menor
+## Objetivo
+Manter apenas **Alaska & Square**, **Ares** e **Orion** no sistema, removendo todas as outras estratégias.
 
-## Problema Raiz Identificado
+---
 
-1. **Falta de índice na coluna `strategy`** - Cada SELECT/DELETE faz full table scan
-2. **ON DELETE CASCADE** em `ai_classification_logs` e `notifications` - Cada delete pode remover centenas de registros relacionados
-3. **REPLICA IDENTITY FULL** - Overhead adicional no WAL para cada delete
+## Alterações Necessárias
 
-## Solução em 2 Partes
+### 1. Atualizar Whitelist no Código
 
-### Parte 1: Criar Índice (Migração SQL)
+**Arquivo:** `src/components/operations/OperationsDashboard.tsx`
 
-```sql
-CREATE INDEX idx_trading_operations_strategy 
-ON public.trading_operations (strategy);
-```
-
-Isso vai acelerar drasticamente todas as consultas que filtram por estratégia.
-
-### Parte 2: Reduzir Batch Size (Código)
-
-Arquivo: `src/components/operations/DeleteOperationsByStrategy.tsx`
-
-Mudanças:
-- Reduzir `BATCH_SIZE` de 25 para **5** registros
-- Aumentar delay entre batches de 200ms para **500ms**
-- Adicionar tratamento de erro com retry
-
-```text
-┌─────────────────────────────────────────┐
-│  BATCH_SIZE = 5 (era 25)                │
-├─────────────────────────────────────────┤
-│  DELAY = 500ms (era 200ms)              │
-├─────────────────────────────────────────┤
-│  Retry automático em caso de erro       │
-└─────────────────────────────────────────┘
-```
-
-Código atualizado:
+Alterar a lista de estratégias permitidas em **dois locais** (linhas 132-141 e 166-175):
 
 ```typescript
-const deleteBatch = async (strategy: string): Promise<number> => {
-  const BATCH_SIZE = 5; // Reduzido de 25 para 5
-  const MAX_RETRIES = 3;
-  let totalDeleted = 0;
+// De:
+const allowedStrategies = [
+  'alaska & square',
+  'apollo',
+  'ares',
+  'artemis',
+  'orion',
+  'pegasus',
+  'ventture',
+  'zeus'
+];
 
-  while (true) {
-    const { data: operations, error: fetchError } = await supabase
-      .from("trading_operations")
-      .select("id")
-      .eq("strategy", strategy)
-      .limit(BATCH_SIZE);
-
-    if (fetchError) throw fetchError;
-    if (!operations || operations.length === 0) break;
-
-    const ids = operations.map(op => op.id);
-    let retries = 0;
-    let success = false;
-
-    while (retries < MAX_RETRIES && !success) {
-      const { error } = await supabase
-        .from("trading_operations")
-        .delete()
-        .in("id", ids);
-
-      if (!error) {
-        success = true;
-      } else if (error.message.includes("timeout")) {
-        retries++;
-        await new Promise(r => setTimeout(r, 1000 * retries));
-      } else {
-        throw error;
-      }
-    }
-
-    if (!success) throw new Error("Falha após múltiplas tentativas");
-
-    totalDeleted += ids.length;
-    setDeletedCount(totalDeleted);
-    
-    if (totalCount > 0) {
-      setProgress(Math.min(Math.round((totalDeleted / totalCount) * 100), 99));
-    }
-
-    // Delay maior entre lotes
-    await new Promise(r => setTimeout(r, 500));
-  }
-
-  setProgress(100);
-  return totalDeleted;
-};
+// Para:
+const allowedStrategies = [
+  'alaska & square',
+  'ares',
+  'orion'
+];
 ```
 
-## Ordem de Execução
+### 2. Limpar Tabela de Estratégias (SQL)
 
-1. Criar o índice via migração SQL
-2. Atualizar o código com batch menor e retry
-3. Testar a exclusão das operações Apollo
+Executar migração para remover estratégias não desejadas:
 
-## Tempo Estimado
+```sql
+DELETE FROM strategies 
+WHERE LOWER(name) NOT IN ('alaska & square', 'ares', 'orion');
+```
 
-Com batch de 5 e 500ms de delay:
-- 1980 operações ÷ 5 = 396 lotes
-- 396 × 0.5s = ~3-4 minutos
+---
 
-Após criar o índice, o tempo pode reduzir para ~1-2 minutos.
+## Resultado Esperado
 
+| Antes | Depois |
+|-------|--------|
+| 8 estratégias visíveis | 3 estratégias visíveis |
+| Apollo, Artemis, Pegasus, Ventture, Zeus | Removidas do dashboard |
+| Filtros mostram todas | Filtros mostram apenas 3 |
+
+---
+
+## Nota Importante
+
+As **operações históricas** (trading_operations) das estratégias removidas permanecerão no banco de dados, mas **não serão exibidas** no Dashboard Geral porque a whitelist as filtrará. Se desejar excluir também os dados históricos dessas estratégias, isso pode ser feito posteriormente.
