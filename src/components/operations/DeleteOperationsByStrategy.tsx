@@ -52,7 +52,8 @@ const DeleteOperationsByStrategy = ({ userId }: DeleteOperationsByStrategyProps)
   };
 
   const deleteBatch = async (strategy: string): Promise<number> => {
-    const BATCH_SIZE = 25;
+    const BATCH_SIZE = 5; // Reduzido de 25 para 5
+    const MAX_RETRIES = 3;
     let totalDeleted = 0;
 
     // Loop até não haver mais operações
@@ -70,14 +71,30 @@ const DeleteOperationsByStrategy = ({ userId }: DeleteOperationsByStrategyProps)
       if (!operations || operations.length === 0) break;
 
       const ids = operations.map(op => op.id);
+      let retries = 0;
+      let success = false;
 
-      // Excluir este lote
-      const { error } = await supabase
-        .from("trading_operations")
-        .delete()
-        .in("id", ids);
+      // Loop de retry para lidar com timeouts
+      while (retries < MAX_RETRIES && !success) {
+        const { error } = await supabase
+          .from("trading_operations")
+          .delete()
+          .in("id", ids);
 
-      if (error) throw error;
+        if (!error) {
+          success = true;
+        } else if (error.message.includes("timeout")) {
+          retries++;
+          console.log(`Timeout no lote, tentativa ${retries}/${MAX_RETRIES}...`);
+          await new Promise(r => setTimeout(r, 1000 * retries));
+        } else {
+          throw error;
+        }
+      }
+
+      if (!success) {
+        throw new Error("Falha após múltiplas tentativas de timeout");
+      }
 
       totalDeleted += ids.length;
       setDeletedCount(totalDeleted);
@@ -87,8 +104,8 @@ const DeleteOperationsByStrategy = ({ userId }: DeleteOperationsByStrategyProps)
         setProgress(Math.min(Math.round((totalDeleted / totalCount) * 100), 99));
       }
 
-      // Delay entre lotes
-      await new Promise(r => setTimeout(r, 200));
+      // Delay maior entre lotes para evitar sobrecarga
+      await new Promise(r => setTimeout(r, 500));
     }
 
     setProgress(100);
