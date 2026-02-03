@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Progress } from "@/components/ui/progress";
 import { Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -16,16 +17,21 @@ const DeleteOperationsByStrategy = ({ userId }: DeleteOperationsByStrategyProps)
   const [selectedStrategy, setSelectedStrategy] = useState("");
   const [strategies, setStrategies] = useState<string[]>([]);
   const [open, setOpen] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [deletedCount, setDeletedCount] = useState(0);
+  const [totalCount, setTotalCount] = useState(0);
 
   useEffect(() => {
     if (open) {
       loadStrategies();
+      setProgress(0);
+      setDeletedCount(0);
+      setTotalCount(0);
     }
   }, [open]);
 
   const loadStrategies = async () => {
     try {
-      // Buscar estratégias distintas no servidor (evita paginação gigante)
       const { data, error } = await supabase.rpc('distinct_strategies');
 
       if (error) throw error;
@@ -45,6 +51,45 @@ const DeleteOperationsByStrategy = ({ userId }: DeleteOperationsByStrategyProps)
     }
   };
 
+  const deleteBatch = async (strategy: string): Promise<number> => {
+    const BATCH_SIZE = 100;
+    let totalDeleted = 0;
+
+    // Buscar todos os IDs da estratégia
+    const { data: operations, error: fetchError } = await supabase
+      .from("trading_operations")
+      .select("id")
+      .eq("strategy", strategy);
+
+    if (fetchError) throw fetchError;
+    if (!operations?.length) return 0;
+
+    const totalToDelete = operations.length;
+    setTotalCount(totalToDelete);
+    const ids = operations.map(op => op.id);
+
+    // Excluir em lotes
+    for (let i = 0; i < ids.length; i += BATCH_SIZE) {
+      const batch = ids.slice(i, i + BATCH_SIZE);
+
+      const { error } = await supabase
+        .from("trading_operations")
+        .delete()
+        .in("id", batch);
+
+      if (error) throw error;
+
+      totalDeleted += batch.length;
+      setDeletedCount(totalDeleted);
+      setProgress(Math.round((totalDeleted / totalToDelete) * 100));
+
+      // Pequeno delay entre lotes para não sobrecarregar
+      await new Promise(r => setTimeout(r, 100));
+    }
+
+    return totalDeleted;
+  };
+
   const handleDelete = async () => {
     if (confirmText !== "EXCLUIR") {
       toast.error("Digite 'EXCLUIR' para confirmar");
@@ -57,16 +102,12 @@ const DeleteOperationsByStrategy = ({ userId }: DeleteOperationsByStrategyProps)
     }
 
     setDeleting(true);
+    setProgress(0);
 
     try {
-      const { error } = await supabase
-        .from("trading_operations")
-        .delete()
-        .eq("strategy", selectedStrategy);
+      const deletedCount = await deleteBatch(selectedStrategy);
 
-      if (error) throw error;
-
-      toast.success(`Operações da estratégia "${selectedStrategy}" foram excluídas!`);
+      toast.success(`${deletedCount} operações da estratégia "${selectedStrategy}" foram excluídas!`);
       setConfirmText("");
       setSelectedStrategy("");
       setOpen(false);
@@ -106,7 +147,11 @@ const DeleteOperationsByStrategy = ({ userId }: DeleteOperationsByStrategyProps)
                 <label className="text-sm font-medium">
                   Selecione a estratégia:
                 </label>
-                <Select value={selectedStrategy} onValueChange={setSelectedStrategy}>
+                <Select 
+                  value={selectedStrategy} 
+                  onValueChange={setSelectedStrategy}
+                  disabled={deleting}
+                >
                   <SelectTrigger className="w-full mt-2">
                     <SelectValue placeholder="Selecione uma estratégia" />
                   </SelectTrigger>
@@ -132,6 +177,19 @@ const DeleteOperationsByStrategy = ({ userId }: DeleteOperationsByStrategyProps)
                   disabled={deleting}
                 />
               </div>
+              
+              {deleting && (
+                <div className="space-y-2 pt-2">
+                  <div className="flex justify-between text-sm">
+                    <span>Excluindo operações...</span>
+                    <span>{deletedCount} / {totalCount}</span>
+                  </div>
+                  <Progress value={progress} className="h-2" />
+                  <p className="text-xs text-muted-foreground text-center">
+                    {progress}% concluído
+                  </p>
+                </div>
+              )}
             </div>
           </AlertDialogDescription>
         </AlertDialogHeader>
@@ -142,7 +200,7 @@ const DeleteOperationsByStrategy = ({ userId }: DeleteOperationsByStrategyProps)
             disabled={deleting || confirmText !== "EXCLUIR" || !selectedStrategy}
             className="bg-destructive hover:bg-destructive/90"
           >
-            {deleting ? "Excluindo..." : "Confirmar Exclusão"}
+            {deleting ? `Excluindo... ${progress}%` : "Confirmar Exclusão"}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
