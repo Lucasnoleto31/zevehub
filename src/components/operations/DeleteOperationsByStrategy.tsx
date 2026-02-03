@@ -52,41 +52,46 @@ const DeleteOperationsByStrategy = ({ userId }: DeleteOperationsByStrategyProps)
   };
 
   const deleteBatch = async (strategy: string): Promise<number> => {
-    const BATCH_SIZE = 25; // Reduzido para evitar timeout
+    const BATCH_SIZE = 25;
     let totalDeleted = 0;
 
-    // Buscar todos os IDs da estratégia
-    const { data: operations, error: fetchError } = await supabase
-      .from("trading_operations")
-      .select("id")
-      .eq("strategy", strategy);
+    // Loop até não haver mais operações
+    while (true) {
+      // Buscar apenas BATCH_SIZE IDs por vez (evita timeout no SELECT)
+      const { data: operations, error: fetchError } = await supabase
+        .from("trading_operations")
+        .select("id")
+        .eq("strategy", strategy)
+        .limit(BATCH_SIZE);
 
-    if (fetchError) throw fetchError;
-    if (!operations?.length) return 0;
+      if (fetchError) throw fetchError;
+      
+      // Se não há mais operações, terminar
+      if (!operations || operations.length === 0) break;
 
-    const totalToDelete = operations.length;
-    setTotalCount(totalToDelete);
-    const ids = operations.map(op => op.id);
+      const ids = operations.map(op => op.id);
 
-    // Excluir em lotes
-    for (let i = 0; i < ids.length; i += BATCH_SIZE) {
-      const batch = ids.slice(i, i + BATCH_SIZE);
-
+      // Excluir este lote
       const { error } = await supabase
         .from("trading_operations")
         .delete()
-        .in("id", batch);
+        .in("id", ids);
 
       if (error) throw error;
 
-      totalDeleted += batch.length;
+      totalDeleted += ids.length;
       setDeletedCount(totalDeleted);
-      setProgress(Math.round((totalDeleted / totalToDelete) * 100));
+      
+      // Atualizar progresso (estimativa baseada no total inicial)
+      if (totalCount > 0) {
+        setProgress(Math.min(Math.round((totalDeleted / totalCount) * 100), 99));
+      }
 
-      // Pequeno delay entre lotes para não sobrecarregar
-      await new Promise(r => setTimeout(r, 100));
+      // Delay entre lotes
+      await new Promise(r => setTimeout(r, 200));
     }
 
+    setProgress(100);
     return totalDeleted;
   };
 
@@ -103,11 +108,21 @@ const DeleteOperationsByStrategy = ({ userId }: DeleteOperationsByStrategyProps)
 
     setDeleting(true);
     setProgress(0);
+    setDeletedCount(0);
 
     try {
-      const deletedCount = await deleteBatch(selectedStrategy);
+      // Buscar contagem total primeiro (para barra de progresso)
+      const { count, error: countError } = await supabase
+        .from("trading_operations")
+        .select("*", { count: "exact", head: true })
+        .eq("strategy", selectedStrategy);
 
-      toast.success(`${deletedCount} operações da estratégia "${selectedStrategy}" foram excluídas!`);
+      if (countError) throw countError;
+      setTotalCount(count || 0);
+
+      const deleted = await deleteBatch(selectedStrategy);
+
+      toast.success(`${deleted} operações da estratégia "${selectedStrategy}" foram excluídas!`);
       setConfirmText("");
       setSelectedStrategy("");
       setOpen(false);
