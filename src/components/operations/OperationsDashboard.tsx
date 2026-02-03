@@ -131,6 +131,7 @@ const OperationsDashboard = ({ userId }: OperationsDashboardProps) => {
       // Estratégias permitidas no dashboard de Robôs (whitelist)
       const allowedStrategies = [
         'alaska & square',
+        'apollo',
         'ares',
         'orion'
       ];
@@ -160,6 +161,7 @@ const OperationsDashboard = ({ userId }: OperationsDashboardProps) => {
     // Estratégias permitidas no dashboard de Robôs (whitelist)
     const allowedStrategies = [
       'alaska & square',
+      'apollo',
       'ares',
       'orion'
     ];
