@@ -52,7 +52,7 @@ const DeleteOperationsByStrategy = ({ userId }: DeleteOperationsByStrategyProps)
   };
 
   const deleteBatch = async (strategy: string): Promise<number> => {
-    const BATCH_SIZE = 100;
+    const BATCH_SIZE = 25; // Reduzido para evitar timeout
     let totalDeleted = 0;
 
     // Buscar todos os IDs da estratégia
