@@ -131,13 +131,8 @@ const OperationsDashboard = ({ userId }: OperationsDashboardProps) => {
       // Estratégias permitidas no dashboard de Robôs (whitelist)
       const allowedStrategies = [
         'alaska & square',
-        'apollo',
         'ares',
-        'artemis',
-        'orion',
-        'pegasus',
-        'ventture',
-        'zeus'
+        'orion'
       ];
       
       const strategies = Array.from(new Set(
@@ -165,13 +160,8 @@ const OperationsDashboard = ({ userId }: OperationsDashboardProps) => {
     // Estratégias permitidas no dashboard de Robôs (whitelist)
     const allowedStrategies = [
       'alaska & square',
-      'apollo',
       'ares',
-      'artemis',
-      'orion',
-      'pegasus',
-      'ventture',
-      'zeus'
+      'orion'
     ];
     
     // Filtra apenas operações com estratégias permitidas
