@@ -5,43 +5,29 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
-// Order matters - delete child tables before parent tables
 const TABLES_TO_CLEAR = [
-  // 1. Most dependent tables first (grandchildren)
   'comment_likes',
   'post_reactions', 
   'post_mentions',
   'post_reports',
   'user_notifications',
-  
-  // 2. Child tables
   'community_comments',
   'ai_classification_logs',
   'notifications',
-  
-  // 3. Tables with foreign keys to posts
   'community_posts',
-  
-  // 4. Trading tables
   'trading_operations',
   'profit_operations',
   'journal_trades',
-  
-  // 5. Finance tables with FKs
   'account_transfers',
   'personal_finances',
   'lancamentos_financas',
   'recurring_transactions',
   'category_budgets',
-  
-  // 6. Reference tables
   'strategies',
   'financial_accounts',
   'finance_categories',
   'categorias_financas',
   'metas_financeiras',
-  
-  // 7. Independent tables
   'opportunities',
   'messages',
   'client_bots',
@@ -55,12 +41,72 @@ const TABLES_TO_CLEAR = [
   'user_badges',
   'badge_progress',
   'user_community_titles',
-  
-  // 8. Core user tables (last)
   'user_permissions',
   'user_roles',
-  // 'profiles' - NOT deleting profiles as it will break auth
 ]
+
+interface DeleteResult {
+  deleted: number
+  error?: string
+}
+
+async function deleteInBatches(supabase: any, table: string): Promise<DeleteResult> {
+  let totalDeleted = 0
+  let consecutiveErrors = 0
+  const maxConsecutiveErrors = 3
+
+  while (consecutiveErrors < maxConsecutiveErrors) {
+    try {
+      const { data: rows, error: selectError } = await supabase
+        .from(table)
+        .select('id')
+        .limit(1)
+
+      if (selectError) {
+        console.error(`Select error on ${table}:`, selectError.message)
+        consecutiveErrors++
+        await new Promise(r => setTimeout(r, 100))
+        continue
+      }
+
+      if (!rows || rows.length === 0) {
+        return { deleted: totalDeleted }
+      }
+
+      const id = (rows[0] as { id: string }).id
+
+      const { error: deleteError } = await supabase
+        .from(table)
+        .delete()
+        .eq('id', id)
+
+      if (deleteError) {
+        console.error(`Delete error on ${table}:`, deleteError.message)
+        consecutiveErrors++
+        await new Promise(r => setTimeout(r, 100))
+        continue
+      }
+
+      totalDeleted++
+      consecutiveErrors = 0
+
+      if (totalDeleted % 100 === 0) {
+        console.log(`${table}: ${totalDeleted} deleted`)
+      }
+
+      await new Promise(r => setTimeout(r, 10))
+    } catch (err) {
+      console.error(`Exception on ${table}:`, err)
+      consecutiveErrors++
+      await new Promise(r => setTimeout(r, 100))
+    }
+  }
+
+  return { 
+    deleted: totalDeleted, 
+    error: totalDeleted > 0 ? undefined : 'Max errors reached' 
+  }
+}
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -72,84 +118,19 @@ Deno.serve(async (req) => {
     const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     
     const supabase = createClient(supabaseUrl, serviceRoleKey, {
-      auth: {
-        autoRefreshToken: false,
-        persistSession: false
-      }
+      auth: { autoRefreshToken: false, persistSession: false }
     })
 
     const results: { table: string; deleted: number; error?: string }[] = []
 
     for (const table of TABLES_TO_CLEAR) {
-      try {
-        // First count records
-        const { count, error: countError } = await supabase
-          .from(table)
-          .select('*', { count: 'exact', head: true })
-
-        if (countError) {
-          results.push({ table, deleted: 0, error: countError.message })
-          continue
-        }
-
-        const recordCount = count || 0
-
-        if (recordCount === 0) {
-          results.push({ table, deleted: 0 })
-          continue
-        }
-
-        // Delete in batches of 100 to avoid timeout
-        let totalDeleted = 0
-        let hasMore = true
-
-        while (hasMore) {
-          // Get batch of IDs
-          const { data: batch, error: selectError } = await supabase
-            .from(table)
-            .select('id')
-            .limit(100)
-
-          if (selectError) {
-            results.push({ table, deleted: totalDeleted, error: selectError.message })
-            hasMore = false
-            continue
-          }
-
-          if (!batch || batch.length === 0) {
-            hasMore = false
-            continue
-          }
-
-          const ids = batch.map((r: { id: string }) => r.id)
-
-          const { error: deleteError } = await supabase
-            .from(table)
-            .delete()
-            .in('id', ids)
-
-          if (deleteError) {
-            results.push({ table, deleted: totalDeleted, error: deleteError.message })
-            hasMore = false
-            continue
-          }
-
-          totalDeleted += ids.length
-
-          if (batch.length < 100) {
-            hasMore = false
-          }
-        }
-
-        results.push({ table, deleted: totalDeleted })
-      } catch (err) {
-        results.push({ table, deleted: 0, error: String(err) })
-      }
+      console.log(`Processing ${table}...`)
+      const result = await deleteInBatches(supabase, table)
+      results.push({ table, ...result })
     }
 
-    // Clear profiles data but keep the records (reset to defaults)
     try {
-      const { error: profilesError } = await supabase
+      await supabase
         .from('profiles')
         .update({
           full_name: null,
@@ -173,23 +154,19 @@ Deno.serve(async (req) => {
           followers_count: 0,
           following_count: 0
         })
-        .neq('id', '00000000-0000-0000-0000-000000000000') // Match all
+        .neq('id', '00000000-0000-0000-0000-000000000000')
 
-      results.push({ 
-        table: 'profiles', 
-        deleted: 0, 
-        error: profilesError ? profilesError.message : 'Reset to defaults (not deleted)'
-      })
+      results.push({ table: 'profiles', deleted: 0, error: 'Reset to defaults' })
     } catch (err) {
       results.push({ table: 'profiles', deleted: 0, error: String(err) })
     }
 
     const totalDeleted = results.reduce((sum, r) => sum + r.deleted, 0)
-    const errors = results.filter(r => r.error && !r.error.includes('Reset'))
+    const errors = results.filter(r => r.error && !r.error.includes('Reset') && !r.error.includes('defaults'))
 
     return new Response(
       JSON.stringify({
-        success: true,
+        success: errors.length === 0,
         totalDeleted,
         tablesProcessed: results.length,
         errors: errors.length,
@@ -198,7 +175,7 @@ Deno.serve(async (req) => {
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
   } catch (error) {
-    console.error('Error clearing database:', error)
+    console.error('Error:', error)
     return new Response(
       JSON.stringify({ success: false, error: String(error) }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
