@@ -1,5 +1,8 @@
 project_id = "zsylxitrkmaihpfvnjny"
 
+[functions.clear-all-data]
+verify_jwt = false
+
 [functions.predict-cashflow]
 verify_jwt = true
 

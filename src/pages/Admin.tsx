@@ -3,12 +3,13 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
-import { Users, Settings, Clock, CheckCircle, Ban } from "lucide-react";
+import { Users, Settings, Clock, CheckCircle, Ban, Trash2 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import ClientsTable from "@/components/admin/ClientsTable";
 import PendingUsersTable from "@/components/admin/PendingUsersTable";
 import PermissionsManager from "@/components/admin/PermissionsManager";
 import CreateMessageDialog from "@/components/admin/CreateMessageDialog";
+import DatabaseCleaner from "@/components/admin/DatabaseCleaner";
 import { PremiumPageLayout, PremiumCard, PremiumLoader } from "@/components/layout/PremiumPageLayout";
 import { motion } from "framer-motion";
 
@@ -224,6 +225,13 @@ const Admin = () => {
             >
               Logs de Acesso
             </TabsTrigger>
+            <TabsTrigger 
+              value="database"
+              className="data-[state=active]:bg-background data-[state=active]:shadow-lg rounded-xl font-semibold transition-all duration-300 text-destructive"
+            >
+              <Trash2 className="w-4 h-4 mr-1" />
+              Banco de Dados
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="pending" className="space-y-4">
@@ -287,6 +295,10 @@ const Admin = () => {
                 </p>
               </CardContent>
             </PremiumCard>
+          </TabsContent>
+
+          <TabsContent value="database" className="space-y-4">
+            <DatabaseCleaner />
           </TabsContent>
         </Tabs>
       </motion.div>
