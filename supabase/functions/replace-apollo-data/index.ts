@@ -84,7 +84,7 @@ serve(async (req) => {
       );
     }
 
-    // Ação: inserir novos registros em lote
+    // Ação: inserir novos registros em lote (ultra pequeno para evitar timeout)
     if (action === "insert") {
       if (!operations || !Array.isArray(operations) || operations.length === 0) {
         throw new Error("Operações são obrigatórias para inserção");
@@ -109,30 +109,42 @@ serve(async (req) => {
         strategy: "Apolo",
       }));
 
-      // Inserir em lotes de 50
-      const batchSize = 50;
+      // Inserir em lotes MUITO pequenos (10) com retry
+      const batchSize = 10;
       let totalInserted = 0;
       let insertErrors = 0;
+      const maxRetries = 3;
 
       for (let i = 0; i < operationsToInsert.length; i += batchSize) {
         const batch = operationsToInsert.slice(i, i + batchSize);
+        let success = false;
         
-        const { data, error } = await supabase
-          .from("trading_operations")
-          .insert(batch)
-          .select("id");
+        for (let retry = 0; retry < maxRetries && !success; retry++) {
+          if (retry > 0) {
+            console.log(`Retry ${retry} para lote ${i / batchSize + 1}`);
+            await new Promise(r => setTimeout(r, 500 * retry)); // Delay crescente
+          }
 
-        if (error) {
-          console.error(`Erro no lote ${i / batchSize + 1}:`, error);
-          insertErrors++;
-          // Continuar mesmo com erros
-          continue;
+          const { data, error } = await supabase
+            .from("trading_operations")
+            .insert(batch)
+            .select("id");
+
+          if (!error) {
+            totalInserted += data?.length || 0;
+            success = true;
+          } else if (retry === maxRetries - 1) {
+            console.error(`Erro final no lote ${i / batchSize + 1}:`, error.message);
+            insertErrors++;
+          }
+        }
+        
+        if (totalInserted % 100 === 0 && totalInserted > 0) {
+          console.log(`Inseridos: ${totalInserted}`);
         }
 
-        totalInserted += data?.length || 0;
-        
-        // Pequeno delay entre lotes
-        await new Promise(r => setTimeout(r, 100));
+        // Delay maior entre lotes para não sobrecarregar
+        await new Promise(r => setTimeout(r, 150));
       }
 
       console.log(`✅ Total inserido: ${totalInserted}, Erros: ${insertErrors}`);

@@ -101,8 +101,9 @@ const ApolloDataReplacer = ({ userId }: ApolloDataReplacerProps) => {
   };
 
   const insertOperations = async (operations: ParsedOperation[]): Promise<number> => {
-    const chunkSize = 500; // Enviar 500 por vez para a Edge Function
+    const chunkSize = 200; // Enviar 200 por vez para a Edge Function (ela divide em lotes de 10)
     let totalInserted = 0;
+    let totalErrors = 0;
 
     for (let i = 0; i < operations.length; i += chunkSize) {
       const chunk = operations.slice(i, i + chunkSize);
@@ -110,26 +111,36 @@ const ApolloDataReplacer = ({ userId }: ApolloDataReplacerProps) => {
       setStatusMessage(`Inserindo operações ${i + 1} a ${Math.min(i + chunkSize, operations.length)} de ${operations.length}...`);
       setProgress(Math.round(((i + chunk.length) / operations.length) * 100));
 
-      const { data, error } = await supabase.functions.invoke("replace-apollo-data", {
-        body: { 
-          action: "insert", 
-          operations: chunk,
-          userId 
-        },
-      });
+      try {
+        const { data, error } = await supabase.functions.invoke("replace-apollo-data", {
+          body: { 
+            action: "insert", 
+            operations: chunk,
+            userId 
+          },
+        });
 
-      if (error) {
-        console.error("Erro ao inserir lote:", error);
-        continue;
+        if (error) {
+          console.error("Erro ao inserir lote:", error);
+          totalErrors++;
+          // Tentar continuar mesmo com erro
+          await new Promise(r => setTimeout(r, 1000));
+          continue;
+        }
+
+        totalInserted += data?.inserted || 0;
+        setInsertedCount(totalInserted);
+        console.log(`Chunk ${i / chunkSize + 1}: +${data?.inserted || 0} (total: ${totalInserted})`);
+      } catch (err) {
+        console.error("Erro na chamada:", err);
+        totalErrors++;
       }
 
-      totalInserted += data?.inserted || 0;
-      setInsertedCount(totalInserted);
-
-      // Pequeno delay entre chunks
-      await new Promise(r => setTimeout(r, 200));
+      // Delay maior entre chunks para evitar sobrecarga
+      await new Promise(r => setTimeout(r, 500));
     }
 
+    console.log(`Import finalizado: ${totalInserted} inseridas, ${totalErrors} erros`);
     return totalInserted;
   };
 
