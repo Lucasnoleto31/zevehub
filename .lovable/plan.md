@@ -1,61 +1,91 @@
 
-# Plano: Restringir Estratégias para Apenas 3
+# Plano: Substituir Dados do Apollo
 
-## Objetivo
-Manter apenas **Alaska & Square**, **Ares** e **Orion** no sistema, removendo todas as outras estratégias.
+## Dados da Planilha
+
+| Campo | Exemplo |
+|-------|---------|
+| data_operacao | 2024.12.12 16:38:04 |
+| ativo | WIN |
+| contratos | 1 |
+| resultado | -711 |
+| estrategia | Apolo |
+
+**Total de registros:** ~18.350 operações
 
 ---
 
-## Alterações Necessárias
+## Estratégia de Implementação
 
-### 1. Atualizar Whitelist no Código
+### Problema
+O banco de dados tem timeout rigoroso que impede exclusões diretas via SQL.
 
-**Arquivo:** `src/components/operations/OperationsDashboard.tsx`
+### Solução
+Criar uma **Edge Function dedicada** que:
+1. Deleta os dados antigos do Apollo (1 por vez com retry)
+2. Insere os novos dados em lotes pequenos
 
-Alterar a lista de estratégias permitidas em **dois locais** (linhas 132-141 e 166-175):
+---
+
+## Alterações Técnicas
+
+### 1. Nova Edge Function: `replace-apollo-data`
 
 ```typescript
-// De:
-const allowedStrategies = [
-  'alaska & square',
-  'apollo',
-  'ares',
-  'artemis',
-  'orion',
-  'pegasus',
-  'ventture',
-  'zeus'
-];
-
-// Para:
-const allowedStrategies = [
-  'alaska & square',
-  'ares',
-  'orion'
-];
+// supabase/functions/replace-apollo-data/index.ts
+// - Recebe os dados da planilha via POST
+// - Deleta registros antigos do Apollo um a um
+// - Insere novos registros em lotes de 50
+// - Retorna progresso e resultado final
 ```
 
-### 2. Limpar Tabela de Estratégias (SQL)
+### 2. Componente de Importação Temporário
 
-Executar migração para remover estratégias não desejadas:
+Adicionar lógica no frontend para:
+- Ler a planilha Excel
+- Enviar dados para a Edge Function
+- Mostrar progresso da operação
 
-```sql
-DELETE FROM strategies 
-WHERE LOWER(name) NOT IN ('alaska & square', 'ares', 'orion');
+---
+
+## Fluxo de Execução
+
+```text
+┌─────────────────┐
+│ Ler Planilha    │
+│ (18.350 linhas) │
+└────────┬────────┘
+         ▼
+┌─────────────────┐
+│ Edge Function   │
+│ replace-apollo  │
+└────────┬────────┘
+         ▼
+┌─────────────────┐     ┌─────────────────┐
+│ Deletar antigos │ ──► │ Inserir novos   │
+│ (1 por vez)     │     │ (lotes de 50)   │
+└─────────────────┘     └─────────────────┘
 ```
+
+---
+
+## Mapeamento de Campos
+
+| Planilha | Banco de Dados |
+|----------|----------------|
+| data_operacao | operation_date |
+| horario | operation_time |
+| ativo | asset |
+| contratos | contracts |
+| custos | costs |
+| resultado | result |
+| observacoes | notes |
+| estrategia | strategy |
 
 ---
 
 ## Resultado Esperado
 
-| Antes | Depois |
-|-------|--------|
-| 8 estratégias visíveis | 3 estratégias visíveis |
-| Apollo, Artemis, Pegasus, Ventture, Zeus | Removidas do dashboard |
-| Filtros mostram todas | Filtros mostram apenas 3 |
-
----
-
-## Nota Importante
-
-As **operações históricas** (trading_operations) das estratégias removidas permanecerão no banco de dados, mas **não serão exibidas** no Dashboard Geral porque a whitelist as filtrará. Se desejar excluir também os dados históricos dessas estratégias, isso pode ser feito posteriormente.
+- ✅ Todas as operações antigas do Apollo removidas
+- ✅ ~18.350 novas operações importadas
+- ✅ Dashboard atualizado automaticamente
