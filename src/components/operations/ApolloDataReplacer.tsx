@@ -30,6 +30,8 @@ const ApolloDataReplacer = ({ userId }: ApolloDataReplacerProps) => {
   const [totalOperations, setTotalOperations] = useState(0);
   const [deletedCount, setDeletedCount] = useState(0);
   const [insertedCount, setInsertedCount] = useState(0);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [apolloCount, setApolloCount] = useState<number | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const parseDateTime = (value: string): { date: string; time: string } => {
@@ -89,15 +91,109 @@ const ApolloDataReplacer = ({ userId }: ApolloDataReplacerProps) => {
     });
   };
 
-  const deleteApolloData = async (): Promise<number> => {
-    setStatusMessage("Deletando dados antigos do Apollo...");
-    
-    const { data, error } = await supabase.functions.invoke("replace-apollo-data", {
-      body: { action: "delete" },
-    });
+  // Delete Apollo operations directly from browser (more reliable)
+  const deleteApolloDirectly = async (): Promise<number> => {
+    let totalDeleted = 0;
+    let hasMore = true;
+    let consecutiveErrors = 0;
 
-    if (error) throw error;
-    return data?.deleted || 0;
+    // First, count total
+    const { count } = await supabase
+      .from("trading_operations")
+      .select("*", { count: "exact", head: true })
+      .ilike("strategy", "%apolo%");
+
+    const totalToDelete = count || 0;
+    setApolloCount(totalToDelete);
+
+    if (totalToDelete === 0) {
+      return 0;
+    }
+
+    while (hasMore && consecutiveErrors < 10) {
+      // Fetch one ID at a time
+      const { data: records, error: fetchError } = await supabase
+        .from("trading_operations")
+        .select("id")
+        .ilike("strategy", "%apolo%")
+        .limit(1);
+
+      if (fetchError) {
+        console.error("Erro ao buscar:", fetchError);
+        consecutiveErrors++;
+        await new Promise(r => setTimeout(r, 500));
+        continue;
+      }
+
+      if (!records || records.length === 0) {
+        hasMore = false;
+        break;
+      }
+
+      const id = records[0].id;
+
+      // Delete the record
+      const { error: deleteError } = await supabase
+        .from("trading_operations")
+        .delete()
+        .eq("id", id);
+
+      if (deleteError) {
+        console.error("Erro ao deletar:", deleteError);
+        consecutiveErrors++;
+        await new Promise(r => setTimeout(r, 500));
+        continue;
+      }
+
+      consecutiveErrors = 0;
+      totalDeleted++;
+      setDeletedCount(totalDeleted);
+      setProgress(Math.round((totalDeleted / totalToDelete) * 100));
+      setStatusMessage(`Deletando ${totalDeleted} de ${totalToDelete}...`);
+
+      // Small delay between deletions
+      await new Promise(r => setTimeout(r, 50));
+    }
+
+    return totalDeleted;
+  };
+
+  const handleDeleteOnly = async () => {
+    if (!userId) return;
+
+    setIsDeleting(true);
+    setStep("deleting");
+    setProgress(0);
+    setDeletedCount(0);
+    setStatusMessage("Iniciando exclusão...");
+
+    try {
+      const deleted = await deleteApolloDirectly();
+      
+      toast({
+        title: "✅ Exclusão concluída!",
+        description: `${deleted} operações do Apollo foram excluídas`,
+      });
+
+      setStep("done");
+      setStatusMessage(`${deleted} operações excluídas com sucesso!`);
+    } catch (error) {
+      console.error("Erro na exclusão:", error);
+      setStep("error");
+      setStatusMessage(error instanceof Error ? error.message : "Erro desconhecido");
+      
+      toast({
+        title: "Erro na exclusão",
+        description: error instanceof Error ? error.message : "Erro desconhecido",
+        variant: "destructive",
+      });
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const deleteApolloData = async (): Promise<number> => {
+    return await deleteApolloDirectly();
   };
 
   const insertOperations = async (operations: ParsedOperation[]): Promise<number> => {
@@ -246,13 +342,30 @@ const ApolloDataReplacer = ({ userId }: ApolloDataReplacerProps) => {
             <Button
               onClick={() => fileInputRef.current?.click()}
               className="w-full bg-orange-600 hover:bg-orange-700"
-              disabled={!userId}
+              disabled={!userId || isDeleting}
             >
               <Upload className="mr-2 h-4 w-4" />
               Selecionar Planilha do Apollo
             </Button>
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <span className="w-full border-t" />
+              </div>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-orange-50 dark:bg-orange-950/20 px-2 text-muted-foreground">ou</span>
+              </div>
+            </div>
+            <Button
+              onClick={handleDeleteOnly}
+              variant="destructive"
+              className="w-full"
+              disabled={!userId || isDeleting}
+            >
+              <Trash2 className="mr-2 h-4 w-4" />
+              Apenas Excluir Dados do Apollo
+            </Button>
             <p className="text-xs text-muted-foreground text-center">
-              ⚠️ Esta ação irá DELETAR todos os dados atuais do Apollo e substituir pelos novos
+              ⚠️ A exclusão irá remover TODOS os dados atuais do Apollo
             </p>
           </>
         )}
@@ -266,7 +379,7 @@ const ApolloDataReplacer = ({ userId }: ApolloDataReplacerProps) => {
             <Progress value={progress} className="h-2" />
             <div className="flex justify-between text-xs text-muted-foreground">
               <span>
-                {step === "deleting" && "Deletando..."}
+                {step === "deleting" && `Deletados: ${deletedCount}`}
                 {step === "inserting" && `Inseridos: ${insertedCount}`}
               </span>
               <span>{progress}%</span>
@@ -278,20 +391,24 @@ const ApolloDataReplacer = ({ userId }: ApolloDataReplacerProps) => {
           <div className="space-y-3">
             <div className="flex items-center gap-2 text-green-600">
               <CheckCircle className="h-5 w-5" />
-              <span className="font-medium">Substituição concluída!</span>
+              <span className="font-medium">
+                {insertedCount > 0 ? "Substituição concluída!" : "Exclusão concluída!"}
+              </span>
             </div>
-            <div className="grid grid-cols-2 gap-2 text-sm">
+            <div className={`grid ${insertedCount > 0 ? 'grid-cols-2' : 'grid-cols-1'} gap-2 text-sm`}>
               <div className="flex items-center gap-2">
                 <Trash2 className="h-4 w-4 text-red-500" />
                 <span>{deletedCount} removidas</span>
               </div>
-              <div className="flex items-center gap-2">
-                <Database className="h-4 w-4 text-green-500" />
-                <span>{insertedCount} inseridas</span>
-              </div>
+              {insertedCount > 0 && (
+                <div className="flex items-center gap-2">
+                  <Database className="h-4 w-4 text-green-500" />
+                  <span>{insertedCount} inseridas</span>
+                </div>
+              )}
             </div>
             <Button variant="outline" onClick={reset} className="w-full">
-              Nova Substituição
+              {insertedCount > 0 ? "Nova Substituição" : "Voltar"}
             </Button>
           </div>
         )}
