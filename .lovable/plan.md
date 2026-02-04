@@ -1,91 +1,129 @@
 
-# Plano: Substituir Dados do Apollo
 
-## Dados da Planilha
+# Plano: Limpar Todo o Banco de Dados do Zeve Hub
 
-| Campo | Exemplo |
-|-------|---------|
-| data_operacao | 2024.12.12 16:38:04 |
-| ativo | WIN |
-| contratos | 1 |
-| resultado | -711 |
-| estrategia | Apolo |
+## Escopo
 
-**Total de registros:** ~18.350 operações
+Exclusão **permanente e irreversível** de todos os dados de todas as tabelas do sistema.
 
 ---
 
-## Estratégia de Implementação
+## Tabelas a Serem Limpas
+
+### Dados de Usuários
+- `profiles` - Perfis de usuários
+- `user_roles` - Funções/papéis
+- `user_permissions` - Permissões
+- `user_badges` / `badge_progress` - Conquistas
+- `access_logs` / `access_sync_logs` - Logs de acesso
+- `activity_logs` - Registros de atividade
+
+### Trading/Operações
+- `trading_operations` - Operações de trading
+- `profit_operations` - Operações de lucro
+- `journal_trades` - Diário de trades
+- `strategies` - Estratégias
+- `ai_classification_logs` - Logs de IA
+- `opportunities` - Oportunidades
+
+### Finanças Pessoais
+- `personal_finances` - Transações
+- `financial_accounts` - Contas
+- `finance_categories` / `categorias_financas` - Categorias
+- `lancamentos_financas` - Lançamentos
+- `metas_financeiras` - Metas
+- `category_budgets` - Orçamentos
+- `recurring_transactions` - Recorrências
+- `account_transfers` - Transferências
+- `usuario_metricas_financas` - Métricas
+
+### Comunidade
+- `community_posts` - Posts
+- `community_comments` - Comentários
+- `comment_likes` - Curtidas em comentários
+- `post_reactions` - Reações
+- `post_mentions` - Menções
+- `post_reports` - Denúncias
+- `user_community_titles` - Títulos
+
+### Sistema
+- `messages` / `notifications` / `user_notifications` - Notificações
+- `client_bots` - Robôs
+- `contracts` - Contratos
+- `registered_clients` - Clientes
+- `economic_events` - Eventos econômicos
+- `risk_management_settings` - Configurações de risco
+
+---
+
+## Estratégia de Exclusão
 
 ### Problema
-O banco de dados tem timeout rigoroso que impede exclusões diretas via SQL.
+- RLS (Row Level Security) bloqueia exclusões diretas
+- Foreign Keys exigem ordem específica de exclusão
+- Timeouts do banco impedem DELETE em massa
 
 ### Solução
-Criar uma **Edge Function dedicada** que:
-1. Deleta os dados antigos do Apollo (1 por vez com retry)
-2. Insere os novos dados em lotes pequenos
+Criar uma **Edge Function** com `service_role` key que:
+1. Desabilita temporariamente constraints
+2. Exclui tabelas na ordem correta (filhas antes das pais)
+3. Processa em lotes pequenos para evitar timeout
 
 ---
 
-## Alterações Técnicas
-
-### 1. Nova Edge Function: `replace-apollo-data`
-
-```typescript
-// supabase/functions/replace-apollo-data/index.ts
-// - Recebe os dados da planilha via POST
-// - Deleta registros antigos do Apollo um a um
-// - Insere novos registros em lotes de 50
-// - Retorna progresso e resultado final
-```
-
-### 2. Componente de Importação Temporário
-
-Adicionar lógica no frontend para:
-- Ler a planilha Excel
-- Enviar dados para a Edge Function
-- Mostrar progresso da operação
-
----
-
-## Fluxo de Execução
+## Ordem de Exclusão (Respeitando Foreign Keys)
 
 ```text
-┌─────────────────┐
-│ Ler Planilha    │
-│ (18.350 linhas) │
-└────────┬────────┘
-         ▼
-┌─────────────────┐
-│ Edge Function   │
-│ replace-apollo  │
-└────────┬────────┘
-         ▼
-┌─────────────────┐     ┌─────────────────┐
-│ Deletar antigos │ ──► │ Inserir novos   │
-│ (1 por vez)     │     │ (lotes de 50)   │
-└─────────────────┘     └─────────────────┘
+1. Tabelas dependentes (filhas)
+   ├── comment_likes
+   ├── post_reactions
+   ├── post_mentions
+   ├── post_reports
+   ├── community_comments
+   ├── ai_classification_logs
+   └── notifications
+
+2. Tabelas intermediárias
+   ├── community_posts
+   ├── trading_operations
+   ├── profit_operations
+   ├── journal_trades
+   ├── personal_finances
+   └── lancamentos_financas
+
+3. Tabelas de referência
+   ├── strategies
+   ├── financial_accounts
+   ├── categorias_financas
+   └── ...
+
+4. Tabelas principais
+   ├── user_roles
+   ├── user_permissions
+   └── profiles (por último)
 ```
 
 ---
 
-## Mapeamento de Campos
+## Implementação
 
-| Planilha | Banco de Dados |
-|----------|----------------|
-| data_operacao | operation_date |
-| horario | operation_time |
-| ativo | asset |
-| contratos | contracts |
-| custos | costs |
-| resultado | result |
-| observacoes | notes |
-| estrategia | strategy |
+### 1. Edge Function: `clear-all-data`
+- Usa `service_role` key para bypass de RLS
+- Executa TRUNCATE ou DELETE em cascata
+- Retorna status de cada tabela
+
+### 2. Componente Frontend
+- Botão com confirmação tripla
+- Barra de progresso por tabela
+- Log de exclusão em tempo real
 
 ---
 
-## Resultado Esperado
+## Avisos Importantes
 
-- ✅ Todas as operações antigas do Apollo removidas
-- ✅ ~18.350 novas operações importadas
-- ✅ Dashboard atualizado automaticamente
+- **Esta ação é IRREVERSÍVEL**
+- Todos os usuários perderão acesso
+- Histórico de operações será perdido permanentemente
+- Dados financeiros serão apagados
+- Comunidade será resetada
+
