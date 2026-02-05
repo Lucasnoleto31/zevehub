@@ -510,7 +510,7 @@ export const TradingDashboard = ({ operations, strategies }: TradingDashboardPro
     let cumulative = 0;
     let maxBalance = 0;
     let minBalance = 0;
-    const equityCurve = sortedDays.map(([date, dailyData], idx) => {
+    const fullEquityCurve = sortedDays.map(([date, dailyData], idx) => {
       cumulative += dailyData.result;
       maxBalance = Math.max(maxBalance, cumulative);
       minBalance = Math.min(minBalance, cumulative);
@@ -521,6 +521,15 @@ export const TradingDashboard = ({ operations, strategies }: TradingDashboardPro
         date: format(parseISO(date), 'dd/MM', { locale: ptBR })
       };
     });
+    
+    // Intelligent sampling for large datasets (max 365 points for chart performance)
+    const MAX_CHART_POINTS = 365;
+    const equityCurve = fullEquityCurve.length > MAX_CHART_POINTS
+      ? fullEquityCurve.filter((_, i) => 
+          i % Math.ceil(fullEquityCurve.length / MAX_CHART_POINTS) === 0 || 
+          i === fullEquityCurve.length - 1
+        )
+      : fullEquityCurve;
 
     let maxDrawdown = 0;
     let peak = 0;
