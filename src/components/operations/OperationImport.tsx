@@ -299,17 +299,24 @@ const OperationImport = ({ userId }: OperationImportProps) => {
     setImporting(true);
     setProgress(0);
 
+    // Parâmetros otimizados para importação resiliente
+    const BATCH_SIZE = 50;
+    const BATCH_DELAY = 200;
+    const MAX_RETRIES = 3;
+    const MAX_CONSECUTIVE_ERRORS = 20;
+    const LONG_PAUSE_THRESHOLD = 5;
+    const LONG_PAUSE_DELAY = 3000;
+
     try {
-      // Batch menor para evitar timeout do banco de dados
-      const batchSize = 10;
-      const batches = Math.ceil(pendingOperations.length / batchSize);
+      const totalBatches = Math.ceil(pendingOperations.length / BATCH_SIZE);
       let successCount = 0;
       let errorCount = 0;
+      let consecutiveErrors = 0;
       const failedOperations: string[] = [];
 
-      for (let i = 0; i < batches; i++) {
-        const start = i * batchSize;
-        const end = Math.min(start + batchSize, pendingOperations.length);
+      for (let i = 0; i < totalBatches; i++) {
+        const start = i * BATCH_SIZE;
+        const end = Math.min(start + BATCH_SIZE, pendingOperations.length);
         const batch = pendingOperations.slice(start, end);
 
         const operationsWithUserId = batch.map(op => {
@@ -320,31 +327,69 @@ const OperationImport = ({ userId }: OperationImportProps) => {
           };
         });
 
-        try {
-          const { error } = await supabase
-            .from("trading_operations")
-            .insert(operationsWithUserId);
+        let success = false;
+        let retries = 0;
 
-          if (error) {
-            console.error(`Erro no lote ${i + 1}:`, error);
-            errorCount += batch.length;
-            failedOperations.push(`Lote ${i + 1}: ${error.message}`);
-          } else {
-            successCount += batch.length;
+        // Retry loop com backoff exponencial
+        while (!success && retries < MAX_RETRIES) {
+          try {
+            const { error } = await supabase
+              .from("trading_operations")
+              .insert(operationsWithUserId);
+
+            if (!error) {
+              success = true;
+              successCount += batch.length;
+              consecutiveErrors = 0;
+            } else {
+              retries++;
+              consecutiveErrors++;
+              console.warn(`Erro no lote ${i + 1}, tentativa ${retries}:`, error.message);
+              
+              if (retries < MAX_RETRIES) {
+                // Backoff exponencial: 1s, 2s, 4s
+                const backoffDelay = 1000 * Math.pow(2, retries - 1);
+                await new Promise(resolve => setTimeout(resolve, backoffDelay));
+              }
+            }
+          } catch (batchError: any) {
+            retries++;
+            consecutiveErrors++;
+            console.error(`Exceção no lote ${i + 1}, tentativa ${retries}:`, batchError);
+            
+            if (retries < MAX_RETRIES) {
+              const backoffDelay = 1000 * Math.pow(2, retries - 1);
+              await new Promise(resolve => setTimeout(resolve, backoffDelay));
+            }
           }
-        } catch (batchError: any) {
-          console.error(`Exceção no lote ${i + 1}:`, batchError);
+        }
+
+        // Se após todas as tentativas ainda falhou
+        if (!success) {
           errorCount += batch.length;
-          failedOperations.push(`Lote ${i + 1}: ${batchError.message || 'Erro desconhecido'}`);
+          failedOperations.push(`Lote ${i + 1} (linhas ${start + 1}-${end}): Falhou após ${MAX_RETRIES} tentativas`);
+        }
+
+        // Pausa longa se muitos erros consecutivos
+        if (consecutiveErrors >= LONG_PAUSE_THRESHOLD && consecutiveErrors < MAX_CONSECUTIVE_ERRORS) {
+          console.warn(`${consecutiveErrors} erros consecutivos. Pausando por ${LONG_PAUSE_DELAY}ms...`);
+          toast.warning(`Muitos erros. Aguardando ${LONG_PAUSE_DELAY / 1000}s antes de continuar...`);
+          await new Promise(resolve => setTimeout(resolve, LONG_PAUSE_DELAY));
+        }
+
+        // Abortar se persistir
+        if (consecutiveErrors >= MAX_CONSECUTIVE_ERRORS) {
+          toast.error("Importação abortada: muitos erros consecutivos. Tente novamente mais tarde.");
+          break;
         }
 
         // Atualizar progresso
-        const currentProgress = Math.round(((i + 1) / batches) * 100);
+        const currentProgress = Math.round(((i + 1) / totalBatches) * 100);
         setProgress(currentProgress);
 
-        // Pequeno delay entre batches para evitar sobrecarga
-        if (i < batches - 1) {
-          await new Promise(resolve => setTimeout(resolve, 100));
+        // Delay entre batches para evitar sobrecarga
+        if (i < totalBatches - 1) {
+          await new Promise(resolve => setTimeout(resolve, BATCH_DELAY));
         }
       }
 
