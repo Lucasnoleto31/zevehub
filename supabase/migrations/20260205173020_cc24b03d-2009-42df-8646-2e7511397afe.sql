@@ -1,0 +1,1 @@
+TRUNCATE TABLE trading_operations CASCADE;
