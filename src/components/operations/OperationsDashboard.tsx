@@ -408,6 +408,13 @@ const OperationsDashboard = ({ userId }: OperationsDashboardProps) => {
     });
   };
 
+  // Intelligent sampling for large datasets
+  const sampleData = <T,>(data: T[], maxPoints: number = 365): T[] => {
+    if (data.length <= maxPoints) return data;
+    const step = Math.ceil(data.length / maxPoints);
+    return data.filter((_, i) => i % step === 0 || i === data.length - 1);
+  };
+
   const generateCharts = (ops: Operation[]) => {
     // Performance Curve
     const dailyResults = ops.reduce((acc, op) => {
@@ -427,7 +434,8 @@ const OperationsDashboard = ({ userId }: OperationsDashboardProps) => {
           value: accumulated,
         };
       });
-    setPerformanceCurve(curve);
+    // Sample equity curve for performance (max 365 points)
+    setPerformanceCurve(sampleData(curve, 365));
 
     // Month Stats
     const monthNames = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];

@@ -82,6 +82,8 @@ const Trading = () => {
   const [loading, setLoading] = useState(true);
   const [userId, setUserId] = useState<string | null>(null);
   const [importing, setImporting] = useState(false);
+  const [importProgress, setImportProgress] = useState(0);
+  const [importErrors, setImportErrors] = useState<string[]>([]);
   const [showStrategyDialog, setShowStrategyDialog] = useState(false);
   const [pendingOperations, setPendingOperations] = useState<any[]>([]);
   const [selectedStrategyId, setSelectedStrategyId] = useState<string>("");
@@ -326,7 +328,15 @@ const Trading = () => {
       return;
     }
 
+    // Optimized batch insertion configuration
+    const BATCH_SIZE = 50;
+    const BATCH_DELAY = 100; // ms
+
     try {
+      setImporting(true);
+      setImportProgress(0);
+      setImportErrors([]);
+
       // Add user_id and strategy_id to each operation
       const operationsWithUser = pendingOperations.map(op => ({
         ...op,
@@ -334,14 +344,46 @@ const Trading = () => {
         strategy_id: strategyId,
       }));
 
-      const { error } = await supabase
-        .from('profit_operations')
-        .insert(operationsWithUser);
+      const totalBatches = Math.ceil(operationsWithUser.length / BATCH_SIZE);
+      let successCount = 0;
+      const errors: string[] = [];
 
-      if (error) throw error;
+      // Insert in batches with progress tracking
+      for (let i = 0; i < totalBatches; i++) {
+        const startIdx = i * BATCH_SIZE;
+        const batch = operationsWithUser.slice(startIdx, startIdx + BATCH_SIZE);
+        
+        try {
+          const { error } = await supabase
+            .from('profit_operations')
+            .insert(batch);
 
+          if (error) {
+            errors.push(`Lote ${i + 1}: ${error.message}`);
+          } else {
+            successCount += batch.length;
+          }
+        } catch (batchError: any) {
+          errors.push(`Lote ${i + 1}: ${batchError.message}`);
+        }
+
+        // Update progress
+        setImportProgress(Math.round(((i + 1) / totalBatches) * 100));
+
+        // Add delay between batches to prevent database overload
+        if (i < totalBatches - 1) {
+          await new Promise(resolve => setTimeout(resolve, BATCH_DELAY));
+        }
+      }
+
+      setImportErrors(errors);
       queryClient.invalidateQueries({ queryKey: ['profit-operations'] });
-      toast.success(`${pendingOperations.length} operações importadas com sucesso!`);
+      
+      if (errors.length === 0) {
+        toast.success(`${successCount} operações importadas com sucesso!`);
+      } else {
+        toast.warning(`${successCount} operações importadas. ${errors.length} lotes com erro.`);
+      }
       
       // Reset state
       setShowStrategyDialog(false);
@@ -352,6 +394,9 @@ const Trading = () => {
     } catch (error: any) {
       console.error('Import error:', error);
       toast.error('Erro ao importar operações: ' + error.message);
+    } finally {
+      setImporting(false);
+      setImportProgress(0);
     }
   };
 
@@ -444,9 +489,22 @@ WINJ25;01/01/2025 10:15:00;01/01/2025 10:22:45;00:07:45;2;2;V;125.200;125.050;12
                   </Button>
                 </div>
                 {importing && (
-                  <div className="flex items-center gap-2 text-muted-foreground">
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
-                    <span>Importando...</span>
+                  <div className="flex flex-col items-center gap-3 w-full max-w-md">
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
+                      <span>Importando... {importProgress}%</span>
+                    </div>
+                    <div className="w-full bg-muted rounded-full h-2 overflow-hidden">
+                      <div 
+                        className="h-full bg-primary transition-all duration-300 ease-out"
+                        style={{ width: `${importProgress}%` }}
+                      />
+                    </div>
+                    {importErrors.length > 0 && (
+                      <div className="text-xs text-destructive">
+                        {importErrors.length} erro(s) encontrado(s)
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
