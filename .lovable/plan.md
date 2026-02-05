@@ -1,138 +1,115 @@
 
-# Plano de Otimização para 40.000 Operações
 
-## Objetivo
-Otimizar o sistema de importação e dashboards para suportar 40 mil operações sem travar, implementando batching na página /trading e melhorias de performance nos gráficos.
+# Plano de Correção: Importação Resiliente para /operations
 
----
+## Diagnóstico
 
-## Problemas Identificados
-
-### 1. Importação em /trading (CRÍTICO)
-- **Arquivo**: `src/pages/Trading.tsx` (linhas 337-339)
-- **Problema**: Insere todas as operações de uma única vez
-- **Risco**: Timeout do banco e travamento com 40k registros
-
-### 2. Dashboard de Trading
-- **Arquivo**: `src/components/trading/TradingDashboard.tsx`
-- **Problema**: Processa todas as operações na memória via `useMemo`
-- **Risco**: UI lenta com grandes volumes
-
-### 3. Dashboard de Robôs (/operations)
-- **Arquivo**: `src/components/operations/OperationsDashboard.tsx`
-- **Problema**: Carrega e processa todas as operações no frontend
-- **Risco**: Consumo excessivo de memória
-
----
+O crash ocorreu porque:
+- **Batch size muito pequeno** (10 registros) = muitas requisições
+- **Delay insuficiente** (100ms) = banco não consegue se recuperar
+- **Sem retry logic** = erros não são tratados adequadamente
+- Para 42.000 operações: 4.200 batches = 4.200 requisições ao banco
 
 ## Solução Proposta
 
-### Fase 1: Batching na Importação do /trading
+### Mudanças em `src/components/operations/OperationImport.tsx`
 
 ```text
-┌──────────────────────────────────────────────────────┐
-│             FLUXO DE IMPORTAÇÃO OTIMIZADO            │
-├──────────────────────────────────────────────────────┤
-│  1. Upload CSV                                       │
-│         ↓                                            │
-│  2. Parse das operações                              │
-│         ↓                                            │
-│  3. Divisão em batches de 50 registros               │
-│         ↓                                            │
-│  4. Inserção sequencial com delay de 100ms           │
-│         ↓                                            │
-│  5. Barra de progresso em tempo real                 │
-│         ↓                                            │
-│  6. Relatório de sucesso/falhas                      │
-└──────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────┐
+│              FLUXO DE IMPORTAÇÃO RESILIENTE                 │
+├─────────────────────────────────────────────────────────────┤
+│  1. Aumentar batch size: 10 → 50 registros                  │
+│         ↓                                                   │
+│  2. Aumentar delay: 100ms → 200ms                           │
+│         ↓                                                   │
+│  3. Retry com backoff exponencial em caso de erro           │
+│         ↓                                                   │
+│  4. Pausar 3 segundos após 5 erros consecutivos             │
+│         ↓                                                   │
+│  5. Abortar após 20 erros consecutivos (proteção)           │
+└─────────────────────────────────────────────────────────────┘
 ```
 
-**Mudanças em `src/pages/Trading.tsx`:**
-- Adicionar estados `importProgress` e `importErrors`
-- Implementar função `batchInsert` com lotes de 50 registros
-- Adicionar delay de 100ms entre batches
-- Mostrar barra de progresso durante importação
-- Tratamento de erros por lote
+### Parâmetros Otimizados
 
-### Fase 2: Otimização do TradingDashboard
+| Parâmetro | Antes | Depois |
+|-----------|-------|--------|
+| Batch size | 10 | 50 |
+| Delay entre batches | 100ms | 200ms |
+| Retry em erro | Nenhum | 3 tentativas |
+| Backoff em falha | Nenhum | 1s, 2s, 4s |
+| Pausa após erros | Nenhum | 3s após 5 erros |
+| Limite de erros | Nenhum | Aborta após 20 |
 
-**Mudanças em `src/components/trading/TradingDashboard.tsx`:**
-- Implementar **sampling inteligente** para gráficos quando houver mais de 5.000 operações
-- Limitar equity curve a 365 pontos (agregação diária já existe)
-- Adicionar `React.memo` nos componentes de chart
-- Usar `useDeferredValue` para filtros
+### Tempo Estimado
 
-### Fase 3: Otimização do Dashboard de Robôs
-
-**Mudanças em `src/components/operations/OperationsDashboard.tsx`:**
-- Manter lógica atual de paginação no fetch (já implementada com batch de 1000)
-- Adicionar sampling para gráficos com datasets grandes
-- Limitar heatmap a dados agregados
+- **42.000 operações ÷ 50 = 840 batches**
+- **840 × 200ms = 168 segundos (~3 minutos)**
+- Muito mais seguro que os 4.200 batches anteriores
 
 ---
 
 ## Detalhes Técnicos
 
-### Batching na Importação (Trading.tsx)
+### Nova Lógica de Retry
 
-Nova função `handleConfirmImport`:
 ```typescript
-// Batch size otimizado para evitar timeouts
 const BATCH_SIZE = 50;
-const BATCH_DELAY = 100; // ms
+const BATCH_DELAY = 200;
+const MAX_RETRIES = 3;
+const MAX_CONSECUTIVE_ERRORS = 20;
 
-// Inserção em lotes com progress tracking
+let consecutiveErrors = 0;
+
 for (let i = 0; i < batches; i++) {
-  const batch = operationsWithUser.slice(i * BATCH_SIZE, (i + 1) * BATCH_SIZE);
-  await supabase.from('profit_operations').insert(batch);
-  setImportProgress(((i + 1) / batches) * 100);
-  await new Promise(r => setTimeout(r, BATCH_DELAY));
+  let success = false;
+  let retries = 0;
+
+  while (!success && retries < MAX_RETRIES) {
+    const { error } = await supabase
+      .from("trading_operations")
+      .insert(batch);
+
+    if (!error) {
+      success = true;
+      consecutiveErrors = 0;
+    } else {
+      retries++;
+      consecutiveErrors++;
+      
+      // Backoff exponencial: 1s, 2s, 4s
+      await new Promise(r => setTimeout(r, 1000 * Math.pow(2, retries - 1)));
+    }
+  }
+
+  // Pausa longa se muitos erros
+  if (consecutiveErrors >= 5 && consecutiveErrors < MAX_CONSECUTIVE_ERRORS) {
+    await new Promise(r => setTimeout(r, 3000));
+  }
+
+  // Abortar se persistir
+  if (consecutiveErrors >= MAX_CONSECUTIVE_ERRORS) {
+    throw new Error("Muitos erros consecutivos. Tente novamente mais tarde.");
+  }
 }
 ```
 
-### Estimativa de Tempo de Importação
-- 40.000 operações ÷ 50 por batch = 800 batches
-- 800 batches × 100ms delay = 80 segundos (~1.5 min)
-- Muito mais rápido que os 40+ minutos do batch atual de 10
-
-### Sampling para Gráficos
-
-```typescript
-const sampleData = useMemo(() => {
-  if (operations.length <= 5000) return operations;
-  // Amostragem uniforme para manter representatividade
-  const step = Math.ceil(operations.length / 5000);
-  return operations.filter((_, i) => i % step === 0);
-}, [operations]);
-```
-
 ---
 
-## Arquivos a Modificar
+## Arquivo a Modificar
 
 | Arquivo | Alterações |
 |---------|------------|
-| `src/pages/Trading.tsx` | Adicionar batching, progress bar, tratamento de erros |
-| `src/components/trading/TradingDashboard.tsx` | Adicionar sampling, otimizar memos |
-| `src/components/operations/OperationsDashboard.tsx` | Adicionar sampling para gráficos |
+| `src/components/operations/OperationImport.tsx` | Batch 50, delay 200ms, retry com backoff, limite de erros |
 
 ---
 
-## Benefícios Esperados
+## Benefícios
 
 | Métrica | Antes | Depois |
 |---------|-------|--------|
-| Tempo importação 40k | Timeout/Falha | ~1.5 min |
-| Uso de memória | Alto | Controlado |
-| Responsividade UI | Travamentos | Fluida |
-| Feedback ao usuário | Nenhum | Progress bar |
+| Requisições para 42k | 4.200 | 840 |
+| Chance de timeout | Alta | Baixa |
+| Recuperação de erros | Nenhuma | Automática |
+| Proteção do banco | Nenhuma | Backoff + pause |
 
----
-
-## Testes Recomendados
-
-1. Importar arquivo com 1.000 operações (teste básico)
-2. Importar arquivo com 10.000 operações (teste médio)
-3. Importar arquivo com 40.000 operações (teste de stress)
-4. Verificar gráficos com 40k dados carregados
-5. Testar filtros com dataset grande
