@@ -598,8 +598,8 @@ export const TradingDashboard = ({ operations, strategies }: TradingDashboardPro
       }
     });
     
-    const grossProfit = wins.reduce((s, r) => s + r, 0);
-    const grossLoss = Math.abs(losses.reduce((s, r) => s + r, 0));
+    const grossProfit = winSum;
+    const grossLoss = lossAbsSum;
     const profitFactor = grossLoss > 0 ? grossProfit / grossLoss : grossProfit > 0 ? Infinity : 0;
     
     const expectancy = ops.length > 0 
@@ -624,30 +624,9 @@ export const TradingDashboard = ({ operations, strategies }: TradingDashboardPro
       }))
       .sort((a, b) => a.monthKey.localeCompare(b.monthKey));
 
-    const yearResults: Record<number, number> = {};
-    ops.forEach(op => {
-      const year = getYear(new Date(op.open_time));
-      yearResults[year] = (yearResults[year] || 0) + (op.operation_result || 0);
-    });
     const yearlyData = Object.entries(yearResults)
-      .map(([year, result]) => ({ year, result }))
+      .map(([year, result]) => ({ year: String(year), result }))
       .sort((a, b) => a.year.localeCompare(b.year));
-
-    const hourlyResults: Record<number, { total: number; count: number; wins: number; losses: number; winCount: number; lossCount: number }> = {};
-    ops.forEach(op => {
-      const hour = new Date(op.open_time).getUTCHours(); // Use UTC hours since data is stored as UTC representing local market time
-      if (!hourlyResults[hour]) hourlyResults[hour] = { total: 0, count: 0, wins: 0, losses: 0, winCount: 0, lossCount: 0 };
-      const result = op.operation_result || 0;
-      hourlyResults[hour].total += result;
-      hourlyResults[hour].count++;
-      if (result >= 0) {
-        hourlyResults[hour].wins += result;
-        hourlyResults[hour].winCount++;
-      } else {
-        hourlyResults[hour].losses += Math.abs(result);
-        hourlyResults[hour].lossCount++;
-      }
-    });
     // Market hours: 9h to 18h
     const marketHours = [9, 10, 11, 12, 13, 14, 15, 16, 17, 18];
     const hourlyData = marketHours.map(hour => ({
