@@ -82,38 +82,41 @@ const monthNames: Record<number, string> = {
 };
 
 const calculateBestConfig = (strategy: string, operations: Operation[]): BestConfig => {
-  const strategyOps = operations.filter(op => op.strategy === strategy);
-  
-  // Agrupar por hora
+  // Single-pass: filter by strategy + aggregate hour/weekday/month simultaneously
   const hourStats: Record<number, { total: number; positive: number; result: number }> = {};
-  strategyOps.forEach(op => {
+  const weekdayStats: Record<number, { total: number; positive: number; result: number }> = {};
+  const monthStats: Record<number, { total: number; positive: number; result: number }> = {};
+  let totalResult = 0;
+  let strategyCount = 0;
+
+  operations.forEach(op => {
+    if (op.strategy !== strategy) return;
+    strategyCount++;
+    totalResult += op.result;
+    const isPositive = op.result > 0;
+
+    // Hour
     const hour = parseInt(op.operation_time.split(':')[0]);
     if (!hourStats[hour]) hourStats[hour] = { total: 0, positive: 0, result: 0 };
     hourStats[hour].total++;
     hourStats[hour].result += op.result;
-    if (op.result > 0) hourStats[hour].positive++;
-  });
+    if (isPositive) hourStats[hour].positive++;
 
-  // Agrupar por dia da semana
-  const weekdayStats: Record<number, { total: number; positive: number; result: number }> = {};
-  strategyOps.forEach(op => {
-    const [year, month, day] = op.operation_date.split('-').map(Number);
-    const date = new Date(year, month - 1, day);
+    // Weekday
+    const parts = op.operation_date.split('-');
+    const date = new Date(+parts[0], +parts[1] - 1, +parts[2]);
     const weekday = date.getDay();
     if (!weekdayStats[weekday]) weekdayStats[weekday] = { total: 0, positive: 0, result: 0 };
     weekdayStats[weekday].total++;
     weekdayStats[weekday].result += op.result;
-    if (op.result > 0) weekdayStats[weekday].positive++;
-  });
+    if (isPositive) weekdayStats[weekday].positive++;
 
-  // Agrupar por mês
-  const monthStats: Record<number, { total: number; positive: number; result: number }> = {};
-  strategyOps.forEach(op => {
-    const month = parseInt(op.operation_date.split('-')[1], 10) - 1;
+    // Month
+    const month = +parts[1] - 1;
     if (!monthStats[month]) monthStats[month] = { total: 0, positive: 0, result: 0 };
     monthStats[month].total++;
     monthStats[month].result += op.result;
-    if (op.result > 0) monthStats[month].positive++;
+    if (isPositive) monthStats[month].positive++;
   });
 
   // Filtrar apenas com resultado POSITIVO e ordenar
@@ -153,12 +156,10 @@ const calculateBestConfig = (strategy: string, operations: Operation[]): BestCon
     bestWeekdays.reduce((sum, d) => sum + d.result, 0) +
     bestMonths.reduce((sum, m) => sum + m.result, 0);
 
-  const totalResult = strategyOps.reduce((sum, op) => sum + op.result, 0);
-
   // Determinar confiança baseado no volume
   let confidence: "low" | "medium" | "high" = "low";
-  if (strategyOps.length > 500) confidence = "high";
-  else if (strategyOps.length > 100) confidence = "medium";
+  if (strategyCount > 500) confidence = "high";
+  else if (strategyCount > 100) confidence = "medium";
 
   return {
     strategy,
@@ -167,7 +168,7 @@ const calculateBestConfig = (strategy: string, operations: Operation[]): BestCon
     bestMonths,
     totalResult,
     estimatedResult,
-    totalOperations: strategyOps.length,
+    totalOperations: strategyCount,
     confidence,
   };
 };

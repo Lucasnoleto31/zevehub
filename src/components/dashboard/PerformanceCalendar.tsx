@@ -5,7 +5,6 @@ import { ChevronLeft, ChevronRight, Calendar, TrendingUp, TrendingDown, Activity
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isToday, addMonths, subMonths, getDay, startOfWeek, endOfWeek } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { motion, AnimatePresence } from "framer-motion";
-import { AlertTriangle } from "lucide-react";
 
 interface Operation {
   id: string;
@@ -37,15 +36,6 @@ const PerformanceCalendar = ({ operations }: PerformanceCalendarProps) => {
   const weekDays = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
 
   const { calendarDays, monthStats, recoveryStats, streakPatterns } = useMemo(() => {
-    // Guard: return empty data for very large datasets
-    if (operations.length > 50000) {
-      return {
-        calendarDays: [] as DayData[],
-        monthStats: { totalResult: 0, winDays: 0, lossDays: 0, tradingDays: 0 },
-        recoveryStats: { avgRecovery: 0, recoveryRate: 0, totalRecoveries: 0 },
-        streakPatterns: { maxWinStreak: 0, maxLossStreak: 0, avgAfterWinStreak: 0, avgAfterLossStreak: 0, afterWinStreakCount: 0, afterLossStreakCount: 0 },
-      };
-    }
     const monthStart = startOfMonth(currentMonth);
     const monthEnd = endOfMonth(currentMonth);
     const calendarStart = startOfWeek(monthStart);
@@ -197,31 +187,6 @@ const PerformanceCalendar = ({ operations }: PerformanceCalendarProps) => {
       currency: "BRL",
     }).format(value);
   };
-
-  // Guard: skip heavy rendering for very large datasets
-  if (operations.length > 50000) {
-    return (
-      <div className="space-y-4">
-        <Card className="border-border/50 bg-card/50 backdrop-blur-sm">
-          <CardHeader className="pb-2">
-            <CardTitle className="flex items-center gap-2 text-lg font-semibold">
-              <Calendar className="h-5 w-5 text-primary" />
-              Calendário de Performance
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="py-6">
-            <div className="flex flex-col items-center justify-center text-center gap-3">
-              <AlertTriangle className="h-8 w-8 text-amber-500" />
-              <p className="text-sm text-muted-foreground">
-                Dataset muito grande ({operations.length.toLocaleString()} operações).
-                Refine os filtros de período para visualizar o calendário.
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
 
   return (
     <div className="space-y-4">
