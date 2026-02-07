@@ -1,13 +1,15 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Upload, FileSpreadsheet, CheckCircle, XCircle, Download, Eye } from "lucide-react";
+import { Upload, FileSpreadsheet, CheckCircle, XCircle, Download, Eye, RefreshCw } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import * as XLSX from "xlsx";
 import { Progress } from "@/components/ui/progress";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
 
 interface OperationImportProps {
   userId: string;
@@ -34,6 +36,10 @@ const OperationImport = ({ userId }: OperationImportProps) => {
   const [errorList, setErrorList] = useState<string[]>([]);
   const [showErrors, setShowErrors] = useState(false);
   const [editingCell, setEditingCell] = useState<{ index: number; field: string } | null>(null);
+  const [replaceMode, setReplaceMode] = useState(true);
+  const [deletingDuplicates, setDeletingDuplicates] = useState(false);
+  const [deleteProgress, setDeleteProgress] = useState("");
+  const [importPhase, setImportPhase] = useState<"idle" | "detecting" | "deleting" | "inserting" | "done">("idle");
 
   const downloadTemplate = () => {
     const template = [
@@ -293,11 +299,39 @@ const OperationImport = ({ userId }: OperationImportProps) => {
     }
   };
 
+  const deleteOperationsByDates = async (dates: string[]): Promise<number> => {
+    const DATES_PER_BATCH = 50;
+    let totalDeleted = 0;
+
+    for (let i = 0; i < dates.length; i += DATES_PER_BATCH) {
+      const batch = dates.slice(i, i + DATES_PER_BATCH);
+      setDeleteProgress(`Removendo operações... lote ${Math.floor(i / DATES_PER_BATCH) + 1} de ${Math.ceil(dates.length / DATES_PER_BATCH)}`);
+
+      const { data, error } = await supabase.functions.invoke("delete-operations-by-dates", {
+        body: { dates: batch, userId },
+      });
+
+      if (error) {
+        console.error("Erro ao deletar lote de datas:", error);
+        throw new Error(`Erro ao deletar operações: ${error.message}`);
+      }
+
+      if (data?.deleted) {
+        totalDeleted += data.deleted;
+      }
+
+      setDeleteProgress(`Removidas ${totalDeleted} operações até agora...`);
+    }
+
+    return totalDeleted;
+  };
+
   const confirmImport = async () => {
     if (pendingOperations.length === 0) return;
 
     setImporting(true);
     setProgress(0);
+    setImportPhase("idle");
 
     // Parâmetros otimizados para importação resiliente
     const BATCH_SIZE = 100;
@@ -307,7 +341,72 @@ const OperationImport = ({ userId }: OperationImportProps) => {
     const LONG_PAUSE_THRESHOLD = 5;
     const LONG_PAUSE_DELAY = 3000;
 
+    let totalDeletedOps = 0;
+
     try {
+      // ===== ETAPA 1: Substituição de datas repetidas =====
+      if (replaceMode) {
+        setImportPhase("detecting");
+        setDeleteProgress("Detectando datas duplicadas...");
+
+        // Extrair datas únicas da planilha
+        const uniqueDates = [...new Set(pendingOperations.map(op => op.operation_date))];
+        console.log(`📊 ${uniqueDates.length} datas únicas na planilha`);
+
+        // Verificar quais datas já existem no banco (em lotes de 200 para não estourar query)
+        const existingDates: string[] = [];
+        const DATE_CHECK_BATCH = 200;
+        for (let i = 0; i < uniqueDates.length; i += DATE_CHECK_BATCH) {
+          const batch = uniqueDates.slice(i, i + DATE_CHECK_BATCH);
+          const { data: found } = await supabase
+            .from("trading_operations")
+            .select("operation_date")
+            .eq("user_id", userId)
+            .in("operation_date", batch)
+            .limit(1000);
+
+          if (found) {
+            const foundDates = [...new Set(found.map((r: { operation_date: string }) => r.operation_date))];
+            existingDates.push(...foundDates);
+          }
+        }
+
+        const duplicateDates = [...new Set(existingDates)];
+
+        if (duplicateDates.length > 0) {
+          // Contar quantas operações serão removidas
+          let totalToDelete = 0;
+          for (let i = 0; i < duplicateDates.length; i += DATE_CHECK_BATCH) {
+            const batch = duplicateDates.slice(i, i + DATE_CHECK_BATCH);
+            const { count } = await supabase
+              .from("trading_operations")
+              .select("id", { count: "exact", head: true })
+              .eq("user_id", userId)
+              .in("operation_date", batch);
+
+            totalToDelete += count || 0;
+          }
+
+          setDeleteProgress(`Encontradas ${duplicateDates.length} datas em comum com ${totalToDelete.toLocaleString("pt-BR")} operações existentes`);
+          toast.info(`${duplicateDates.length} datas em comum encontradas. Removendo ${totalToDelete.toLocaleString("pt-BR")} operações antigas...`);
+
+          // ===== ETAPA 2: Excluir operações das datas duplicadas =====
+          setImportPhase("deleting");
+          setDeletingDuplicates(true);
+
+          totalDeletedOps = await deleteOperationsByDates(duplicateDates);
+
+          setDeletingDuplicates(false);
+          setDeleteProgress(`${totalDeletedOps.toLocaleString("pt-BR")} operações antigas removidas`);
+          toast.success(`${totalDeletedOps.toLocaleString("pt-BR")} operações antigas removidas com sucesso`);
+        } else {
+          setDeleteProgress("Nenhuma data duplicada encontrada");
+          toast.info("Nenhuma data duplicada encontrada. Inserindo diretamente...");
+        }
+      }
+
+      // ===== ETAPA 3: Inserir novas operações =====
+      setImportPhase("inserting");
       const totalBatches = Math.ceil(pendingOperations.length / BATCH_SIZE);
       let successCount = 0;
       let errorCount = 0;
@@ -347,7 +446,6 @@ const OperationImport = ({ userId }: OperationImportProps) => {
               console.warn(`Erro no lote ${i + 1}, tentativa ${retries}:`, error.message);
               
               if (retries < MAX_RETRIES) {
-                // Backoff exponencial: 1s, 2s, 4s
                 const backoffDelay = 1000 * Math.pow(2, retries - 1);
                 await new Promise(resolve => setTimeout(resolve, backoffDelay));
               }
@@ -364,46 +462,47 @@ const OperationImport = ({ userId }: OperationImportProps) => {
           }
         }
 
-        // Se após todas as tentativas ainda falhou
         if (!success) {
           errorCount += batch.length;
           failedOperations.push(`Lote ${i + 1} (linhas ${start + 1}-${end}): Falhou após ${MAX_RETRIES} tentativas`);
         }
 
-        // Pausa longa se muitos erros consecutivos
         if (consecutiveErrors >= LONG_PAUSE_THRESHOLD && consecutiveErrors < MAX_CONSECUTIVE_ERRORS) {
           console.warn(`${consecutiveErrors} erros consecutivos. Pausando por ${LONG_PAUSE_DELAY}ms...`);
           toast.warning(`Muitos erros. Aguardando ${LONG_PAUSE_DELAY / 1000}s antes de continuar...`);
           await new Promise(resolve => setTimeout(resolve, LONG_PAUSE_DELAY));
         }
 
-        // Abortar se persistir
         if (consecutiveErrors >= MAX_CONSECUTIVE_ERRORS) {
           toast.error("Importação abortada: muitos erros consecutivos. Tente novamente mais tarde.");
           break;
         }
 
-        // Atualizar progresso
         const currentProgress = Math.round(((i + 1) / totalBatches) * 100);
         setProgress(currentProgress);
 
-        // Delay entre batches para evitar sobrecarga
         if (i < totalBatches - 1) {
           await new Promise(resolve => setTimeout(resolve, BATCH_DELAY));
         }
       }
 
+      setImportPhase("done");
       setResults({ success: successCount, errors: errorCount });
       
-      if (successCount > 0) {
-        toast.success(`${successCount} operação(ões) importada(s) com sucesso!`);
+      const summaryParts: string[] = [];
+      if (totalDeletedOps > 0) {
+        summaryParts.push(`${totalDeletedOps.toLocaleString("pt-BR")} removidas`);
       }
+      if (successCount > 0) {
+        summaryParts.push(`${successCount.toLocaleString("pt-BR")} inseridas`);
+      }
+      toast.success(summaryParts.join(", "));
+
       if (errorCount > 0) {
         toast.error(`${errorCount} operação(ões) falharam na importação`);
         setErrorList(prev => [...prev, ...failedOperations]);
       }
 
-      // Limpar preview
       setPreviewData([]);
       setPendingOperations([]);
     } catch (error: any) {
@@ -412,7 +511,9 @@ const OperationImport = ({ userId }: OperationImportProps) => {
       setResults({ success: 0, errors: pendingOperations.length });
     } finally {
       setImporting(false);
+      setDeletingDuplicates(false);
       setProgress(0);
+      setImportPhase("idle");
     }
   };
 
@@ -500,10 +601,22 @@ const OperationImport = ({ userId }: OperationImportProps) => {
         {importing && (
           <div className="space-y-2">
             <div className="flex items-center justify-between text-sm">
-              <span className="text-muted-foreground">Importando...</span>
-              <span className="font-medium">{progress}%</span>
+              <span className="text-muted-foreground">
+                {importPhase === "detecting" && "🔍 Detectando datas duplicadas..."}
+                {importPhase === "deleting" && "🗑️ Removendo operações antigas..."}
+                {importPhase === "inserting" && `📥 Inserindo operações... ${progress}%`}
+                {importPhase === "done" && "✅ Concluído!"}
+                {importPhase === "idle" && "Preparando..."}
+              </span>
+              {importPhase === "inserting" && <span className="font-medium">{progress}%</span>}
             </div>
-            <Progress value={progress} className="h-2" />
+            {importPhase === "inserting" && <Progress value={progress} className="h-2" />}
+            {(importPhase === "detecting" || importPhase === "deleting") && deleteProgress && (
+              <p className="text-xs text-muted-foreground flex items-center gap-1.5">
+                <RefreshCw className="w-3 h-3 animate-spin" />
+                {deleteProgress}
+              </p>
+            )}
           </div>
         )}
 
@@ -646,6 +759,21 @@ const OperationImport = ({ userId }: OperationImportProps) => {
               </Table>
             </ScrollArea>
 
+            <div className="flex items-center gap-2 p-3 rounded-lg bg-muted/50 border">
+              <Checkbox
+                id="replace-mode"
+                checked={replaceMode}
+                onCheckedChange={(checked) => setReplaceMode(checked === true)}
+                disabled={importing}
+              />
+              <Label htmlFor="replace-mode" className="text-sm cursor-pointer leading-tight">
+                <span className="font-medium">Substituir datas repetidas</span>
+                <span className="block text-xs text-muted-foreground mt-0.5">
+                  Remove todas as operações existentes nas datas da planilha antes de inserir os novos dados
+                </span>
+              </Label>
+            </div>
+
             <div className="flex gap-2">
               <Button
                 onClick={confirmImport}
@@ -653,7 +781,7 @@ const OperationImport = ({ userId }: OperationImportProps) => {
                 className="flex-1 gap-2"
               >
                 <CheckCircle className="w-4 h-4" />
-                Confirmar Importação ({pendingOperations.length} ops)
+                Confirmar Importação ({pendingOperations.length.toLocaleString("pt-BR")} ops)
               </Button>
               <Button
                 onClick={cancelImport}
