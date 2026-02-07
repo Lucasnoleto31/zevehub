@@ -5,7 +5,6 @@ import { TrendingUp, TrendingDown, Activity, Target, Info, Clock, Zap, Shield, A
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { LineChart, Line, ResponsiveContainer, Area, AreaChart } from "recharts";
 import { cn } from "@/lib/utils";
-import { AlertTriangle } from "lucide-react";
 
 interface Operation {
   operation_date: string;
@@ -42,20 +41,12 @@ const AdvancedMetrics = ({ operations }: AdvancedMetricsProps) => {
   const [strategies, setStrategies] = useState<string[]>([]);
   const [selectedStrategy, setSelectedStrategy] = useState<string>("");
 
-  const isDatasetTooLarge = operations.length > 50000;
-
   useEffect(() => {
     calculateMetricsByStrategy();
   }, [operations]);
 
-  useEffect(() => {
-    if (strategies.length > 0 && !selectedStrategy) {
-      setSelectedStrategy(strategies[0]);
-    }
-  }, [strategies]);
-
   function calculateMetricsByStrategy() {
-    if (isDatasetTooLarge || operations.length === 0) {
+    if (operations.length === 0) {
       setMetricsByStrategy({});
       setHistoricalByStrategy({});
       setStrategies([]);
@@ -154,22 +145,25 @@ const AdvancedMetrics = ({ operations }: AdvancedMetricsProps) => {
       }
     });
 
-    const gains = ops.filter((op) => op.result > 0).reduce((sum, op) => sum + op.result, 0);
-    const losses = Math.abs(
-      ops.filter((op) => op.result < 0).reduce((sum, op) => sum + op.result, 0)
-    );
-    const profitFactor = losses !== 0 ? gains / losses : gains > 0 ? Infinity : 0;
+    // Single-pass: gains, losses, counts, totalProfit
+    let gains = 0;
+    let lossSum = 0;
+    let winningTrades = 0;
+    let losingTrades = 0;
+    let totalProfit = 0;
+    ops.forEach((op) => {
+      totalProfit += op.result;
+      if (op.result > 0) { winningTrades++; gains += op.result; }
+      else if (op.result < 0) { losingTrades++; lossSum += Math.abs(op.result); }
+    });
 
+    const profitFactor = lossSum !== 0 ? gains / lossSum : gains > 0 ? Infinity : 0;
     const totalOperations = ops.length;
-    const winningTrades = ops.filter((op) => op.result > 0).length;
-    const losingTrades = ops.filter((op) => op.result < 0).length;
     const avgWin = winningTrades > 0 ? gains / winningTrades : 0;
-    const avgLoss = losingTrades > 0 ? losses / losingTrades : 0;
+    const avgLoss = losingTrades > 0 ? lossSum / losingTrades : 0;
     const winRate = winningTrades / totalOperations;
     const lossRate = losingTrades / totalOperations;
     const expectancy = winRate * avgWin - lossRate * avgLoss;
-
-    const totalProfit = ops.reduce((sum, op) => sum + op.result, 0);
     const recoveryFactor = maxDrawdown !== 0 ? totalProfit / maxDrawdown : 0;
 
     const sortedDates = Array.from(dailyResults.keys()).sort();
@@ -549,29 +543,6 @@ const AdvancedMetrics = ({ operations }: AdvancedMetricsProps) => {
       />
     </div>
   );
-  // Guard: skip heavy rendering for very large datasets
-  if (isDatasetTooLarge) {
-    return (
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
-        <Card className="border-2 border-border/30 bg-gradient-to-br from-card via-card to-accent/5">
-          <CardHeader>
-            <div className="flex items-center gap-3">
-              <div className="p-2.5 rounded-xl bg-gradient-to-br from-violet-500/20 to-violet-500/5 border border-violet-500/20">
-                <Activity className="w-5 h-5 text-violet-400" />
-              </div>
-              <div>
-                <CardTitle className="text-lg">Métricas Avançadas</CardTitle>
-                <CardDescription className="flex items-center gap-2 mt-1">
-                  <AlertTriangle className="h-4 w-4 text-amber-500" />
-                  Dataset muito grande ({operations.length.toLocaleString()} operações). Refine os filtros.
-                </CardDescription>
-              </div>
-            </div>
-          </CardHeader>
-        </Card>
-      </motion.div>
-    );
-  }
 
   if (strategies.length === 0) {
     return (

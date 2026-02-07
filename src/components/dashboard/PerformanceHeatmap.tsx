@@ -47,8 +47,6 @@ const PerformanceHeatmap = ({ operations }: PerformanceHeatmapProps) => {
   const [comparisonPeriod, setComparisonPeriod] = useState<ComparisonPeriod>("all");
   const [theme, setTheme] = useState<HeatmapTheme>("dark");
 
-  const isDatasetTooLarge = operations.length > 50000;
-
   const filterByPeriod = useCallback((ops: Operation[], periodType: "current" | "previous", period: ComparisonPeriod): Operation[] => {
     if (period === "all") {
       const sorted = [...ops].sort((a, b) => a.operation_date.localeCompare(b.operation_date));
@@ -138,7 +136,7 @@ const PerformanceHeatmap = ({ operations }: PerformanceHeatmapProps) => {
     return result;
   }, []);
 
-  const heatmapData = useMemo(() => isDatasetTooLarge ? [] : processOperations(operations), [operations, processOperations, isDatasetTooLarge]);
+  const heatmapData = useMemo(() => processOperations(operations), [operations, processOperations]);
 
   const comparisonData = useMemo((): ComparisonData[] => {
     const currentOps = filterByPeriod(operations, "current", comparisonPeriod);
@@ -238,31 +236,6 @@ const PerformanceHeatmap = ({ operations }: PerformanceHeatmapProps) => {
       ? "bg-slate-800/40 border-slate-700/30 text-slate-500" 
       : "bg-slate-100 border-slate-200 text-slate-400";
   };
-
-  // Guard: skip heavy rendering for very large datasets
-  if (isDatasetTooLarge) {
-    return (
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
-        <Card className="border-border/50 bg-card/50 backdrop-blur-sm">
-          <CardHeader className="pb-2">
-            <CardTitle className="flex items-center gap-2 text-lg font-semibold">
-              <Activity className="w-5 h-5 text-amber-500" />
-              Heatmap de Performance
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="py-6">
-            <div className="flex flex-col items-center justify-center text-center gap-3">
-              <AlertTriangle className="h-8 w-8 text-amber-500" />
-              <p className="text-sm text-muted-foreground">
-                Dataset muito grande ({operations.length.toLocaleString()} operações).
-                Refine os filtros de período para visualizar o heatmap.
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-      </motion.div>
-    );
-  }
 
   return (
     <motion.div 
