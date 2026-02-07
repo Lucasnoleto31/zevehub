@@ -42,6 +42,8 @@ const AdvancedMetrics = ({ operations }: AdvancedMetricsProps) => {
   const [strategies, setStrategies] = useState<string[]>([]);
   const [selectedStrategy, setSelectedStrategy] = useState<string>("");
 
+  const isDatasetTooLarge = operations.length > 50000;
+
   useEffect(() => {
     calculateMetricsByStrategy();
   }, [operations]);
@@ -52,32 +54,8 @@ const AdvancedMetrics = ({ operations }: AdvancedMetricsProps) => {
     }
   }, [strategies]);
 
-  // Guard: skip heavy rendering for very large datasets
-  if (operations.length > 50000) {
-    return (
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
-        <Card className="border-2 border-border/30 bg-gradient-to-br from-card via-card to-accent/5">
-          <CardHeader>
-            <div className="flex items-center gap-3">
-              <div className="p-2.5 rounded-xl bg-gradient-to-br from-violet-500/20 to-violet-500/5 border border-violet-500/20">
-                <Activity className="w-5 h-5 text-violet-400" />
-              </div>
-              <div>
-                <CardTitle className="text-lg">Métricas Avançadas</CardTitle>
-                <CardDescription className="flex items-center gap-2 mt-1">
-                  <AlertTriangle className="h-4 w-4 text-amber-500" />
-                  Dataset muito grande ({operations.length.toLocaleString()} operações). Refine os filtros.
-                </CardDescription>
-              </div>
-            </div>
-          </CardHeader>
-        </Card>
-      </motion.div>
-    );
-  }
-
-  const calculateMetricsByStrategy = () => {
-    if (operations.length === 0) {
+  function calculateMetricsByStrategy() {
+    if (isDatasetTooLarge || operations.length === 0) {
       setMetricsByStrategy({});
       setHistoricalByStrategy({});
       setStrategies([]);
@@ -106,7 +84,7 @@ const AdvancedMetrics = ({ operations }: AdvancedMetricsProps) => {
     setMetricsByStrategy(calculatedMetrics);
     setHistoricalByStrategy(calculatedHistorical);
     setStrategies(strategyNames);
-  };
+  }
 
   const calculateHistoricalMetrics = (ops: Operation[]): HistoricalMetrics[] => {
     // Group operations by month
@@ -571,6 +549,29 @@ const AdvancedMetrics = ({ operations }: AdvancedMetricsProps) => {
       />
     </div>
   );
+  // Guard: skip heavy rendering for very large datasets
+  if (isDatasetTooLarge) {
+    return (
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
+        <Card className="border-2 border-border/30 bg-gradient-to-br from-card via-card to-accent/5">
+          <CardHeader>
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 rounded-xl bg-gradient-to-br from-violet-500/20 to-violet-500/5 border border-violet-500/20">
+                <Activity className="w-5 h-5 text-violet-400" />
+              </div>
+              <div>
+                <CardTitle className="text-lg">Métricas Avançadas</CardTitle>
+                <CardDescription className="flex items-center gap-2 mt-1">
+                  <AlertTriangle className="h-4 w-4 text-amber-500" />
+                  Dataset muito grande ({operations.length.toLocaleString()} operações). Refine os filtros.
+                </CardDescription>
+              </div>
+            </div>
+          </CardHeader>
+        </Card>
+      </motion.div>
+    );
+  }
 
   if (strategies.length === 0) {
     return (
