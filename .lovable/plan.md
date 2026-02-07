@@ -1,91 +1,95 @@
 
+# Plano: Importacao com Substituicao de Datas Repetidas
 
-# Plano: Suportar 216k Operacoes sem Travar o Dashboard
+## Contexto
 
-## Problema
+O banco possui **75.260 operacoes** em **1.863 datas distintas**. A planilha a ser importada contem ~216k operacoes de Apollo e Orion. Para cada data que existir na planilha E no banco, TODAS as operacoes daquela data (independente da estrategia) serao removidas e substituidas pelos novos dados.
 
-Com 216k operacoes no banco, a query filtrada traz ~75k. Os componentes que mostram **melhores dias e horarios** (Heatmap, Calendario, Metricas Avancadas) estao **bloqueados por guards de 50k** que exibem apenas um aviso. Alem disso, o guard do AdvancedMetrics tem um bug critico: e codigo inalcancavel.
+## Abordagem
 
-## Solucao
+Modificar o fluxo de importacao existente no `OperationImport.tsx` para adicionar uma etapa de **deteccao e exclusao de duplicatas por data** antes da insercao. Tambem criar uma Edge Function dedicada para a exclusao em lote por datas, pois a exclusao direta pelo client sofre timeouts com dependencias em cascata.
 
-Remover os guards de 50k e confiar nas otimizacoes single-pass ja implementadas, que processam 75-216k operacoes sem problemas de memoria ou CPU.
+## Etapas da Implementacao
 
----
+### 1. Nova Edge Function: `delete-operations-by-dates`
 
-## Mudancas por Arquivo
+Funcao dedicada para excluir operacoes por lista de datas, tratando dependencias:
 
-### 1. `src/components/dashboard/AdvancedMetrics.tsx`
+- Recebe um array de datas e o userId
+- Desabilita triggers do usuario temporariamente
+- Remove registros dependentes em `notifications` e `ai_classification_logs`
+- Deleta todas as operacoes naquelas datas
+- Reabilita triggers
+- Retorna contagem de registros deletados
 
-**Bug critico**: O guard `isDatasetTooLarge` (linhas 552-574) esta posicionado **apos** a declaracao de `renderMetricsForStrategy`, tornando-o codigo morto. O componente nunca mostra o aviso quando ha dados.
+Processa em lotes de 50 datas por chamada para evitar timeout.
 
-- Remover a variavel `isDatasetTooLarge` e toda a logica de guard
-- Remover a condicao `isDatasetTooLarge` de dentro de `calculateMetricsByStrategy()`
-- Otimizar `calculateMetrics()` para usar single-pass (atualmente faz 5+ passes com filter/reduce)
-- Remover import do `AlertTriangle`
+### 2. Modificar `OperationImport.tsx`
 
-### 2. `src/components/dashboard/PerformanceCalendar.tsx`
+Adicionar checkbox "Substituir datas repetidas" na interface de importacao:
 
-- Remover o guard que retorna aviso quando `operations.length > 50000` (linhas 41-48 no useMemo e linhas 202-224 no JSX)
-- Remover import do `AlertTriangle`
-- O `useMemo` ja processa eficientemente com Map/forEach, suporta 216k sem problemas
+- Quando ativado, apos o parse da planilha e antes da insercao:
+  1. Extrai as datas unicas das operacoes importadas
+  2. Verifica quais dessas datas ja existem no banco
+  3. Mostra ao usuario quantas operacoes serao removidas
+  4. Chama a Edge Function para excluir as operacoes das datas duplicadas
+  5. Insere os novos dados normalmente
 
-### 3. `src/components/dashboard/PerformanceHeatmap.tsx`
+A checkbox vem **ativada por padrao** (pois e o que o usuario pediu agora).
 
-- Remover `isDatasetTooLarge` e o guard de 50k (linhas 50, 141, 242-265)
-- Remover import do `AlertTriangle`
-- Os `useMemo` e `useCallback` ja usam Map para processamento eficiente
+### 3. Fluxo Visual Atualizado
 
-### 4. `src/components/dashboard/TopPerformanceDays.tsx`
-
-- Sem mudancas necessarias. Ja usa Map para agregar por dia e processa eficientemente.
-
-### 5. `src/components/operations/StrategyOptimizer.tsx`
-
-- Otimizar `calculateBestConfig()` para usar single-pass (atualmente faz `filter` + 3x `forEach` por estrategia)
-- Consolidar em um unico loop que agrupa por hora, dia e mes simultaneamente
-
----
+```text
+[Upload Planilha]
+       |
+[Parse + Preview]  <-- Exibe checkbox "Substituir datas repetidas" (marcada)
+       |
+[Confirmar Importacao]
+       |
+   [Etapa 1] Detectar datas duplicadas
+       |          "Encontradas 150 datas em comum com X operacoes existentes"
+       |
+   [Etapa 2] Excluir operacoes das datas duplicadas (barra de progresso)
+       |          "Removendo operacoes antigas... 3.500 de 8.200"
+       |
+   [Etapa 3] Inserir novas operacoes (barra de progresso existente)
+       |          "Inserindo operacoes... 45.000 de 216.000"
+       |
+   [Concluido] "8.200 removidas, 216.000 inseridas"
+```
 
 ## Detalhes Tecnicos
 
-### AdvancedMetrics - Otimizacao de `calculateMetrics()`
+### Edge Function `delete-operations-by-dates`
 
-Codigo atual faz 5+ passes:
 ```text
-ops.filter(r > 0).reduce(...)     // pass 1+2 (gains)
-ops.filter(r < 0).reduce(...)     // pass 3+4 (losses)  
-ops.filter(r > 0).length          // pass 5 (winCount)
-ops.filter(r < 0).length          // pass 6 (lossCount)
-ops.reduce(...)                   // pass 7 (totalProfit)
+Entrada: { dates: string[], userId: string }
+Processo:
+  1. ALTER TABLE trading_operations DISABLE TRIGGER USER
+  2. DELETE FROM notifications WHERE operation_id IN (SELECT id FROM trading_operations WHERE operation_date = ANY(dates))
+  3. DELETE FROM ai_classification_logs WHERE operation_id IN (SELECT id FROM trading_operations WHERE operation_date = ANY(dates))
+  4. DELETE FROM trading_operations WHERE operation_date = ANY(dates) AND user_id = userId
+  5. ALTER TABLE trading_operations ENABLE TRIGGER USER
+Saida: { deleted: number, success: boolean }
 ```
 
-Refatorar para single-pass:
-```text
-ops.forEach(op => {
-  totalProfit += op.result;
-  if (op.result > 0) { winCount++; gains += op.result; }
-  else if (op.result < 0) { lossCount++; lossSum += Math.abs(op.result); }
-});
-```
+Processamento em lotes de 50 datas por chamada para evitar timeout da Edge Function (limite de ~60s).
 
-### StrategyOptimizer - Otimizacao de `calculateBestConfig()`
+### Modificacoes no `OperationImport.tsx`
 
-Codigo atual: `filter` por estrategia + 3 loops separados (hora, dia, mes)
+- Novo estado: `replaceMode` (boolean, default true)
+- Novo estado: `deletingDuplicates` (boolean)
+- Novo estado: `duplicateInfo` ({ dates: number, operations: number } | null)
+- Modificar `confirmImport()` para incluir etapa de exclusao antes da insercao
+- Adicionar checkbox na UI do preview
 
-Refatorar para: um unico loop por estrategia que popula os 3 buckets simultaneamente.
+### Arquivos Afetados
 
----
+1. **Novo**: `supabase/functions/delete-operations-by-dates/index.ts` - Edge Function para exclusao em lote
+2. **Modificar**: `src/components/operations/OperationImport.tsx` - Adicionar checkbox e logica de substituicao
 
-## Estimativa de Performance com 216k
+### Consideracoes de Performance
 
-| Componente | Antes | Depois |
-|-----------|-------|--------|
-| AdvancedMetrics | Bloqueado (guard 50k, mas bugado) | Funcional, single-pass |
-| PerformanceCalendar | Bloqueado (guard 50k) | Funcional, Map-based |
-| PerformanceHeatmap | Bloqueado (guard 50k) | Funcional, Map-based |
-| TopPerformanceDays | Funcional | Sem mudanca |
-| StrategyOptimizer | 16 passes (~1.2M iteracoes) | 4 passes single-pass (~300k iteracoes) |
-
-Tempo de processamento estimado no browser com 75k operacoes (filtradas): menor que 500ms.
-Tempo de processamento estimado com 216k operacoes (se whitelist for removida): menor que 2 segundos.
-
+- Exclusao: ~50 datas por chamada a Edge Function, cada chamada ~2-5s. Para 200 datas = ~20s
+- Insercao: 216k operacoes em batches de 100 com 150ms delay = ~5-6 min (fluxo existente ja otimizado)
+- Total estimado: ~6-7 minutos para o processo completo (exclusao + insercao)
