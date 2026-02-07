@@ -419,82 +419,128 @@ export const TradingDashboard = ({ operations, strategies }: TradingDashboardPro
     return filtered;
   }, [operations, periodFilter, strategyFilter, customDateRange]);
 
-  // Calculate all statistics
+  // Calculate all statistics - OPTIMIZED: single pass over operations
   const stats = useMemo(() => {
     const ops = filteredOperations;
-    const results = ops.map(op => op.operation_result || 0);
-    
-    const totalResult = results.reduce((sum, r) => sum + r, 0);
-    const wins = results.filter(r => r > 0);
-    const losses = results.filter(r => r < 0);
-    const winRate = ops.length > 0 ? (wins.length / ops.length * 100) : 0;
-    const avgWin = wins.length > 0 ? wins.reduce((s, r) => s + r, 0) / wins.length : 0;
-    const avgLoss = losses.length > 0 ? Math.abs(losses.reduce((s, r) => s + r, 0) / losses.length) : 0;
-    const payoff = avgLoss > 0 ? avgWin / avgLoss : 0;
-    
+    const n = ops.length;
+
+    if (n === 0) {
+      return {
+        totalResult: 0, totalOperations: 0, totalDays: 0,
+        winRate: 0, payoff: 0, consistency: 0,
+        positiveDays: 0, negativeDays: 0, positiveMonths: 0, negativeMonths: 0,
+        bestTrade: 0, worstTrade: 0, monthlyAvg: 0,
+        stdDev: 0, volatility: 0, currentStreak: 0, streakType: null as 'W' | 'L' | null,
+        equityCurve: [] as { index: number; result: number; total: number; date: string }[],
+        maxBalance: 0, minBalance: 0,
+        maxDrawdown: 0, maxDrawdownDuration: 0,
+        profitFactor: 0, expectancy: 0, sharpeRatio: 0, recoveryFactor: 0,
+        monthlyData: [] as { month: string; monthKey: string; result: number }[],
+        yearlyData: [] as { year: string; result: number }[],
+        hourlyData: [] as any[],
+        calendarData: [] as any[],
+        bestDays: [] as { date: string; result: number; count: number }[],
+        worstDays: [] as { date: string; result: number; count: number }[],
+        dayResults: {} as Record<string, { result: number; count: number }>,
+        weekdayHourData: {} as Record<string, { result: number; count: number; winCount: number; lossCount: number }>
+      };
+    }
+
+    // === SINGLE PASS: aggregate all data at once ===
     const dayResults: Record<string, { result: number; count: number }> = {};
-    ops.forEach(op => {
-      const day = format(new Date(op.open_time), 'yyyy-MM-dd');
+    const monthResults: Record<string, number> = {};
+    const yearResults: Record<number, number> = {};
+    const hourlyResults: Record<number, { total: number; count: number; wins: number; losses: number; winCount: number; lossCount: number }> = {};
+    const weekdayHourData: Record<string, { result: number; count: number; winCount: number; lossCount: number }> = {};
+
+    let totalResult = 0;
+    let winCount = 0;
+    let lossCount = 0;
+    let winSum = 0;
+    let lossAbsSum = 0;
+    let bestTrade = -Infinity;
+    let worstTrade = Infinity;
+    let sumOfSquares = 0;
+
+    for (let i = 0; i < n; i++) {
+      const op = ops[i];
+      const result = op.operation_result || 0;
+      totalResult += result;
+      sumOfSquares += result * result;
+
+      if (result > 0) { winCount++; winSum += result; }
+      else if (result < 0) { lossCount++; lossAbsSum += Math.abs(result); }
+      if (result > bestTrade) bestTrade = result;
+      if (result < worstTrade) worstTrade = result;
+
+      // Use string slicing instead of Date parsing for day/month/year
+      const openTime = op.open_time;
+      const day = openTime.substring(0, 10);
+      const month = openTime.substring(0, 7);
+      const year = parseInt(openTime.substring(0, 4));
+
       if (!dayResults[day]) dayResults[day] = { result: 0, count: 0 };
-      dayResults[day].result += (op.operation_result || 0);
+      dayResults[day].result += result;
       dayResults[day].count++;
-    });
-    const dayValues = Object.values(dayResults).map(d => d.result);
+
+      monthResults[month] = (monthResults[month] || 0) + result;
+      yearResults[year] = (yearResults[year] || 0) + result;
+
+      const date = new Date(openTime);
+      const hour = date.getUTCHours();
+      const weekday = date.getUTCDay();
+
+      if (!hourlyResults[hour]) hourlyResults[hour] = { total: 0, count: 0, wins: 0, losses: 0, winCount: 0, lossCount: 0 };
+      hourlyResults[hour].total += result;
+      hourlyResults[hour].count++;
+      if (result >= 0) { hourlyResults[hour].wins += result; hourlyResults[hour].winCount++; }
+      else { hourlyResults[hour].losses += Math.abs(result); hourlyResults[hour].lossCount++; }
+
+      const whKey = `${weekday}-${hour}`;
+      if (!weekdayHourData[whKey]) weekdayHourData[whKey] = { result: 0, count: 0, winCount: 0, lossCount: 0 };
+      weekdayHourData[whKey].result += result;
+      weekdayHourData[whKey].count++;
+      if (result >= 0) weekdayHourData[whKey].winCount++;
+      else weekdayHourData[whKey].lossCount++;
+    }
+
+    // === DERIVED CALCULATIONS ===
+    const winRate = n > 0 ? (winCount / n * 100) : 0;
+    const avgWin = winCount > 0 ? winSum / winCount : 0;
+    const avgLoss = lossCount > 0 ? lossAbsSum / lossCount : 0;
+    const payoff = avgLoss > 0 ? avgWin / avgLoss : 0;
+
+    if (bestTrade === -Infinity) bestTrade = 0;
+    if (worstTrade === Infinity) worstTrade = 0;
+
+    const mean = n > 0 ? totalResult / n : 0;
+    const variance = n > 0 ? Math.max(0, (sumOfSquares / n) - (mean * mean)) : 0;
+    const stdDev = Math.sqrt(variance);
+    const volatility = mean !== 0 ? (stdDev / Math.abs(mean)) * 100 : 0;
+
+    const dayEntries = Object.entries(dayResults);
+    const dayValues = dayEntries.map(([, d]) => d.result);
     const positiveDays = dayValues.filter(v => v > 0).length;
     const negativeDays = dayValues.filter(v => v < 0).length;
-    
-    // Heatmap data: weekday x hour
-    const weekdayHourData: Record<string, { result: number; count: number; winCount: number; lossCount: number }> = {};
-    ops.forEach(op => {
-      const date = new Date(op.open_time);
-      const weekday = date.getUTCDay(); // 0=Sun, 1=Mon, etc - use UTC to match stored time
-      const hour = date.getUTCHours(); // Use UTC hours since data is stored as UTC representing local market time
-      const key = `${weekday}-${hour}`;
-      if (!weekdayHourData[key]) weekdayHourData[key] = { result: 0, count: 0, winCount: 0, lossCount: 0 };
-      const opResult = op.operation_result || 0;
-      weekdayHourData[key].result += opResult;
-      weekdayHourData[key].count++;
-      if (opResult >= 0) {
-        weekdayHourData[key].winCount++;
-      } else {
-        weekdayHourData[key].lossCount++;
-      }
-    });
-    
-    const monthResults: Record<string, number> = {};
-    ops.forEach(op => {
-      const month = format(new Date(op.open_time), 'yyyy-MM');
-      monthResults[month] = (monthResults[month] || 0) + (op.operation_result || 0);
-    });
+    const consistency = dayValues.length > 0 ? (positiveDays / dayValues.length * 100) : 0;
+
     const monthValues = Object.values(monthResults);
     const positiveMonths = monthValues.filter(v => v > 0).length;
     const negativeMonths = monthValues.filter(v => v < 0).length;
-    
-    const consistency = dayValues.length > 0 ? (positiveDays / dayValues.length * 100) : 0;
-    
-    const bestTrade = results.length > 0 ? Math.max(...results) : 0;
-    const worstTrade = results.length > 0 ? Math.min(...results) : 0;
-    
     const monthlyAvg = monthValues.length > 0 ? monthValues.reduce((s, v) => s + v, 0) / monthValues.length : 0;
-    
-    const mean = results.length > 0 ? totalResult / results.length : 0;
-    const variance = results.length > 0 
-      ? results.reduce((sum, r) => sum + Math.pow(r - mean, 2), 0) / results.length 
-      : 0;
-    const stdDev = Math.sqrt(variance);
-    
-    const volatility = mean !== 0 ? (stdDev / Math.abs(mean)) * 100 : 0;
-    
+
+    // Streak from day results (sorts ~1000 entries instead of 216k ops)
+    const sortedDayEntries = dayEntries.sort(([a], [b]) => a.localeCompare(b));
     let currentStreak = 0;
     let streakType: 'W' | 'L' | null = null;
-    const sortedOps = [...ops].sort((a, b) => new Date(a.open_time).getTime() - new Date(b.open_time).getTime());
-    for (let i = sortedOps.length - 1; i >= 0; i--) {
-      const result = sortedOps[i].operation_result || 0;
-      if (i === sortedOps.length - 1) {
-        streakType = result > 0 ? 'W' : result < 0 ? 'L' : null;
-        currentStreak = result !== 0 ? 1 : 0;
+
+    for (let i = sortedDayEntries.length - 1; i >= 0; i--) {
+      const dayResult = sortedDayEntries[i][1].result;
+      if (i === sortedDayEntries.length - 1) {
+        streakType = dayResult > 0 ? 'W' : dayResult < 0 ? 'L' : null;
+        currentStreak = dayResult !== 0 ? 1 : 0;
       } else {
-        const currentType = result > 0 ? 'W' : result < 0 ? 'L' : null;
+        const currentType = dayResult > 0 ? 'W' : dayResult < 0 ? 'L' : null;
         if (currentType === streakType && currentType !== null) {
           currentStreak++;
         } else {

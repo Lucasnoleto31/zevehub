@@ -5,6 +5,7 @@ import { ChevronLeft, ChevronRight, Calendar, TrendingUp, TrendingDown, Activity
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isToday, addMonths, subMonths, getDay, startOfWeek, endOfWeek } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { motion, AnimatePresence } from "framer-motion";
+import { AlertTriangle } from "lucide-react";
 
 interface Operation {
   id: string;
@@ -34,6 +35,31 @@ const PerformanceCalendar = ({ operations }: PerformanceCalendarProps) => {
   const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
 
   const weekDays = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
+
+  // Guard: skip heavy rendering for very large datasets
+  if (operations.length > 50000) {
+    return (
+      <div className="space-y-4">
+        <Card className="border-border/50 bg-card/50 backdrop-blur-sm">
+          <CardHeader className="pb-2">
+            <CardTitle className="flex items-center gap-2 text-lg font-semibold">
+              <Calendar className="h-5 w-5 text-primary" />
+              Calendário de Performance
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="py-6">
+            <div className="flex flex-col items-center justify-center text-center gap-3">
+              <AlertTriangle className="h-8 w-8 text-amber-500" />
+              <p className="text-sm text-muted-foreground">
+                Dataset muito grande ({operations.length.toLocaleString()} operações).
+                Refine os filtros de período para visualizar o calendário.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   const { calendarDays, monthStats, recoveryStats, streakPatterns } = useMemo(() => {
     const monthStart = startOfMonth(currentMonth);

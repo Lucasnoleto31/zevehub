@@ -300,8 +300,8 @@ const OperationImport = ({ userId }: OperationImportProps) => {
     setProgress(0);
 
     // Parâmetros otimizados para importação resiliente
-    const BATCH_SIZE = 50;
-    const BATCH_DELAY = 200;
+    const BATCH_SIZE = 100;
+    const BATCH_DELAY = 150;
     const MAX_RETRIES = 3;
     const MAX_CONSECUTIVE_ERRORS = 20;
     const LONG_PAUSE_THRESHOLD = 5;

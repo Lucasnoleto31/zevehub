@@ -124,19 +124,32 @@ const Dashboard = () => {
         setRoles(rolesData.map((r) => r.role));
       }
 
-      // Fetch profit_operations
-      const { data: opsData, error: opsError } = await supabase
-        .from("profit_operations")
-        .select("id, user_id, open_time, close_time, operation_result, strategy_id, asset")
-        .eq("user_id", session.user.id)
-        .order("open_time", { ascending: false });
+      // Fetch profit_operations with pagination (handles 216k+ records)
+      const allOps: ProfitOperation[] = [];
+      const batchSize = 1000;
+      let from = 0;
+      let hasMore = true;
 
-      if (opsError) {
-        console.error("Erro ao carregar operações:", opsError);
-        toast.error("Erro ao carregar operações");
-      } else {
-        setOperations(opsData || []);
+      while (hasMore) {
+        const { data: opsData, error: opsError } = await supabase
+          .from("profit_operations")
+          .select("id, user_id, open_time, close_time, operation_result, strategy_id, asset")
+          .eq("user_id", session.user.id)
+          .order("open_time", { ascending: false })
+          .range(from, from + batchSize - 1);
+
+        if (opsError) {
+          console.error("Erro ao carregar operações:", opsError);
+          toast.error("Erro ao carregar operações");
+          break;
+        }
+
+        allOps.push(...(opsData || []));
+        from += batchSize;
+        hasMore = (opsData?.length || 0) === batchSize;
       }
+
+      setOperations(allOps);
 
       // Fetch strategies
       const { data: strategiesData, error: strategiesError } = await supabase
