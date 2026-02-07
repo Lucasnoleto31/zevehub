@@ -123,19 +123,32 @@ const Trading = () => {
     enabled: !!userId,
   });
 
-  // Fetch operations
+  // Fetch operations with pagination (handles 216k+ records)
   const { data: operations = [], isLoading: loadingOperations } = useQuery({
     queryKey: ['profit-operations', userId],
     queryFn: async () => {
       if (!userId) return [];
-      const { data, error } = await supabase
-        .from('profit_operations')
-        .select('*')
-        .eq('user_id', userId)
-        .order('open_time', { ascending: false });
-      
-      if (error) throw error;
-      return data as ProfitOperation[];
+      const allOperations: ProfitOperation[] = [];
+      const batchSize = 1000;
+      let from = 0;
+      let hasMore = true;
+
+      while (hasMore) {
+        const { data, error } = await supabase
+          .from('profit_operations')
+          .select('id, user_id, asset, open_time, close_time, duration, side, buy_qty, sell_qty, operation_result, operation_result_percent, total, strategy_id, created_at, account_number, holder_name, import_date, buy_price, sell_price, market_price')
+          .eq('user_id', userId)
+          .order('open_time', { ascending: false })
+          .range(from, from + batchSize - 1);
+
+        if (error) throw error;
+
+        allOperations.push(...(data as ProfitOperation[] || []));
+        from += batchSize;
+        hasMore = (data?.length || 0) === batchSize;
+      }
+
+      return allOperations;
     },
     enabled: !!userId,
   });
@@ -329,8 +342,8 @@ const Trading = () => {
     }
 
     // Optimized batch insertion configuration
-    const BATCH_SIZE = 50;
-    const BATCH_DELAY = 100; // ms
+    const BATCH_SIZE = 100;
+    const BATCH_DELAY = 150; // ms
 
     try {
       setImporting(true);

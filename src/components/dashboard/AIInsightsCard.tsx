@@ -49,13 +49,70 @@ const AIInsightsCard = ({ operations }: AIInsightsCardProps) => {
     setError(null);
 
     try {
+      // Pre-aggregate data on frontend to avoid sending huge payload (216k+ ops = ~50MB)
+      const hourStats: Record<number, { wins: number; total: number; result: number }> = {};
+      const dayStats: Record<number, { wins: number; total: number; result: number }> = {};
+      const strategyStats: Record<string, { wins: number; total: number; result: number }> = {};
+      const dailyResults: Record<string, number> = {};
+      let morningWins = 0, morningTotal = 0, morningResult = 0;
+      let afternoonWins = 0, afternoonTotal = 0, afternoonResult = 0;
+      let totalWins = 0;
+      let totalResult = 0;
+
+      operations.forEach(op => {
+        const hour = parseInt(op.operation_time.split(":")[0]);
+        const [year, month, day] = op.operation_date.split('-').map(Number);
+        const date = new Date(year, month - 1, day);
+        const dayOfWeek = date.getDay();
+        const isWin = op.result > 0;
+
+        totalResult += op.result;
+        if (isWin) totalWins++;
+
+        // Hour stats
+        if (!hourStats[hour]) hourStats[hour] = { wins: 0, total: 0, result: 0 };
+        hourStats[hour].total++;
+        if (isWin) hourStats[hour].wins++;
+        hourStats[hour].result += op.result;
+
+        // Day stats
+        if (!dayStats[dayOfWeek]) dayStats[dayOfWeek] = { wins: 0, total: 0, result: 0 };
+        dayStats[dayOfWeek].total++;
+        if (isWin) dayStats[dayOfWeek].wins++;
+        dayStats[dayOfWeek].result += op.result;
+
+        // Strategy stats
+        if (op.strategy) {
+          if (!strategyStats[op.strategy]) strategyStats[op.strategy] = { wins: 0, total: 0, result: 0 };
+          strategyStats[op.strategy].total++;
+          if (isWin) strategyStats[op.strategy].wins++;
+          strategyStats[op.strategy].result += op.result;
+        }
+
+        // Morning vs afternoon
+        if (hour < 12) { morningTotal++; if (isWin) morningWins++; morningResult += op.result; }
+        else { afternoonTotal++; if (isWin) afternoonWins++; afternoonResult += op.result; }
+
+        // Daily results
+        if (!dailyResults[op.operation_date]) dailyResults[op.operation_date] = 0;
+        dailyResults[op.operation_date] += op.result;
+      });
+
+      // Send aggregated summary instead of raw operations
+      const summary = {
+        totalOperations: operations.length,
+        totalWins,
+        totalResult,
+        hourStats,
+        dayStats,
+        strategyStats,
+        dailyResults,
+        morningPerformance: { wins: morningWins, total: morningTotal, result: morningResult },
+        afternoonPerformance: { wins: afternoonWins, total: afternoonTotal, result: afternoonResult },
+      };
+
       const { data, error: fnError } = await supabase.functions.invoke("analyze-trading-patterns", {
-        body: { operations: operations.map(op => ({
-          operation_date: op.operation_date,
-          operation_time: op.operation_time,
-          result: op.result,
-          strategy: op.strategy
-        })) }
+        body: { summary }
       });
 
       if (fnError) throw fnError;
