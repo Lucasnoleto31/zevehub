@@ -6,6 +6,10 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+function sleep(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -28,102 +32,97 @@ Deno.serve(async (req) => {
       );
     }
 
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabaseUrl = Deno.env.get("SUPABASE_URL");
+    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+
+    if (!supabaseUrl || !supabaseKey) {
+      console.error("Missing env vars:", { hasUrl: !!supabaseUrl, hasKey: !!supabaseKey });
+      return new Response(
+        JSON.stringify({ error: "Configuração do servidor ausente" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     const supabase = createClient(supabaseUrl, supabaseKey);
 
     console.log(`🗑️ Iniciando exclusão para ${dates.length} datas do usuário ${userId}`);
 
-    // 1. Desabilitar triggers do usuário para evitar timeouts
-    await supabase.rpc("exec_sql", {
-      query: "ALTER TABLE public.trading_operations DISABLE TRIGGER USER",
-    }).then(() => {
-      console.log("✅ Triggers desabilitados");
-    }).catch((err: unknown) => {
-      // Se a função exec_sql não existir, tentar sem desabilitar triggers
-      console.warn("⚠️ Não foi possível desabilitar triggers, continuando...", err);
-    });
+    // 1. Buscar IDs das operações que serão deletadas
+    const { data: operationIds, error: fetchError } = await supabase
+      .from("trading_operations")
+      .select("id")
+      .eq("user_id", userId)
+      .in("operation_date", dates);
+
+    if (fetchError) {
+      console.error("Erro ao buscar operações:", fetchError);
+      throw fetchError;
+    }
+
+    if (!operationIds || operationIds.length === 0) {
+      console.log("Nenhuma operação encontrada para as datas informadas");
+      return new Response(
+        JSON.stringify({ success: true, deleted: 0 }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const ids = operationIds.map((op: { id: string }) => op.id);
+    console.log(`📊 Encontradas ${ids.length} operações para deletar`);
 
     let totalDeleted = 0;
+    const BATCH_SIZE = 5; // Ultra-small batches to avoid timeout
+    const DELAY_MS = 300; // Delay between batches
 
-    try {
-      // 2. Buscar IDs das operações que serão deletadas
-      const { data: operationIds, error: fetchError } = await supabase
+    // 2. Process in ultra-small batches: delete deps then operation
+    for (let i = 0; i < ids.length; i += BATCH_SIZE) {
+      const idBatch = ids.slice(i, i + BATCH_SIZE);
+
+      // Delete notifications for this batch (ignore errors - may not exist)
+      const { error: notifError } = await supabase
+        .from("notifications")
+        .delete()
+        .in("operation_id", idBatch);
+
+      if (notifError) {
+        console.warn(`⚠️ Notif batch ${i}:`, notifError.message);
+      }
+
+      // Delete ai_classification_logs for this batch
+      const { error: aiError } = await supabase
+        .from("ai_classification_logs")
+        .delete()
+        .in("operation_id", idBatch);
+
+      if (aiError) {
+        console.warn(`⚠️ AI logs batch ${i}:`, aiError.message);
+      }
+
+      // Small delay to let DB breathe
+      await sleep(100);
+
+      // Delete the operations themselves
+      const { error: deleteError } = await supabase
         .from("trading_operations")
-        .select("id")
-        .eq("user_id", userId)
-        .in("operation_date", dates);
+        .delete()
+        .in("id", idBatch);
 
-      if (fetchError) {
-        console.error("Erro ao buscar operações:", fetchError);
-        throw fetchError;
-      }
-
-      if (!operationIds || operationIds.length === 0) {
-        console.log("Nenhuma operação encontrada para as datas informadas");
-        return new Response(
-          JSON.stringify({ success: true, deleted: 0 }),
-          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
-
-      const ids = operationIds.map((op: { id: string }) => op.id);
-      console.log(`📊 Encontradas ${ids.length} operações para deletar`);
-
-      // 3. Remover dependências em lotes de 500 IDs
-      const ID_BATCH_SIZE = 500;
-      for (let i = 0; i < ids.length; i += ID_BATCH_SIZE) {
-        const idBatch = ids.slice(i, i + ID_BATCH_SIZE);
-
-        // Deletar notifications dependentes
-        const { error: notifError } = await supabase
-          .from("notifications")
-          .delete()
-          .in("operation_id", idBatch);
-
-        if (notifError) {
-          console.warn(`⚠️ Erro ao deletar notifications (lote ${i}):`, notifError.message);
-        }
-
-        // Deletar ai_classification_logs dependentes
-        const { error: aiError } = await supabase
-          .from("ai_classification_logs")
-          .delete()
-          .in("operation_id", idBatch);
-
-        if (aiError) {
-          console.warn(`⚠️ Erro ao deletar ai_classification_logs (lote ${i}):`, aiError.message);
-        }
-      }
-
-      console.log("✅ Dependências removidas");
-
-      // 4. Deletar operações em lotes de 500 IDs
-      for (let i = 0; i < ids.length; i += ID_BATCH_SIZE) {
-        const idBatch = ids.slice(i, i + ID_BATCH_SIZE);
-
-        const { error: deleteError } = await supabase
-          .from("trading_operations")
-          .delete()
-          .in("id", idBatch);
-
-        if (deleteError) {
-          console.error(`Erro ao deletar lote ${i}:`, deleteError.message);
-          throw deleteError;
-        }
-
+      if (deleteError) {
+        console.error(`❌ Erro ao deletar lote ${i}:`, deleteError.message);
+        // Continue with next batch instead of throwing
+        console.log(`⚠️ Pulando lote com erro, continuando...`);
+      } else {
         totalDeleted += idBatch.length;
-        console.log(`🗑️ Deletadas ${totalDeleted} de ${ids.length} operações`);
       }
-    } finally {
-      // 5. Reabilitar triggers sempre
-      await supabase.rpc("exec_sql", {
-        query: "ALTER TABLE public.trading_operations ENABLE TRIGGER USER",
-      }).then(() => {
-        console.log("✅ Triggers reabilitados");
-      }).catch((err: unknown) => {
-        console.warn("⚠️ Não foi possível reabilitar triggers:", err);
-      });
+
+      if (i + BATCH_SIZE < ids.length) {
+        await sleep(DELAY_MS);
+      }
+
+      // Log progress every 25 operations
+      if ((i + BATCH_SIZE) % 25 === 0 || i + BATCH_SIZE >= ids.length) {
+        console.log(`🗑️ Progresso: ${Math.min(i + BATCH_SIZE, ids.length)}/${ids.length}`);
+      }
     }
 
     console.log(`✅ Exclusão concluída: ${totalDeleted} operações removidas`);
@@ -134,7 +133,7 @@ Deno.serve(async (req) => {
     );
   } catch (error) {
     console.error("❌ Erro na exclusão por datas:", error);
-    const message = error instanceof Error ? error.message : "Erro desconhecido";
+    const message = error instanceof Error ? error.message : String(error);
     return new Response(
       JSON.stringify({ error: message }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
