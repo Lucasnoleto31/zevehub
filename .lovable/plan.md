@@ -1,115 +1,169 @@
 
+# Plano de Otimizacao para 216.000 Operacoes
 
-# Plano de Correção: Importação Resiliente para /operations
+## Diagnostico: O que vai travar?
 
-## Diagnóstico
+### Problemas CRITICOS (vai travar/falhar)
 
-O crash ocorreu porque:
-- **Batch size muito pequeno** (10 registros) = muitas requisições
-- **Delay insuficiente** (100ms) = banco não consegue se recuperar
-- **Sem retry logic** = erros não são tratados adequadamente
-- Para 42.000 operações: 4.200 batches = 4.200 requisições ao banco
+| Componente | Problema | Impacto com 216k |
+|-----------|---------|------------------|
+| Trading.tsx (fetch) | `select('*')` sem paginacao, limite de 1000 rows | So carrega 1.000 das 216k operacoes |
+| TradingDashboard.tsx | `useMemo` processa 216k no main thread | Congela a UI por 5-15 segundos |
+| AIInsightsCard.tsx | Envia 216k operacoes inteiras no body da edge function | Estoura limite de payload (~50MB JSON) |
+| Importacao (Trading.tsx) | 216k / 50 = 4.320 batches com 200ms delay | ~14 minutos de importacao |
 
-## Solução Proposta
+### Problemas MEDIOS (lentidao)
 
-### Mudanças em `src/components/operations/OperationImport.tsx`
-
-```text
-┌─────────────────────────────────────────────────────────────┐
-│              FLUXO DE IMPORTAÇÃO RESILIENTE                 │
-├─────────────────────────────────────────────────────────────┤
-│  1. Aumentar batch size: 10 → 50 registros                  │
-│         ↓                                                   │
-│  2. Aumentar delay: 100ms → 200ms                           │
-│         ↓                                                   │
-│  3. Retry com backoff exponencial em caso de erro           │
-│         ↓                                                   │
-│  4. Pausar 3 segundos após 5 erros consecutivos             │
-│         ↓                                                   │
-│  5. Abortar após 20 erros consecutivos (proteção)           │
-└─────────────────────────────────────────────────────────────┘
-```
-
-### Parâmetros Otimizados
-
-| Parâmetro | Antes | Depois |
-|-----------|-------|--------|
-| Batch size | 10 | 50 |
-| Delay entre batches | 100ms | 200ms |
-| Retry em erro | Nenhum | 3 tentativas |
-| Backoff em falha | Nenhum | 1s, 2s, 4s |
-| Pausa após erros | Nenhum | 3s após 5 erros |
-| Limite de erros | Nenhum | Aborta após 20 |
-
-### Tempo Estimado
-
-- **42.000 operações ÷ 50 = 840 batches**
-- **840 × 200ms = 168 segundos (~3 minutos)**
-- Muito mais seguro que os 4.200 batches anteriores
+| Componente | Problema | Impacto com 216k |
+|-----------|---------|------------------|
+| OperationsDashboard.tsx | Carrega 216k em memoria via paginacao | ~216 requisicoes de 1000, uso alto de RAM |
+| PerformanceHeatmap.tsx | Itera 216k operacoes em useMemo | Lentidao ao renderizar |
+| PerformanceCalendar.tsx | Itera 216k operacoes por mudanca de mes | Delay ao navegar meses |
+| AdvancedMetrics.tsx | Calcula metricas sobre 216k registros | Lentidao moderada |
 
 ---
 
-## Detalhes Técnicos
+## Solucao Proposta
 
-### Nova Lógica de Retry
+### Fase 1: Corrigir Fetch no /trading (CRITICO)
 
+**Arquivo: `src/pages/Trading.tsx`**
+
+O fetch atual usa `select('*')` sem paginacao, e o Supabase retorna no maximo 1000 rows por padrao. Com 216k operacoes, voce so veria 1.000.
+
+Mudancas:
+- Implementar paginacao em batches de 1000 (igual ao OperationsDashboard)
+- Selecionar apenas colunas necessarias para reduzir payload
+- Mostrar indicador de carregamento com progresso
+
+```text
+ANTES:
+  supabase.from('profit_operations').select('*')
+  -> Retorna apenas 1.000 registros (limite padrao)
+
+DEPOIS:
+  Loop paginado buscando 1.000 por vez
+  -> Busca todos os 216.000 registros
+  -> Seleciona apenas colunas necessarias
+```
+
+### Fase 2: Otimizar TradingDashboard (CRITICO)
+
+**Arquivo: `src/components/trading/TradingDashboard.tsx`**
+
+O `useMemo` que calcula `stats` processa todas as 216k operacoes sincronamente. Isso congela o browser.
+
+Mudancas:
+- Pre-agregar dados por dia ANTES dos calculos pesados (reduz 216k -> ~1.000 dias)
+- O sampling de 365 pontos para graficos ja existe, manter
+- Limitar ranking (bestDays/worstDays) que usa sort em 216k items
+
+### Fase 3: Limitar AIInsightsCard (CRITICO)
+
+**Arquivo: `src/components/dashboard/AIInsightsCard.tsx`**
+
+Enviar 216k operacoes no body de uma edge function vai falhar. O payload seria ~50MB.
+
+Mudancas:
+- Pre-agregar dados no frontend antes de enviar
+- Enviar apenas resumo estatistico (por hora, dia da semana, estrategia) em vez dos 216k registros brutos
+- Limitar a no maximo 5.000 operacoes enviadas (amostragem se necessario)
+
+### Fase 4: Otimizar Importacao
+
+**Arquivo: `src/pages/Trading.tsx`**
+
+216k / 50 = 4.320 batches. Com 200ms delay = ~14 minutos. Funcional mas lento.
+
+Mudancas:
+- Aumentar batch size para 100 registros (reduz para 2.160 batches)
+- Reduzir delay para 150ms
+- Tempo estimado: ~5-6 minutos (aceitavel com progress bar)
+
+**Arquivo: `src/components/operations/OperationImport.tsx`**
+- Mesmo ajuste: batch de 100 com delay de 150ms
+
+### Fase 5: Otimizar Componentes Secundarios
+
+**PerformanceHeatmap.tsx, PerformanceCalendar.tsx, AdvancedMetrics.tsx:**
+- Estes componentes recebem `filteredOperations` que ja passa pelos filtros
+- O impacto depende de quantos registros passam nos filtros
+- Adicionar early-return se o dataset filtrado for > 50k (mostrar aviso para refinar filtros)
+
+---
+
+## Resumo de Arquivos a Modificar
+
+| Arquivo | Mudanca | Prioridade |
+|---------|---------|------------|
+| `src/pages/Trading.tsx` | Fetch paginado + batch importacao 100 | CRITICA |
+| `src/components/trading/TradingDashboard.tsx` | Pre-agregacao por dia | CRITICA |
+| `src/components/dashboard/AIInsightsCard.tsx` | Limitar/agregar payload | CRITICA |
+| `src/components/operations/OperationImport.tsx` | Batch 100, delay 150ms | MEDIA |
+| `src/components/operations/OperationsDashboard.tsx` | Ja tem paginacao, manter | BAIXA |
+
+---
+
+## Estimativas com 216k
+
+| Metrica | Antes | Depois |
+|---------|-------|--------|
+| Dados carregados no /trading | 1.000 (bug) | 216.000 (correto) |
+| Tempo de carregamento | Rapido (incompleto) | ~20s (dados completos) |
+| Responsividade da UI | Congela 5-15s | Fluida |
+| Tempo de importacao | ~14 min | ~6 min |
+| AI Insights | Falha (payload grande) | Funciona (dados agregados) |
+| Uso de memoria | ~500MB+ | ~200MB (otimizado) |
+
+---
+
+## Detalhes Tecnicos
+
+### Fetch Paginado (Trading.tsx)
 ```typescript
-const BATCH_SIZE = 50;
-const BATCH_DELAY = 200;
-const MAX_RETRIES = 3;
-const MAX_CONSECUTIVE_ERRORS = 20;
+// Busca em batches de 1000 com select otimizado
+let allOperations = [];
+let from = 0;
+const batchSize = 1000;
+let hasMore = true;
 
-let consecutiveErrors = 0;
+while (hasMore) {
+  const { data } = await supabase
+    .from('profit_operations')
+    .select('id, user_id, open_time, close_time, operation_result, strategy_id, asset')
+    .eq('user_id', userId)
+    .order('open_time', { ascending: false })
+    .range(from, from + batchSize - 1);
 
-for (let i = 0; i < batches; i++) {
-  let success = false;
-  let retries = 0;
-
-  while (!success && retries < MAX_RETRIES) {
-    const { error } = await supabase
-      .from("trading_operations")
-      .insert(batch);
-
-    if (!error) {
-      success = true;
-      consecutiveErrors = 0;
-    } else {
-      retries++;
-      consecutiveErrors++;
-      
-      // Backoff exponencial: 1s, 2s, 4s
-      await new Promise(r => setTimeout(r, 1000 * Math.pow(2, retries - 1)));
-    }
-  }
-
-  // Pausa longa se muitos erros
-  if (consecutiveErrors >= 5 && consecutiveErrors < MAX_CONSECUTIVE_ERRORS) {
-    await new Promise(r => setTimeout(r, 3000));
-  }
-
-  // Abortar se persistir
-  if (consecutiveErrors >= MAX_CONSECUTIVE_ERRORS) {
-    throw new Error("Muitos erros consecutivos. Tente novamente mais tarde.");
-  }
+  allOperations.push(...(data || []));
+  from += batchSize;
+  hasMore = (data?.length || 0) === batchSize;
 }
 ```
 
----
+### Pre-Agregacao (TradingDashboard.tsx)
+```typescript
+// Agregar por dia PRIMEIRO (216k -> ~1000 dias)
+const dayResults = {};
+operations.forEach(op => {
+  const day = op.open_time.substring(0, 10);
+  if (!dayResults[day]) dayResults[day] = { result: 0, count: 0, wins: 0, losses: 0 };
+  const result = op.operation_result || 0;
+  dayResults[day].result += result;
+  dayResults[day].count++;
+  // ... calculos sobre dados ja agregados
+});
+```
 
-## Arquivo a Modificar
-
-| Arquivo | Alterações |
-|---------|------------|
-| `src/components/operations/OperationImport.tsx` | Batch 50, delay 200ms, retry com backoff, limite de erros |
-
----
-
-## Benefícios
-
-| Métrica | Antes | Depois |
-|---------|-------|--------|
-| Requisições para 42k | 4.200 | 840 |
-| Chance de timeout | Alta | Baixa |
-| Recuperação de erros | Nenhuma | Automática |
-| Proteção do banco | Nenhuma | Backoff + pause |
-
+### AI Insights Otimizado
+```typescript
+// Enviar resumo agregado, nao 216k registros
+const summary = {
+  totalOps: operations.length,
+  byHour: Object.entries(hourData).map(...),
+  byWeekday: Object.entries(weekdayData).map(...),
+  byStrategy: Object.entries(strategyData).map(...),
+  recentOps: operations.slice(0, 500) // Amostra recente
+};
+await supabase.functions.invoke("analyze-trading-patterns", { body: summary });
+```
