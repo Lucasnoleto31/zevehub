@@ -1,8 +1,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { motion } from "framer-motion";
-import { BarChart2, Loader2 } from "lucide-react";
-import { Progress } from "@/components/ui/progress";
+import { BarChart2 } from "lucide-react";
 
 import RobosHero from "./RobosHero";
 import RobosFilters from "./RobosFilters";
@@ -92,75 +91,51 @@ const OperationsDashboard = ({ userId }: OperationsDashboardProps) => {
   const [yearlyStats, setYearlyStats] = useState<any[]>([]);
   const [strategyStats, setStrategyStats] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [loadingProgress, setLoadingProgress] = useState(0);
-  const [totalToLoad, setTotalToLoad] = useState(0);
-  const [loadedCount, setLoadedCount] = useState(0);
 
   useEffect(() => {
     loadOperations();
   }, [userId]);
 
-  // FASE 1: Fetch paralelo filtrado por estratégias permitidas no banco
+  useEffect(() => {
+    applyDateFilter();
+  }, [operations, dateFilter, strategyFilter, customStartDate, customEndDate, hourFilter, weekdayFilter, monthFilter]);
+
+  useEffect(() => {
+    if (filteredOperations.length > 0) {
+      calculateStats(filteredOperations);
+      generateCharts(filteredOperations);
+    }
+  }, [filteredOperations]);
+
+  // FASE 1: Fetch filtrado por estratégias permitidas no banco
   const loadOperations = async () => {
     try {
-      const BATCH_SIZE = 5000;
-      const PARALLEL_REQUESTS = 4;
+      let allOperations: Operation[] = [];
+      let from = 0;
+      const batchSize = 1000;
+      let hasMore = true;
 
-      // Step 1: Get total count
-      const { count, error: countError } = await supabase
-        .from("trading_operations")
-        .select("*", { count: "exact", head: true })
-        .in("strategy", ALLOWED_STRATEGIES);
+      while (hasMore) {
+        const { data, error } = await supabase
+          .from("trading_operations")
+          .select("operation_date, operation_time, result, strategy")
+          .in("strategy", ALLOWED_STRATEGIES)
+          .order("operation_date", { ascending: true })
+          .range(from, from + batchSize - 1);
 
-      if (countError) throw countError;
+        if (error) throw error;
 
-      const totalRecords = count || 0;
-      setTotalToLoad(totalRecords);
-
-      if (totalRecords === 0) {
-        setOperations([]);
-        setLoading(false);
-        return;
-      }
-
-      // Step 2: Calculate all ranges needed
-      const ranges: [number, number][] = [];
-      for (let from = 0; from < totalRecords; from += BATCH_SIZE) {
-        ranges.push([from, Math.min(from + BATCH_SIZE - 1, totalRecords - 1)]);
-      }
-
-      // Step 3: Fetch in parallel groups
-      const allOperations: Operation[] = [];
-      let loaded = 0;
-
-      for (let i = 0; i < ranges.length; i += PARALLEL_REQUESTS) {
-        const currentBatch = ranges.slice(i, i + PARALLEL_REQUESTS);
-
-        const results = await Promise.all(
-          currentBatch.map(([from, to]) =>
-            supabase
-              .from("trading_operations")
-              .select("operation_date, operation_time, result, strategy")
-              .in("strategy", ALLOWED_STRATEGIES)
-              .order("operation_date", { ascending: true })
-              .range(from, to)
-          )
-        );
-
-        for (const { data, error } of results) {
-          if (error) throw error;
-          if (data && data.length > 0) {
-            allOperations.push(...data);
-            loaded += data.length;
-          }
+        if (data && data.length > 0) {
+          allOperations = [...allOperations, ...data];
+          from += batchSize;
+          hasMore = data.length === batchSize;
+        } else {
+          hasMore = false;
         }
-
-        setLoadedCount(loaded);
-        setLoadingProgress(Math.round((loaded / totalRecords) * 100));
       }
 
       setOperations(allOperations);
-
+      
       const strategies = Array.from(new Set(
         allOperations
           .map(op => op.strategy)
@@ -579,21 +554,10 @@ const OperationsDashboard = ({ userId }: OperationsDashboardProps) => {
 
   if (loading) {
     return (
-      <div className="flex flex-col items-center justify-center py-24 gap-6">
+      <div className="flex items-center justify-center py-24">
         <div className="relative">
           <div className="w-20 h-20 border-4 border-primary/20 rounded-full"></div>
           <div className="absolute top-0 left-0 w-20 h-20 border-4 border-transparent border-t-primary rounded-full animate-spin"></div>
-        </div>
-        <div className="w-full max-w-md space-y-3">
-          <Progress value={loadingProgress} className="h-3" />
-          <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
-            <Loader2 className="w-4 h-4 animate-spin" />
-            <span>
-              {totalToLoad > 0
-                ? `Carregando ${loadedCount.toLocaleString("pt-BR")} de ${totalToLoad.toLocaleString("pt-BR")} operações... (${loadingProgress}%)`
-                : "Verificando operações..."}
-            </span>
-          </div>
         </div>
       </div>
     );
