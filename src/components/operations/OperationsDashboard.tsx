@@ -249,37 +249,110 @@ const OperationsDashboard = ({ userId }: OperationsDashboardProps) => {
         console.warn("RPC fallback - using client-side aggregation:", rpcErr);
       }
 
-      // Show stats immediately from RPC, then load full operations in background
-      setLoading(false);
-      setAvailableStrategies([...ALLOWED_STRATEGIES].sort());
+      // Fetch aggregated detail for sub-components via RPC
+      try {
+        const { data: detailData, error: detailError } = await supabase.rpc('get_operations_detail', {
+          p_user_id: userId,
+        });
 
-      // Background: fetch ALL operations for sub-components
-      const batchSize = 1000;
-      let allOps: Operation[] = [];
-      let from = 0;
-      let hasMore = true;
+        if (!detailError && detailData) {
+          const syntheticOps: Operation[] = [];
 
-      while (hasMore) {
-        const { data, error } = await supabase
-          .from("trading_operations")
-          .select("operation_date, operation_time, result, strategy, contracts")
-          .eq("user_id", userId)
-          .in("strategy", ALLOWED_STRATEGIES)
-          .order("operation_date", { ascending: true })
-          .range(from, from + batchSize - 1);
+          // For heatmap: needs operation_date (with correct weekday) + operation_time (hour)
+          // byDowHour has dayOfWeek + hour + result + operations
+          const byDowHour = detailData.byDowHour || [];
+          const byDay = detailData.byDay || [];
 
-        if (error) break;
-        if (data && data.length > 0) {
-          allOps = allOps.concat(data);
-          from += batchSize;
-          hasMore = data.length === batchSize;
+          // Build a lookup of real dates by day-of-week
+          const datesByDow: Record<number, string[]> = {};
+          for (const d of byDay) {
+            const date = new Date(d.date + 'T12:00:00');
+            const dow = date.getDay();
+            if (!datesByDow[dow]) datesByDow[dow] = [];
+            datesByDow[dow].push(d.date);
+          }
+
+          // Create ops from byStrategyDay (has strategy info for AdvancedMetrics)
+          const byStrategyDay = detailData.byStrategyDay || [];
+          for (const sd of byStrategyDay) {
+            // Split wins and losses proportionally
+            const winsCount = sd.wins || 0;
+            const lossCount = sd.operations - winsCount;
+            const avgWin = winsCount > 0 ? Math.max(sd.result, 0) / Math.max(winsCount, 1) : 0;
+            const avgLoss = lossCount > 0 ? Math.min(sd.result, 0) / Math.max(lossCount, 1) : 0;
+
+            // Add winning ops
+            for (let i = 0; i < winsCount; i++) {
+              syntheticOps.push({
+                operation_date: sd.date,
+                operation_time: '10:00:00',
+                result: avgWin || 1,
+                strategy: sd.strategy,
+                contracts: 1,
+              });
+            }
+            // Add losing ops
+            for (let i = 0; i < lossCount; i++) {
+              syntheticOps.push({
+                operation_date: sd.date,
+                operation_time: '10:00:00',
+                result: avgLoss || -1,
+                strategy: sd.strategy,
+                contracts: 1,
+              });
+            }
+          }
+
+          // Overlay heatmap time data: replace operation_time with real hours
+          // Create additional ops specifically for heatmap hour distribution
+          for (const cell of byDowHour) {
+            const dates = datesByDow[cell.dayOfWeek] || [];
+            if (dates.length === 0) continue;
+            // Spread operations across available dates for this DOW
+            const date = dates[0];
+            const hours = String(cell.hour).padStart(2, '0');
+            for (let i = 0; i < cell.operations; i++) {
+              const dateIdx = i % dates.length;
+              syntheticOps.push({
+                operation_date: dates[dateIdx],
+                operation_time: `${hours}:00:00`,
+                result: cell.result / cell.operations,
+                strategy: null,
+                contracts: 1,
+              });
+            }
+          }
+
+          setOperations(syntheticOps);
+          setLoadingOps(false);
         } else {
-          hasMore = false;
+          throw new Error('RPC failed');
         }
+      } catch (detailErr) {
+        console.warn("Detail RPC failed, falling back to batch fetch:", detailErr);
+        // Fallback: batch fetch
+        const batchSize = 1000;
+        let allOps: Operation[] = [];
+        let from = 0;
+        let hasMore = true;
+        while (hasMore) {
+          const { data, error } = await supabase
+            .from("trading_operations")
+            .select("operation_date, operation_time, result, strategy, contracts")
+            .eq("user_id", userId)
+            .in("strategy", ALLOWED_STRATEGIES)
+            .order("operation_date", { ascending: true })
+            .range(from, from + batchSize - 1);
+          if (error) break;
+          if (data && data.length > 0) { allOps = allOps.concat(data); from += batchSize; hasMore = data.length === batchSize; }
+          else hasMore = false;
+        }
+        setOperations(allOps);
+        setLoadingOps(false);
       }
 
-      setOperations(allOps);
-      setLoadingOps(false);
+      setLoading(false);
+      setAvailableStrategies([...ALLOWED_STRATEGIES].sort());
     } catch (error) {
       console.error("Erro ao carregar operações:", error);
     } finally {
