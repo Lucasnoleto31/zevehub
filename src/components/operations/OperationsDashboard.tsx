@@ -93,6 +93,7 @@ const OperationsDashboard = ({ userId }: OperationsDashboardProps) => {
   const [loading, setLoading] = useState(true);
   const [loadingOps, setLoadingOps] = useState(true);
   const [rpcData, setRpcData] = useState<any>(null);
+  const [heatmapData, setHeatmapData] = useState<any[]>([]);
 
   useEffect(() => {
     loadOperations();
@@ -253,32 +254,52 @@ const OperationsDashboard = ({ userId }: OperationsDashboardProps) => {
         console.warn("RPC fallback - using client-side aggregation:", rpcErr);
       }
 
-      // Load ALL operations in background for Heatmap (needs raw data)
-      const batchSize = 1000;
-      let allOps: Operation[] = [];
-      let from = 0;
-      let hasMore = true;
+      // Fetch heatmap data via RPC (aggregated — no 130k rows needed!)
+      try {
+        const { data: detailData, error: detailError } = await supabase.rpc('get_operations_detail', {
+          p_user_id: userId,
+        });
 
-      while (hasMore) {
-        const { data, error } = await supabase
-          .from("trading_operations")
-          .select("operation_date, operation_time, result, strategy, contracts")
-          .eq("user_id", userId)
-          .in("strategy", ALLOWED_STRATEGIES)
-          .order("operation_date", { ascending: true })
-          .range(from, from + batchSize - 1);
+        if (!detailError && detailData) {
+          // Build heatmap data from byDowHour
+          const weekdayNames = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
+          const byDowHour = detailData.byDowHour || [];
+          const heatmapPreAgg: any[] = [];
 
-        if (error) break;
-        if (data && data.length > 0) {
-          allOps = allOps.concat(data);
-          from += batchSize;
-          hasMore = data.length === batchSize;
-        } else {
-          hasMore = false;
+          for (let day = 1; day <= 5; day++) {
+            for (let hour = 9; hour <= 17; hour++) {
+              const cell = byDowHour.find((c: any) => c.dayOfWeek === day && c.hour === hour);
+              heatmapPreAgg.push({
+                weekday: weekdayNames[day],
+                hour: `${hour}h`,
+                result: cell ? cell.result / cell.operations : 0,
+                operations: cell ? cell.operations : 0,
+                totalResult: cell ? cell.result : 0,
+                wins: cell ? cell.wins : 0,
+                losses: cell ? (cell.operations - cell.wins) : 0,
+              });
+            }
+          }
+          setHeatmapData(heatmapPreAgg);
+
+          // Build synthetic ops for other sub-components (calendar, top days, advanced metrics)
+          const byStrategyDay = detailData.byStrategyDay || [];
+          const syntheticOps: Operation[] = [];
+          for (const sd of byStrategyDay) {
+            syntheticOps.push({
+              operation_date: sd.date,
+              operation_time: '10:00:00',
+              result: sd.result,
+              strategy: sd.strategy,
+              contracts: sd.operations,
+            });
+          }
+          setOperations(syntheticOps);
         }
+      } catch (err) {
+        console.warn("Detail RPC failed:", err);
       }
 
-      setOperations(allOps);
       setLoadingOps(false);
       setLoading(false);
       setAvailableStrategies([...ALLOWED_STRATEGIES].sort());
@@ -788,7 +809,7 @@ const OperationsDashboard = ({ userId }: OperationsDashboardProps) => {
       ) : (
         <>
           {/* Heatmap — protagonista */}
-          <PerformanceHeatmap operations={filteredOperations} />
+          <PerformanceHeatmap operations={filteredOperations} preAggregatedData={heatmapData.length > 0 ? heatmapData : undefined} />
 
           {/* Strategy Cards */}
           <RobosStrategyCards strategyStats={strategyStats} />

@@ -32,6 +32,7 @@ interface ComparisonData extends HeatmapData {
 
 interface PerformanceHeatmapProps {
   operations: Operation[];
+  preAggregatedData?: HeatmapData[];
 }
 
 type ViewMode = "normal" | "comparison";
@@ -41,7 +42,7 @@ type HeatmapTheme = "dark" | "light";
 const WEEKDAYS = ["Seg", "Ter", "Qua", "Qui", "Sex"];
 const HOURS = Array.from({ length: 9 }, (_, i) => `${i + 9}h`);
 
-const PerformanceHeatmap = ({ operations }: PerformanceHeatmapProps) => {
+const PerformanceHeatmap = ({ operations, preAggregatedData }: PerformanceHeatmapProps) => {
   const [hoveredCell, setHoveredCell] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>("normal");
   const [comparisonPeriod, setComparisonPeriod] = useState<ComparisonPeriod>("all");
@@ -136,7 +137,7 @@ const PerformanceHeatmap = ({ operations }: PerformanceHeatmapProps) => {
     return result;
   }, []);
 
-  const heatmapData = useMemo(() => processOperations(operations), [operations, processOperations]);
+  const heatmapData = useMemo(() => preAggregatedData || processOperations(operations), [operations, processOperations, preAggregatedData]);
 
   const comparisonData = useMemo((): ComparisonData[] => {
     const currentOps = filterByPeriod(operations, "current", comparisonPeriod);
