@@ -249,6 +249,10 @@ const OperationsDashboard = ({ userId }: OperationsDashboardProps) => {
         console.warn("RPC fallback - using client-side aggregation:", rpcErr);
       }
 
+      // Stats are ready — stop showing main spinner
+      setLoading(false);
+      setAvailableStrategies([...ALLOWED_STRATEGIES].sort());
+
       // Fetch aggregated detail for sub-components via RPC
       try {
         const { data: detailData, error: detailError } = await supabase.rpc('get_operations_detail', {
@@ -351,12 +355,11 @@ const OperationsDashboard = ({ userId }: OperationsDashboardProps) => {
         setLoadingOps(false);
       }
 
-      setLoading(false);
-      setAvailableStrategies([...ALLOWED_STRATEGIES].sort());
     } catch (error) {
       console.error("Erro ao carregar operações:", error);
     } finally {
       setLoading(false);
+      setLoadingOps(false);
     }
   };
 
