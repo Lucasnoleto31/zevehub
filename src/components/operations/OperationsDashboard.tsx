@@ -701,7 +701,7 @@ const OperationsDashboard = ({ userId }: OperationsDashboardProps) => {
     );
   }
 
-  if (operations.length === 0 && !rpcData && !loadingOps) {
+  if (operations.length === 0 && !rpcData && !loadingOps && !loading) {
     return (
       <motion.div 
         initial={{ opacity: 0, y: 20 }}
@@ -723,13 +723,13 @@ const OperationsDashboard = ({ userId }: OperationsDashboardProps) => {
     <div className="space-y-8">
       {/* Hero Section */}
       <RobosHero
-        totalOperations={filteredOperations.length}
+        totalOperations={rpcData?.totalOperations ?? filteredOperations.length}
         totalDays={stats.positiveDays + stats.negativeDays}
-        totalResult={stats.totalResult}
-        winRate={stats.winRate}
+        totalResult={rpcData?.netResult ?? stats.totalResult}
+        winRate={rpcData?.winRate ?? stats.winRate}
         positiveDays={stats.positiveDays}
         negativeDays={stats.negativeDays}
-        payoff={stats.payoff}
+        payoff={rpcData?.payoff ?? stats.payoff}
         monthlyConsistency={stats.monthlyConsistency}
         positiveMonths={stats.positiveMonths}
         negativeMonths={stats.negativeMonths}
