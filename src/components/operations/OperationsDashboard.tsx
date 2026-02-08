@@ -91,9 +91,6 @@ const OperationsDashboard = ({ userId }: OperationsDashboardProps) => {
   const [yearlyStats, setYearlyStats] = useState<any[]>([]);
   const [strategyStats, setStrategyStats] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [loadingOps, setLoadingOps] = useState(true);
-  const [rpcData, setRpcData] = useState<any>(null);
-  const [heatmapData, setHeatmapData] = useState<any[]>([]);
 
   useEffect(() => {
     loadOperations();
@@ -104,211 +101,51 @@ const OperationsDashboard = ({ userId }: OperationsDashboardProps) => {
   }, [operations, dateFilter, strategyFilter, customStartDate, customEndDate, hourFilter, weekdayFilter, monthFilter]);
 
   useEffect(() => {
-    // When no date/strategy filter is active and we have RPC data, use it for main stats
-    if (rpcData && dateFilter === "all" && strategyFilter.length === 0 && hourFilter.length === 0 && weekdayFilter.length === 0 && monthFilter.length === 0) {
-      applyRPCStats(rpcData);
-    } else if (filteredOperations.length > 0 && !rpcData) {
+    if (filteredOperations.length > 0) {
       calculateStats(filteredOperations);
       generateCharts(filteredOperations);
     }
-  }, [filteredOperations, rpcData, dateFilter, strategyFilter, hourFilter, weekdayFilter, monthFilter]);
+  }, [filteredOperations]);
 
-  const applyRPCStats = (rpc: any) => {
-    const dr = rpc.dailyResults || [];
-    const dailyResultsArray = dr.map((d: any) => d.result);
-    const positiveDays = dailyResultsArray.filter((r: number) => r > 0).length;
-    const negativeDays = dailyResultsArray.filter((r: number) => r < 0).length;
-    const totalDays = dr.length;
-    const winRate = totalDays > 0 ? (positiveDays / totalDays) * 100 : 0;
-
-    const avgWin = rpc.totalWins > 0 ? rpc.totalProfit / rpc.totalWins : 0;
-    const avgLoss = rpc.totalLosses > 0 ? Math.abs(rpc.totalLoss) / rpc.totalLosses : 0;
-    const payoff = avgLoss > 0 ? avgWin / avgLoss : 0;
-
-    const mr = rpc.monthlyResults || [];
-    const monthlyResultsArray = mr.map((m: any) => m.result);
-    const positiveMonths = monthlyResultsArray.filter((r: number) => r > 0).length;
-    const negativeMonths = monthlyResultsArray.filter((r: number) => r < 0).length;
-    const monthlyConsistency = mr.length > 0 ? (positiveMonths / mr.length) * 100 : 0;
-    const averageMonthlyResult = mr.length > 0 ? monthlyResultsArray.reduce((s: number, r: number) => s + r, 0) / mr.length : 0;
-
-    const avgDaily = totalDays > 0 ? dailyResultsArray.reduce((s: number, r: number) => s + r, 0) / totalDays : 0;
-    let varianceSum = 0;
-    for (const r of dailyResultsArray) varianceSum += (r - avgDaily) ** 2;
-    const standardDeviation = totalDays > 0 ? Math.sqrt(varianceSum / totalDays) : 0;
-    const volatility = avgDaily !== 0 ? (standardDeviation / Math.abs(avgDaily)) * 100 : 0;
-
-    // Streaks
-    const sorted = [...dr].sort((a: any, b: any) => a.date.localeCompare(b.date));
-    let maxPos = 0, maxNeg = 0, curPos = 0, curNeg = 0;
-    for (const d of sorted) {
-      if (d.result > 0) { curPos++; curNeg = 0; if (curPos > maxPos) maxPos = curPos; }
-      else if (d.result < 0) { curNeg++; curPos = 0; if (curNeg > maxNeg) maxNeg = curNeg; }
-    }
-
-    setStats({
-      totalOperations: rpc.totalOperations,
-      positiveDays,
-      negativeDays,
-      winRate,
-      totalResult: rpc.netResult,
-      bestResult: rpc.bestDay?.result || 0,
-      worstResult: rpc.worstDay?.result || 0,
-      positiveStreak: maxPos,
-      negativeStreak: maxNeg,
-      payoff,
-      averageWin: avgWin,
-      averageLoss: avgLoss,
-      positiveMonths,
-      negativeMonths,
-      monthlyConsistency,
-      averageMonthlyResult,
-      volatility,
-      standardDeviation,
-    });
-
-    // Generate charts from RPC data
-    generateChartsFromRPC(rpc);
-  };
-
-  const generateChartsFromRPC = (rpc: any) => {
-    const monthNames = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
-    const dr = rpc.dailyResults || [];
-    const mr = rpc.monthlyResults || [];
-    const bh = rpc.byHour || [];
-    const bs = rpc.byStrategy || [];
-
-    // Performance curve
-    let accumulated = 0;
-    const sorted = [...dr].sort((a: any, b: any) => a.date.localeCompare(b.date));
-    const curve = sorted.map((d: any) => {
-      accumulated += d.result;
-      const [, mm, dd] = d.date.split('-');
-      return { date: `${dd}/${mm}`, value: accumulated };
-    });
-    setPerformanceCurve(curve.length > 365 ? curve.filter((_: any, i: number) => i % Math.ceil(curve.length / 365) === 0 || i === curve.length - 1) : curve);
-
-    // Month stats
-    const monthlyMap: Record<string, number> = {};
-    mr.forEach((m: any) => {
-      const idx = parseInt(m.month.split('-')[1], 10) - 1;
-      monthlyMap[monthNames[idx]] = (monthlyMap[monthNames[idx]] || 0) + m.result;
-    });
-    setMonthStats(monthNames.map(month => ({ month, result: monthlyMap[month] || 0 })));
-
-    // Hour distribution
-    const hourDist = bh.map((h: any) => ({
-      hour: `${h.hour}h`,
-      operacoes: h.operations,
-      positivas: h.wins,
-      negativas: h.operations - h.wins,
-      winRate: h.operations > 0 ? (h.wins / h.operations) * 100 : 0,
-      resultado: h.result,
-    })).sort((a: any, b: any) => parseInt(a.hour) - parseInt(b.hour));
-    setHourDistribution(hourDist);
-
-    // Yearly stats
-    const yearAgg: Record<string, number> = {};
-    mr.forEach((m: any) => {
-      const year = m.month.substring(0, 4);
-      yearAgg[year] = (yearAgg[year] || 0) + m.result;
-    });
-    setYearlyStats(Object.entries(yearAgg).sort(([a], [b]) => a.localeCompare(b)).map(([year, result]) => ({ year, result })));
-
-    // Strategy stats from RPC
-    const strategyStatsArray = bs.map((s: any) => {
-      const losses = s.operations - s.wins;
-      const winRate = s.operations > 0 ? (s.wins / s.operations) * 100 : 0;
-      return {
-        strategy: s.strategy || 'Sem Estratégia',
-        totalOps: s.operations,
-        totalResult: s.result,
-        winRate,
-        payoff: 0, // not available from RPC aggregate
-        averageWin: 0,
-        averageLoss: 0,
-        maxDrawdown: 0,
-        positive: s.wins,
-        negative: losses,
-      };
-    }).sort((a: any, b: any) => b.totalResult - a.totalResult);
-    setStrategyStats(strategyStatsArray);
-  };
-
-  // Fetch via RPC instead of batch loading all operations
+  // FASE 1: Fetch filtrado por estratégias permitidas no banco
   const loadOperations = async () => {
     try {
-      // Use RPC for aggregated data (with fallback)
-      let rpc: any = null;
-      try {
-        const { data, error: rpcError } = await supabase.rpc('get_operations_dashboard', {
-          p_user_id: userId,
-          p_date_from: null,
-          p_date_to: null,
-        });
-        if (!rpcError && data) {
-          rpc = data;
-          setRpcData(data);
+      let allOperations: Operation[] = [];
+      let from = 0;
+      const batchSize = 1000;
+      let hasMore = true;
+
+      while (hasMore) {
+        const { data, error } = await supabase
+          .from("trading_operations")
+          .select("operation_date, operation_time, result, strategy, contracts")
+          .in("strategy", ALLOWED_STRATEGIES)
+          .order("operation_date", { ascending: true })
+          .range(from, from + batchSize - 1);
+
+        if (error) throw error;
+
+        if (data && data.length > 0) {
+          allOperations = [...allOperations, ...data];
+          from += batchSize;
+          hasMore = data.length === batchSize;
+        } else {
+          hasMore = false;
         }
-      } catch (rpcErr) {
-        console.warn("RPC fallback - using client-side aggregation:", rpcErr);
       }
 
-      // Fetch heatmap data via RPC (aggregated — no 130k rows needed!)
-      try {
-        const { data: detailData, error: detailError } = await supabase.rpc('get_operations_detail', {
-          p_user_id: userId,
-        });
-
-        if (!detailError && detailData) {
-          // Build heatmap data from byDowHour
-          const weekdayNames = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
-          const byDowHour = detailData.byDowHour || [];
-          const heatmapPreAgg: any[] = [];
-
-          for (let day = 1; day <= 5; day++) {
-            for (let hour = 9; hour <= 17; hour++) {
-              const cell = byDowHour.find((c: any) => c.dayOfWeek === day && c.hour === hour);
-              heatmapPreAgg.push({
-                weekday: weekdayNames[day],
-                hour: `${hour}h`,
-                result: cell ? cell.result / cell.operations : 0,
-                operations: cell ? cell.operations : 0,
-                totalResult: cell ? cell.result : 0,
-                wins: cell ? cell.wins : 0,
-                losses: cell ? (cell.operations - cell.wins) : 0,
-              });
-            }
-          }
-          setHeatmapData(heatmapPreAgg);
-
-          // Build synthetic ops for other sub-components (calendar, top days, advanced metrics)
-          const byStrategyDay = detailData.byStrategyDay || [];
-          const syntheticOps: Operation[] = [];
-          for (const sd of byStrategyDay) {
-            syntheticOps.push({
-              operation_date: sd.date,
-              operation_time: '10:00:00',
-              result: sd.result,
-              strategy: sd.strategy,
-              contracts: sd.operations,
-            });
-          }
-          setOperations(syntheticOps);
-        }
-      } catch (err) {
-        console.warn("Detail RPC failed:", err);
-      }
-
-      setLoadingOps(false);
-      setLoading(false);
-      setAvailableStrategies([...ALLOWED_STRATEGIES].sort());
-
+      setOperations(allOperations);
+      
+      const strategies = Array.from(new Set(
+        allOperations
+          .map(op => op.strategy)
+          .filter((s): s is string => s != null && s.trim() !== '')
+      ));
+      setAvailableStrategies(strategies.sort());
     } catch (error) {
       console.error("Erro ao carregar operações:", error);
     } finally {
       setLoading(false);
-      setLoadingOps(false);
     }
   };
 
@@ -726,7 +563,7 @@ const OperationsDashboard = ({ userId }: OperationsDashboardProps) => {
     );
   }
 
-  if (operations.length === 0 && !rpcData && !loadingOps && !loading) {
+  if (operations.length === 0) {
     return (
       <motion.div 
         initial={{ opacity: 0, y: 20 }}
@@ -748,13 +585,13 @@ const OperationsDashboard = ({ userId }: OperationsDashboardProps) => {
     <div className="space-y-8">
       {/* Hero Section */}
       <RobosHero
-        totalOperations={rpcData?.totalOperations ?? filteredOperations.length}
+        totalOperations={filteredOperations.length}
         totalDays={stats.positiveDays + stats.negativeDays}
-        totalResult={rpcData?.netResult ?? stats.totalResult}
-        winRate={rpcData?.winRate ?? stats.winRate}
+        totalResult={stats.totalResult}
+        winRate={stats.winRate}
         positiveDays={stats.positiveDays}
         negativeDays={stats.negativeDays}
-        payoff={rpcData?.payoff ?? stats.payoff}
+        payoff={stats.payoff}
         monthlyConsistency={stats.monthlyConsistency}
         positiveMonths={stats.positiveMonths}
         negativeMonths={stats.negativeMonths}
@@ -794,51 +631,22 @@ const OperationsDashboard = ({ userId }: OperationsDashboardProps) => {
       />
 
 
-      {/* Heatmap + Sub-components — load progressively with real operations */}
-      {loadingOps ? (
-        <div className="text-center py-8 text-muted-foreground">
-          <div className="animate-pulse flex flex-col items-center gap-3">
-            <div className="grid grid-cols-5 gap-1">
-              {Array.from({ length: 25 }).map((_, i) => (
-                <div key={i} className="w-10 h-10 rounded bg-muted/30"></div>
-              ))}
-            </div>
-            <p className="text-sm">Carregando heatmap... ({operations.length.toLocaleString()} de ~130k operações)</p>
-          </div>
-        </div>
-      ) : (
-        <>
-          {/* Heatmap — protagonista */}
-          <PerformanceHeatmap operations={filteredOperations} preAggregatedData={heatmapData.length > 0 ? heatmapData : undefined} />
+      {/* Advanced Metrics */}
+      <AdvancedMetrics operations={filteredOperations} />
 
-          {/* Strategy Cards */}
-          <RobosStrategyCards strategyStats={rpcData ? (rpcData.byStrategy || []).map((s: any) => ({
-            strategy: s.strategy,
-            totalOps: s.operations,
-            totalResult: s.result,
-            winRate: s.operations > 0 ? (s.wins / s.operations) * 100 : 0,
-            payoff: 0,
-            averageWin: 0,
-            averageLoss: 0,
-            maxDrawdown: 0,
-            positive: s.wins,
-            negative: s.operations - s.wins,
-          })) : strategyStats} />
+      {/* Performance Calendar */}
+      <PerformanceCalendar operations={filteredOperations.map(op => ({
+        id: `${op.operation_date}-${op.operation_time}`,
+        operation_date: op.operation_date,
+        result: op.result,
+        strategy: op.strategy || undefined,
+      }))} />
 
-          {/* Advanced Metrics */}
-          <AdvancedMetrics operations={filteredOperations} />
-
-          {/* Calendar + Top Days */}
-          <PerformanceCalendar operations={filteredOperations.map(op => ({
-            id: `${op.operation_date}-${op.operation_time}`,
-            operation_date: op.operation_date,
-            result: op.result,
-            strategy: op.strategy || undefined,
-          }))} />
-
-          <TopPerformanceDays operations={filteredOperations} />
-        </>
-      )}
+      {/* Heatmap & Top Days */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <PerformanceHeatmap operations={filteredOperations} />
+        <TopPerformanceDays operations={filteredOperations} />
+      </div>
     </div>
   );
 };
