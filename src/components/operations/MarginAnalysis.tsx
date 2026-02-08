@@ -22,6 +22,7 @@ interface MarginAnalysisProps {
 
 const MARGIN_PER_CONTRACT = 150;
 const MARKET_HOURS = [9, 10, 11, 12, 13, 14, 15, 16, 17];
+const STOP_SAFETY_MARGIN = 1.4; // +40% de margem de segurança
 
 const MarginAnalysis = ({ operations }: MarginAnalysisProps) => {
   const { hourlyData, summaryStats } = useMemo(() => {
@@ -116,7 +117,7 @@ const MarginAnalysis = ({ operations }: MarginAnalysisProps) => {
       const sg = hourStopGain[h];
       const avgContracts = agg.days > 0 ? agg.total / agg.days : 0;
       const avgGain = sg.gainCount > 0 ? Math.round(sg.gainSum / sg.gainCount) : 0;
-      const avgStop = sg.lossCount > 0 ? Math.round(Math.abs(sg.lossSum / sg.lossCount)) : 0;
+      const avgStop = sg.lossCount > 0 ? Math.round(Math.abs(sg.lossSum / sg.lossCount) * STOP_SAFETY_MARGIN) : 0;
 
       return {
         hour: `${h}h`,
@@ -237,7 +238,7 @@ const MarginAnalysis = ({ operations }: MarginAnalysisProps) => {
               icon={ShieldAlert}
               label="Stop Ideal"
               value={`R$ ${summaryStats.overallAvgStop.toLocaleString("pt-BR")}`}
-              sublabel="Média geral das perdas/hora"
+              sublabel="Média + 40% margem de segurança"
               color="text-red-400"
               bgColor="from-red-500/10 to-red-500/5 border-red-500/20"
             />
@@ -339,7 +340,7 @@ const MarginAnalysis = ({ operations }: MarginAnalysisProps) => {
             <div>
               <CardTitle className="text-lg font-bold">Stop e Gain Ideal por Hora</CardTitle>
               <CardDescription className="text-xs">
-                Baseado no resultado médio acumulado por janela de horário
+                Baseado no resultado médio acumulado por janela (stop com +40% de segurança)
               </CardDescription>
             </div>
           </div>
