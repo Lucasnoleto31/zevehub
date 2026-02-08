@@ -248,36 +248,84 @@ const OperationsDashboard = ({ userId }: OperationsDashboardProps) => {
         console.warn("RPC fallback - using client-side aggregation:", rpcErr);
       }
 
-      // Fetch ALL operations for sub-components (heatmap, calendar, advanced metrics)
-      const batchSize = 1000;
-      let allOps: Operation[] = [];
-      let from = 0;
-      let hasMore = true;
+      // Fetch aggregated detail data for sub-components (heatmap, calendar, advanced metrics)
+      // Uses RPC to get pre-aggregated data instead of 130k+ individual rows
+      try {
+        const { data: detailData, error: detailError } = await supabase.rpc('get_operations_detail', {
+          p_user_id: userId,
+        });
 
-      while (hasMore) {
-        const { data, error } = await supabase
+        if (!detailError && detailData) {
+          // Convert aggregated day data into Operation-like objects for sub-components
+          const byDay = detailData.byDay || [];
+          const syntheticOps: Operation[] = [];
+
+          // For each day, create synthetic operation entries that sub-components can process
+          for (const day of byDay) {
+            // Create one synthetic op per day with the daily result
+            // This gives calendar and top-days what they need
+            syntheticOps.push({
+              operation_date: day.date,
+              operation_time: '12:00:00',
+              result: day.result,
+              strategy: null,
+              contracts: day.contracts || 1,
+            });
+          }
+
+          // For heatmap: create synthetic ops from dow×hour data
+          const byDowHour = detailData.byDowHour || [];
+          for (const cell of byDowHour) {
+            // Find a date that matches this day of week for the heatmap
+            const matchingDay = byDay.find((d: any) => {
+              const date = new Date(d.date + 'T12:00:00');
+              return date.getDay() === cell.dayOfWeek;
+            });
+            if (matchingDay) {
+              const hours = String(cell.hour).padStart(2, '0');
+              for (let i = 0; i < cell.operations; i++) {
+                syntheticOps.push({
+                  operation_date: matchingDay.date,
+                  operation_time: `${hours}:00:00`,
+                  result: cell.result / cell.operations,
+                  strategy: null,
+                  contracts: 1,
+                });
+              }
+            }
+          }
+
+          // For advanced metrics: create synthetic ops from strategy×day data
+          const byStrategyDay = detailData.byStrategyDay || [];
+          const strategyOps: Operation[] = [];
+          for (const sd of byStrategyDay) {
+            for (let i = 0; i < sd.operations; i++) {
+              strategyOps.push({
+                operation_date: sd.date,
+                operation_time: '12:00:00',
+                result: sd.result / sd.operations,
+                strategy: sd.strategy,
+                contracts: 1,
+              });
+            }
+          }
+
+          // Merge: use strategyOps (has strategy info) for the main operations set
+          setOperations(strategyOps.length > 0 ? strategyOps : syntheticOps);
+        }
+      } catch (detailErr) {
+        console.warn("Detail RPC failed, falling back to batch fetch:", detailErr);
+        // Fallback: fetch recent 5000
+        const { data: opsData } = await supabase
           .from("trading_operations")
           .select("operation_date, operation_time, result, strategy, contracts")
           .eq("user_id", userId)
           .in("strategy", ALLOWED_STRATEGIES)
-          .order("operation_date", { ascending: true })
-          .range(from, from + batchSize - 1);
-
-        if (error) {
-          console.error("Erro ao carregar operações:", error);
-          break;
-        }
-
-        if (data && data.length > 0) {
-          allOps = allOps.concat(data);
-          from += batchSize;
-          hasMore = data.length === batchSize;
-        } else {
-          hasMore = false;
-        }
+          .order("operation_date", { ascending: false })
+          .limit(5000);
+        if (opsData) setOperations(opsData.reverse());
       }
 
-      setOperations(allOps);
       setAvailableStrategies([...ALLOWED_STRATEGIES].sort());
     } catch (error) {
       console.error("Erro ao carregar operações:", error);
