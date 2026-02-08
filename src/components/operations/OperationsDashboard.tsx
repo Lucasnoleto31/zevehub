@@ -101,47 +101,172 @@ const OperationsDashboard = ({ userId }: OperationsDashboardProps) => {
   }, [operations, dateFilter, strategyFilter, customStartDate, customEndDate, hourFilter, weekdayFilter, monthFilter]);
 
   useEffect(() => {
-    if (filteredOperations.length > 0) {
+    // When no date/strategy filter is active and we have RPC data, use it for main stats
+    if (rpcData && dateFilter === "all" && strategyFilter.length === 0 && hourFilter.length === 0 && weekdayFilter.length === 0 && monthFilter.length === 0) {
+      applyRPCStats(rpcData);
+    } else if (filteredOperations.length > 0) {
       calculateStats(filteredOperations);
       generateCharts(filteredOperations);
     }
-  }, [filteredOperations]);
+  }, [filteredOperations, rpcData, dateFilter, strategyFilter, hourFilter, weekdayFilter, monthFilter]);
 
-  // FASE 1: Fetch filtrado por estratégias permitidas no banco
+  const applyRPCStats = (rpc: any) => {
+    const dr = rpc.dailyResults || [];
+    const dailyResultsArray = dr.map((d: any) => d.result);
+    const positiveDays = dailyResultsArray.filter((r: number) => r > 0).length;
+    const negativeDays = dailyResultsArray.filter((r: number) => r < 0).length;
+    const totalDays = dr.length;
+    const winRate = totalDays > 0 ? (positiveDays / totalDays) * 100 : 0;
+
+    const avgWin = rpc.totalWins > 0 ? rpc.totalProfit / rpc.totalWins : 0;
+    const avgLoss = rpc.totalLosses > 0 ? Math.abs(rpc.totalLoss) / rpc.totalLosses : 0;
+    const payoff = avgLoss > 0 ? avgWin / avgLoss : 0;
+
+    const mr = rpc.monthlyResults || [];
+    const monthlyResultsArray = mr.map((m: any) => m.result);
+    const positiveMonths = monthlyResultsArray.filter((r: number) => r > 0).length;
+    const negativeMonths = monthlyResultsArray.filter((r: number) => r < 0).length;
+    const monthlyConsistency = mr.length > 0 ? (positiveMonths / mr.length) * 100 : 0;
+    const averageMonthlyResult = mr.length > 0 ? monthlyResultsArray.reduce((s: number, r: number) => s + r, 0) / mr.length : 0;
+
+    const avgDaily = totalDays > 0 ? dailyResultsArray.reduce((s: number, r: number) => s + r, 0) / totalDays : 0;
+    let varianceSum = 0;
+    for (const r of dailyResultsArray) varianceSum += (r - avgDaily) ** 2;
+    const standardDeviation = totalDays > 0 ? Math.sqrt(varianceSum / totalDays) : 0;
+    const volatility = avgDaily !== 0 ? (standardDeviation / Math.abs(avgDaily)) * 100 : 0;
+
+    // Streaks
+    const sorted = [...dr].sort((a: any, b: any) => a.date.localeCompare(b.date));
+    let maxPos = 0, maxNeg = 0, curPos = 0, curNeg = 0;
+    for (const d of sorted) {
+      if (d.result > 0) { curPos++; curNeg = 0; if (curPos > maxPos) maxPos = curPos; }
+      else if (d.result < 0) { curNeg++; curPos = 0; if (curNeg > maxNeg) maxNeg = curNeg; }
+    }
+
+    setStats({
+      totalOperations: rpc.totalOperations,
+      positiveDays,
+      negativeDays,
+      winRate,
+      totalResult: rpc.netResult,
+      bestResult: rpc.bestDay?.result || 0,
+      worstResult: rpc.worstDay?.result || 0,
+      positiveStreak: maxPos,
+      negativeStreak: maxNeg,
+      payoff,
+      averageWin: avgWin,
+      averageLoss: avgLoss,
+      positiveMonths,
+      negativeMonths,
+      monthlyConsistency,
+      averageMonthlyResult,
+      volatility,
+      standardDeviation,
+    });
+
+    // Generate charts from RPC data
+    generateChartsFromRPC(rpc);
+  };
+
+  const generateChartsFromRPC = (rpc: any) => {
+    const monthNames = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
+    const dr = rpc.dailyResults || [];
+    const mr = rpc.monthlyResults || [];
+    const bh = rpc.byHour || [];
+    const bs = rpc.byStrategy || [];
+
+    // Performance curve
+    let accumulated = 0;
+    const sorted = [...dr].sort((a: any, b: any) => a.date.localeCompare(b.date));
+    const curve = sorted.map((d: any) => {
+      accumulated += d.result;
+      const [, mm, dd] = d.date.split('-');
+      return { date: `${dd}/${mm}`, value: accumulated };
+    });
+    setPerformanceCurve(curve.length > 365 ? curve.filter((_: any, i: number) => i % Math.ceil(curve.length / 365) === 0 || i === curve.length - 1) : curve);
+
+    // Month stats
+    const monthlyMap: Record<string, number> = {};
+    mr.forEach((m: any) => {
+      const idx = parseInt(m.month.split('-')[1], 10) - 1;
+      monthlyMap[monthNames[idx]] = (monthlyMap[monthNames[idx]] || 0) + m.result;
+    });
+    setMonthStats(monthNames.map(month => ({ month, result: monthlyMap[month] || 0 })));
+
+    // Hour distribution
+    const hourDist = bh.map((h: any) => ({
+      hour: `${h.hour}h`,
+      operacoes: h.operations,
+      positivas: h.wins,
+      negativas: h.operations - h.wins,
+      winRate: h.operations > 0 ? (h.wins / h.operations) * 100 : 0,
+      resultado: h.result,
+    })).sort((a: any, b: any) => parseInt(a.hour) - parseInt(b.hour));
+    setHourDistribution(hourDist);
+
+    // Yearly stats
+    const yearAgg: Record<string, number> = {};
+    mr.forEach((m: any) => {
+      const year = m.month.substring(0, 4);
+      yearAgg[year] = (yearAgg[year] || 0) + m.result;
+    });
+    setYearlyStats(Object.entries(yearAgg).sort(([a], [b]) => a.localeCompare(b)).map(([year, result]) => ({ year, result })));
+
+    // Strategy stats from RPC
+    const strategyStatsArray = bs.map((s: any) => {
+      const losses = s.operations - s.wins;
+      const winRate = s.operations > 0 ? (s.wins / s.operations) * 100 : 0;
+      return {
+        strategy: s.strategy || 'Sem Estratégia',
+        totalOps: s.operations,
+        totalResult: s.result,
+        winRate,
+        payoff: 0, // not available from RPC aggregate
+        averageWin: 0,
+        averageLoss: 0,
+        maxDrawdown: 0,
+        positive: s.wins,
+        negative: losses,
+      };
+    }).sort((a: any, b: any) => b.totalResult - a.totalResult);
+    setStrategyStats(strategyStatsArray);
+  };
+
+  // RPC-based data
+  const [rpcData, setRpcData] = useState<any>(null);
+
+  // Fetch via RPC instead of batch loading all operations
   const loadOperations = async () => {
     try {
-      let allOperations: Operation[] = [];
-      let from = 0;
-      const batchSize = 1000;
-      let hasMore = true;
+      // Use RPC for aggregated data
+      const { data: rpc, error: rpcError } = await supabase.rpc('get_operations_dashboard', {
+        p_user_id: userId,
+        p_date_from: null,
+        p_date_to: null,
+      });
 
-      while (hasMore) {
-        const { data, error } = await supabase
-          .from("trading_operations")
-          .select("operation_date, operation_time, result, strategy, contracts")
-          .in("strategy", ALLOWED_STRATEGIES)
-          .order("operation_date", { ascending: true })
-          .range(from, from + batchSize - 1);
+      if (rpcError) throw rpcError;
+      if (rpc) setRpcData(rpc);
 
-        if (error) throw error;
+      // Also fetch a lightweight set of operations for sub-components that need raw data
+      // Only fetch the most recent 5000 for calendar/heatmap/advanced metrics
+      const { data: opsData, error: opsError } = await supabase
+        .from("trading_operations")
+        .select("operation_date, operation_time, result, strategy, contracts")
+        .eq("user_id", userId)
+        .in("strategy", ALLOWED_STRATEGIES)
+        .order("operation_date", { ascending: true })
+        .limit(5000);
 
-        if (data && data.length > 0) {
-          allOperations = [...allOperations, ...data];
-          from += batchSize;
-          hasMore = data.length === batchSize;
-        } else {
-          hasMore = false;
-        }
+      if (!opsError && opsData) {
+        setOperations(opsData);
+        const strategies = Array.from(new Set(
+          opsData
+            .map(op => op.strategy)
+            .filter((s): s is string => s != null && s.trim() !== '')
+        ));
+        setAvailableStrategies(strategies.sort());
       }
-
-      setOperations(allOperations);
-      
-      const strategies = Array.from(new Set(
-        allOperations
-          .map(op => op.strategy)
-          .filter((s): s is string => s != null && s.trim() !== '')
-      ));
-      setAvailableStrategies(strategies.sort());
     } catch (error) {
       console.error("Erro ao carregar operações:", error);
     } finally {

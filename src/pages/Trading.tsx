@@ -113,35 +113,32 @@ const Trading = () => {
     enabled: !!userId,
   });
 
-  // Fetch operations with pagination (handles 216k+ records)
-  const { data: operations = [], isLoading: loadingOperations } = useQuery({
-    queryKey: ['profit-operations', userId],
+  // Server-side paginated operations for import tab table only
+  const [tablePageIndex, setTablePageIndex] = useState(0);
+  const TABLE_PAGE_SIZE = 50;
+
+  const { data: operationsPage, isLoading: loadingOperations } = useQuery({
+    queryKey: ['profit-operations-page', userId, tablePageIndex],
     queryFn: async () => {
-      if (!userId) return [];
-      const allOperations: ProfitOperation[] = [];
-      const batchSize = 1000;
-      let from = 0;
-      let hasMore = true;
+      if (!userId) return { rows: [] as ProfitOperation[], total: 0 };
+      const from = tablePageIndex * TABLE_PAGE_SIZE;
+      const to = from + TABLE_PAGE_SIZE - 1;
 
-      while (hasMore) {
-        const { data, error } = await supabase
-          .from('profit_operations')
-          .select('id, user_id, asset, open_time, close_time, duration, side, buy_qty, sell_qty, operation_result, operation_result_percent, total, strategy_id, created_at, account_number, holder_name, import_date, buy_price, sell_price, market_price')
-          .eq('user_id', userId)
-          .order('open_time', { ascending: false })
-          .range(from, from + batchSize - 1);
+      const { data, error, count } = await supabase
+        .from('profit_operations')
+        .select('id, user_id, asset, open_time, close_time, duration, side, buy_qty, sell_qty, operation_result, operation_result_percent, total, strategy_id, created_at, account_number, holder_name, import_date, buy_price, sell_price, market_price', { count: 'exact' })
+        .eq('user_id', userId)
+        .order('open_time', { ascending: false })
+        .range(from, to);
 
-        if (error) throw error;
-
-        allOperations.push(...(data as ProfitOperation[] || []));
-        from += batchSize;
-        hasMore = (data?.length || 0) === batchSize;
-      }
-
-      return allOperations;
+      if (error) throw error;
+      return { rows: (data as ProfitOperation[] || []), total: count || 0 };
     },
     enabled: !!userId,
   });
+
+  const operations = operationsPage?.rows || [];
+  const totalOperationsCount = operationsPage?.total || 0;
 
   // Delete mutation
   const deleteMutation = useMutation({
@@ -153,7 +150,7 @@ const Trading = () => {
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['profit-operations'] });
+      queryClient.invalidateQueries({ queryKey: ['profit-operations-page'] });
       toast.success('Operação deletada com sucesso');
     },
     onError: () => {
@@ -171,7 +168,7 @@ const Trading = () => {
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['profit-operations'] });
+      queryClient.invalidateQueries({ queryKey: ['profit-operations-page'] });
       toast.success('Todas as operações foram deletadas');
     },
     onError: () => {
@@ -380,7 +377,7 @@ const Trading = () => {
       }
 
       setImportErrors(errors);
-      queryClient.invalidateQueries({ queryKey: ['profit-operations'] });
+      queryClient.invalidateQueries({ queryKey: ['profit-operations-page'] });
       
       if (errors.length === 0) {
         toast.success(`${successCount} operações importadas com sucesso!`);
@@ -517,10 +514,10 @@ WINJ25;01/01/2025 10:15:00;01/01/2025 10:22:45;00:07:45;2;2;V;125.200;125.050;12
           {/* Operations List */}
           <PremiumSection
             title="Operações Importadas"
-            subtitle={`${operations.length} operações encontradas`}
+            subtitle={`${totalOperationsCount} operações encontradas`}
             icon={Activity}
             actions={
-              operations.length > 0 && (
+              totalOperationsCount > 0 && (
                 <Button 
                   variant="destructive" 
                   size="sm"
@@ -540,7 +537,7 @@ WINJ25;01/01/2025 10:15:00;01/01/2025 10:22:45;00:07:45;2;2;V;125.200;125.050;12
               <div className="flex justify-center py-8">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
               </div>
-            ) : operations.length === 0 ? (
+            ) : totalOperationsCount === 0 ? (
               <PremiumCard className="p-6">
                 <div className="text-center py-8 text-muted-foreground">
                   <AlertCircle className="h-12 w-12 mx-auto mb-4 opacity-50" />
@@ -564,7 +561,7 @@ WINJ25;01/01/2025 10:15:00;01/01/2025 10:22:45;00:07:45;2;2;V;125.200;125.050;12
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {operations.slice(0, 50).map((op) => (
+                      {operations.map((op) => (
                         <TableRow key={op.id}>
                           <TableCell className="font-medium">{op.asset}</TableCell>
                           <TableCell className="text-sm text-muted-foreground">
@@ -608,9 +605,29 @@ WINJ25;01/01/2025 10:15:00;01/01/2025 10:22:45;00:07:45;2;2;V;125.200;125.050;12
                     </TableBody>
                   </Table>
                 </div>
-                {operations.length > 50 && (
-                  <div className="p-4 text-center text-sm text-muted-foreground border-t">
-                    Mostrando 50 de {operations.length} operações
+                {totalOperationsCount > TABLE_PAGE_SIZE && (
+                  <div className="p-4 flex items-center justify-between border-t">
+                    <span className="text-sm text-muted-foreground">
+                      Mostrando {tablePageIndex * TABLE_PAGE_SIZE + 1}-{Math.min((tablePageIndex + 1) * TABLE_PAGE_SIZE, totalOperationsCount)} de {totalOperationsCount} operações
+                    </span>
+                    <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        disabled={tablePageIndex === 0}
+                        onClick={() => setTablePageIndex(p => p - 1)}
+                      >
+                        Anterior
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        disabled={(tablePageIndex + 1) * TABLE_PAGE_SIZE >= totalOperationsCount}
+                        onClick={() => setTablePageIndex(p => p + 1)}
+                      >
+                        Próximo
+                      </Button>
+                    </div>
                   </div>
                 )}
               </PremiumCard>
@@ -620,7 +637,7 @@ WINJ25;01/01/2025 10:15:00;01/01/2025 10:22:45;00:07:45;2;2;V;125.200;125.050;12
 
         {/* Dashboard Tab */}
         <TabsContent value="dashboard" className="mt-6">
-          <TradingDashboard operations={operations} strategies={strategies} />
+          <TradingDashboard strategies={strategies} userId={userId || undefined} />
         </TabsContent>
       </Tabs>
 

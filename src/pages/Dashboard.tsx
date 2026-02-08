@@ -54,7 +54,6 @@ const Dashboard = () => {
   const [profile, setProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [accessStatus, setAccessStatus] = useState<string>("aprovado");
-  const [operations, setOperations] = useState<ProfitOperation[]>([]);
   const [strategies, setStrategies] = useState<Strategy[]>([]);
   const [unreadMessages, setUnreadMessages] = useState<UnreadMessage[]>([]);
   const [showMessagesDialog, setShowMessagesDialog] = useState(false);
@@ -96,34 +95,7 @@ const Dashboard = () => {
         }
       }
 
-      // Fetch profit_operations with pagination (handles 216k+ records)
-      const allOps: ProfitOperation[] = [];
-      const batchSize = 1000;
-      let from = 0;
-      let hasMore = true;
-
-      while (hasMore) {
-        const { data: opsData, error: opsError } = await supabase
-          .from("profit_operations")
-          .select("id, user_id, open_time, close_time, operation_result, strategy_id, asset")
-          .eq("user_id", user.id)
-          .order("open_time", { ascending: false })
-          .range(from, from + batchSize - 1);
-
-        if (opsError) {
-          console.error("Erro ao carregar operações:", opsError);
-          toast.error("Erro ao carregar operações");
-          break;
-        }
-
-        allOps.push(...(opsData || []));
-        from += batchSize;
-        hasMore = (opsData?.length || 0) === batchSize;
-      }
-
-      setOperations(allOps);
-
-      // Fetch strategies
+      // Fetch strategies (lightweight — TradingDashboard fetches via RPC internally)
       const { data: strategiesData } = await supabase
         .from("strategies")
         .select("id, name")
@@ -329,8 +301,8 @@ const Dashboard = () => {
                 transition={{ duration: 0.5 }}
               >
                 <TradingDashboard 
-                  operations={operations} 
-                  strategies={strategies} 
+                  strategies={strategies}
+                  userId={user?.id}
                 />
               </motion.div>
             </div>
