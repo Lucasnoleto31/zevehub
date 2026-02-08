@@ -238,94 +238,80 @@ const OperationsDashboard = ({ userId }: OperationsDashboardProps) => {
   const loadOperations = async () => {
     try {
       // Use RPC for aggregated data (with fallback)
+      let rpc: any = null;
       try {
-        const { data: rpc, error: rpcError } = await supabase.rpc('get_operations_dashboard', {
+        const { data, error: rpcError } = await supabase.rpc('get_operations_dashboard', {
           p_user_id: userId,
           p_date_from: null,
           p_date_to: null,
         });
-        if (!rpcError && rpc) setRpcData(rpc);
+        if (!rpcError && data) {
+          rpc = data;
+          setRpcData(data);
+        }
       } catch (rpcErr) {
         console.warn("RPC fallback - using client-side aggregation:", rpcErr);
       }
 
-      // Stats are ready — stop showing main spinner
+      // Build synthetic operations from the FIRST RPC data (already loaded!)
+      // No second RPC needed — reuse dailyResults, byHour, byStrategy
+      if (rpc) {
+        const syntheticOps: Operation[] = [];
+        const dailyResults = rpc.dailyResults || [];
+        const byHour = rpc.byHour || [];
+        const byStrategy = rpc.byStrategy || [];
+
+        // Build date-to-dow lookup
+        const datesByDow: Record<number, string> = {};
+        for (const d of dailyResults) {
+          const date = new Date(d.date + 'T12:00:00');
+          const dow = date.getDay();
+          if (!datesByDow[dow]) datesByDow[dow] = d.date;
+        }
+
+        // 1 op per day (for Calendar + TopDays)
+        for (const d of dailyResults) {
+          syntheticOps.push({
+            operation_date: d.date,
+            operation_time: '10:00:00',
+            result: d.result,
+            strategy: null,
+            contracts: d.operations,
+          });
+        }
+
+        // 1 op per hour cell (for Heatmap — uses hour distribution)
+        for (const h of byHour) {
+          // Find a date for this data point
+          const anyDate = dailyResults[0]?.date || '2026-01-01';
+          const hours = String(h.hour).padStart(2, '0');
+          syntheticOps.push({
+            operation_date: anyDate,
+            operation_time: `${hours}:00:00`,
+            result: h.result,
+            strategy: null,
+            contracts: h.operations,
+          });
+        }
+
+        // 1 op per strategy (for AdvancedMetrics)
+        for (const s of byStrategy) {
+          const anyDate = dailyResults[0]?.date || '2026-01-01';
+          syntheticOps.push({
+            operation_date: anyDate,
+            operation_time: '10:00:00',
+            result: s.result,
+            strategy: s.strategy,
+            contracts: s.operations,
+          });
+        }
+
+        setOperations(syntheticOps);
+      }
+
+      setLoadingOps(false);
       setLoading(false);
       setAvailableStrategies([...ALLOWED_STRATEGIES].sort());
-
-      // Fetch aggregated detail for sub-components via RPC
-      try {
-        const { data: detailData, error: detailError } = await supabase.rpc('get_operations_detail', {
-          p_user_id: userId,
-        });
-
-        if (!detailError && detailData) {
-          const syntheticOps: Operation[] = [];
-          const byDay = detailData.byDay || [];
-          const byDowHour = detailData.byDowHour || [];
-          const byStrategyDay = detailData.byStrategyDay || [];
-
-          // Build date-to-dow lookup
-          const datesByDow: Record<number, string> = {};
-          for (const d of byDay) {
-            const date = new Date(d.date + 'T12:00:00');
-            const dow = date.getDay();
-            if (!datesByDow[dow]) datesByDow[dow] = d.date;
-          }
-
-          // 1 op per strategy per day (for AdvancedMetrics + Calendar + TopDays)
-          // ~500-1000 entries instead of 130k
-          for (const sd of byStrategyDay) {
-            syntheticOps.push({
-              operation_date: sd.date,
-              operation_time: '10:00:00',
-              result: sd.result,
-              strategy: sd.strategy,
-              contracts: sd.operations,
-            });
-          }
-
-          // 1 op per dow×hour cell (for Heatmap) — ~50-100 entries
-          for (const cell of byDowHour) {
-            const date = datesByDow[cell.dayOfWeek];
-            if (!date) continue;
-            const hours = String(cell.hour).padStart(2, '0');
-            syntheticOps.push({
-              operation_date: date,
-              operation_time: `${hours}:00:00`,
-              result: cell.result,
-              strategy: null,
-              contracts: cell.operations,
-            });
-          }
-
-          setOperations(syntheticOps);
-          setLoadingOps(false);
-        } else {
-          throw new Error('RPC failed');
-        }
-      } catch (detailErr) {
-        console.warn("Detail RPC failed, falling back to batch fetch:", detailErr);
-        // Fallback: batch fetch
-        const batchSize = 1000;
-        let allOps: Operation[] = [];
-        let from = 0;
-        let hasMore = true;
-        while (hasMore) {
-          const { data, error } = await supabase
-            .from("trading_operations")
-            .select("operation_date, operation_time, result, strategy, contracts")
-            .eq("user_id", userId)
-            .in("strategy", ALLOWED_STRATEGIES)
-            .order("operation_date", { ascending: true })
-            .range(from, from + batchSize - 1);
-          if (error) break;
-          if (data && data.length > 0) { allOps = allOps.concat(data); from += batchSize; hasMore = data.length === batchSize; }
-          else hasMore = false;
-        }
-        setOperations(allOps);
-        setLoadingOps(false);
-      }
 
     } catch (error) {
       console.error("Erro ao carregar operações:", error);
