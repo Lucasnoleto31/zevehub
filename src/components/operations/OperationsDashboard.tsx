@@ -253,8 +253,32 @@ const OperationsDashboard = ({ userId }: OperationsDashboardProps) => {
         console.warn("RPC fallback - using client-side aggregation:", rpcErr);
       }
 
-      // All data comes from RPC — no need for operations array
-      // Sub-components (heatmap, calendar) removed in favor of RPC-powered charts
+      // Load ALL operations in background for Heatmap (needs raw data)
+      const batchSize = 1000;
+      let allOps: Operation[] = [];
+      let from = 0;
+      let hasMore = true;
+
+      while (hasMore) {
+        const { data, error } = await supabase
+          .from("trading_operations")
+          .select("operation_date, operation_time, result, strategy, contracts")
+          .eq("user_id", userId)
+          .in("strategy", ALLOWED_STRATEGIES)
+          .order("operation_date", { ascending: true })
+          .range(from, from + batchSize - 1);
+
+        if (error) break;
+        if (data && data.length > 0) {
+          allOps = allOps.concat(data);
+          from += batchSize;
+          hasMore = data.length === batchSize;
+        } else {
+          hasMore = false;
+        }
+      }
+
+      setOperations(allOps);
       setLoadingOps(false);
       setLoading(false);
       setAvailableStrategies([...ALLOWED_STRATEGIES].sort());
@@ -749,20 +773,39 @@ const OperationsDashboard = ({ userId }: OperationsDashboardProps) => {
       />
 
 
-      {/* Strategy Cards from RPC data */}
-      {rpcData && (
-        <RobosStrategyCards
-          strategyStats={(rpcData.byStrategy || []).map((s: any) => ({
-            strategy: s.strategy,
-            totalOperations: s.operations,
-            positiveDays: s.wins,
-            negativeDays: s.operations - s.wins,
-            winRate: s.operations > 0 ? (s.wins / s.operations) * 100 : 0,
-            totalResult: s.result,
-            averageResult: s.operations > 0 ? s.result / s.operations : 0,
-            payoff: 0,
-          }))}
-        />
+      {/* Heatmap + Sub-components — load progressively with real operations */}
+      {loadingOps ? (
+        <div className="text-center py-8 text-muted-foreground">
+          <div className="animate-pulse flex flex-col items-center gap-3">
+            <div className="grid grid-cols-5 gap-1">
+              {Array.from({ length: 25 }).map((_, i) => (
+                <div key={i} className="w-10 h-10 rounded bg-muted/30"></div>
+              ))}
+            </div>
+            <p className="text-sm">Carregando heatmap... ({operations.length.toLocaleString()} de ~130k operações)</p>
+          </div>
+        </div>
+      ) : (
+        <>
+          {/* Heatmap — protagonista */}
+          <PerformanceHeatmap operations={filteredOperations} />
+
+          {/* Strategy Cards */}
+          <RobosStrategyCards strategyStats={strategyStats} />
+
+          {/* Advanced Metrics */}
+          <AdvancedMetrics operations={filteredOperations} />
+
+          {/* Calendar + Top Days */}
+          <PerformanceCalendar operations={filteredOperations.map(op => ({
+            id: `${op.operation_date}-${op.operation_time}`,
+            operation_date: op.operation_date,
+            result: op.result,
+            strategy: op.strategy || undefined,
+          }))} />
+
+          <TopPerformanceDays operations={filteredOperations} />
+        </>
       )}
     </div>
   );
