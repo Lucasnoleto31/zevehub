@@ -91,6 +91,7 @@ const OperationsDashboard = ({ userId }: OperationsDashboardProps) => {
   const [yearlyStats, setYearlyStats] = useState<any[]>([]);
   const [strategyStats, setStrategyStats] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingOps, setLoadingOps] = useState(true);
   const [rpcData, setRpcData] = useState<any>(null);
 
   useEffect(() => {
@@ -278,6 +279,7 @@ const OperationsDashboard = ({ userId }: OperationsDashboardProps) => {
       }
 
       setOperations(allOps);
+      setLoadingOps(false);
     } catch (error) {
       console.error("Erro ao carregar operações:", error);
     } finally {
@@ -699,7 +701,7 @@ const OperationsDashboard = ({ userId }: OperationsDashboardProps) => {
     );
   }
 
-  if (operations.length === 0) {
+  if (operations.length === 0 && !rpcData && !loadingOps) {
     return (
       <motion.div 
         initial={{ opacity: 0, y: 20 }}
@@ -767,22 +769,27 @@ const OperationsDashboard = ({ userId }: OperationsDashboardProps) => {
       />
 
 
-      {/* Advanced Metrics */}
-      <AdvancedMetrics operations={filteredOperations} />
-
-      {/* Performance Calendar */}
-      <PerformanceCalendar operations={filteredOperations.map(op => ({
-        id: `${op.operation_date}-${op.operation_time}`,
-        operation_date: op.operation_date,
-        result: op.result,
-        strategy: op.strategy || undefined,
-      }))} />
-
-      {/* Heatmap & Top Days */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <PerformanceHeatmap operations={filteredOperations} />
-        <TopPerformanceDays operations={filteredOperations} />
-      </div>
+      {/* Advanced Metrics, Calendar, Heatmap — load progressively */}
+      {loadingOps ? (
+        <div className="text-center py-12 text-muted-foreground">
+          <div className="animate-spin w-8 h-8 border-2 border-primary/20 border-t-primary rounded-full mx-auto mb-4"></div>
+          <p>Carregando métricas detalhadas ({operations.length.toLocaleString()} operações)...</p>
+        </div>
+      ) : (
+        <>
+          <AdvancedMetrics operations={filteredOperations} />
+          <PerformanceCalendar operations={filteredOperations.map(op => ({
+            id: `${op.operation_date}-${op.operation_time}`,
+            operation_date: op.operation_date,
+            result: op.result,
+            strategy: op.strategy || undefined,
+          }))} />
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <PerformanceHeatmap operations={filteredOperations} />
+            <TopPerformanceDays operations={filteredOperations} />
+          </div>
+        </>
+      )}
     </div>
   );
 };
