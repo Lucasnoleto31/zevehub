@@ -107,13 +107,46 @@ const OperationsDashboard = ({ userId }: OperationsDashboardProps) => {
     }
   }, [filteredOperations]);
 
-  // Single RPC call — replaces 136+ sequential batch fetches
+  // Parallel batch fetch — 6 concurrent requests instead of 136 sequential
   const loadOperations = async () => {
     try {
-      const { data, error } = await supabase.rpc('get_robot_operations');
-      if (error) throw error;
+      const { count, error: countError } = await supabase
+        .from("trading_operations")
+        .select("id", { count: "exact", head: true })
+        .in("strategy", ALLOWED_STRATEGIES);
 
-      const allOperations: Operation[] = data || [];
+      if (countError) throw countError;
+      if (!count || count === 0) {
+        setOperations([]);
+        setLoading(false);
+        return;
+      }
+
+      const batchSize = 1000;
+      const totalBatches = Math.ceil(count / batchSize);
+      const maxConcurrent = 6;
+      let allOperations: Operation[] = [];
+
+      for (let i = 0; i < totalBatches; i += maxConcurrent) {
+        const promises = [];
+        for (let j = i; j < Math.min(i + maxConcurrent, totalBatches); j++) {
+          const from = j * batchSize;
+          promises.push(
+            supabase
+              .from("trading_operations")
+              .select("operation_date, operation_time, result, strategy, contracts")
+              .in("strategy", ALLOWED_STRATEGIES)
+              .order("operation_date", { ascending: true })
+              .range(from, from + batchSize - 1)
+          );
+        }
+        const results = await Promise.all(promises);
+        for (const { data, error } of results) {
+          if (error) throw error;
+          if (data) allOperations = allOperations.concat(data);
+        }
+      }
+
       setOperations(allOperations);
 
       const strategies = Array.from(new Set(
