@@ -1,83 +1,106 @@
 
-# Margem Media Necessaria por Hora
+
+# Adicionar Stop Ideal e Gain Ideal por Hora
 
 ## Resumo
-Remover o **Otimizador de Estrategias** e o **AI Insights** do dashboard Geral (/operations) e substituir por um novo componente de **Analise de Margem por Hora**, mostrando quanto capital e necessario por janela de horario baseado no historico de operacoes.
+Expandir o componente `MarginAnalysis` para incluir, alem da margem necessaria, o **Stop Ideal** e o **Gain Ideal** por janela de horario, calculados a partir do historico real de operacoes.
 
-## Regra de calculo
-- Margem fixa: **R$ 150,00 por contrato** (ja com desagio de 30% aplicado)
-- Para cada dia operado, agrupa operacoes por hora e soma os contratos naquela janela
-- Calcula a **media de contratos simultaneos por hora** (ao longo de todos os dias)
-- Calcula o **pico maximo de contratos por hora** (pior cenario historico)
-- Margem media = media_contratos x R$ 150
-- Margem recomendada (pico) = max_contratos x R$ 150
+## Logica de calculo
 
-## O que sera feito
+Para cada hora (9h-17h), com base nas operacoes filtradas:
 
-### 1. Remocoes no OperationsDashboard.tsx
-- Remover import do `StrategyOptimizer`
-- Remover import do `AIInsightsCard`
-- Remover o bloco `<StrategyOptimizer ... />` (linhas 618-624)
-- Remover o bloco `<AIInsightsCard ... />` (linha 671-672)
-- Remover a funcao `handleApplyOptimizedConfig` (que era usada apenas pelo StrategyOptimizer)
+```text
+Stop Ideal (por hora) = media dos resultados negativos naquela janela
+  -> Ex: se as 10h as perdas foram -50, -30, -70 => Stop Ideal = R$ -50,00
 
-### 2. Atualizar query de dados
-- Adicionar `contracts` ao select da query: `"operation_date, operation_time, result, strategy, contracts"`
-- Atualizar a interface `Operation` para incluir `contracts: number`
+Gain Ideal (por hora) = media dos resultados positivos naquela janela
+  -> Ex: se as 10h os ganhos foram +80, +60, +100 => Gain Ideal = R$ +80,00
+```
 
-### 3. Novo componente: MarginAnalysis.tsx
+Isso mostra, por hora, qual o stop e o gain tipicos baseados no comportamento real do trader.
 
-Um card premium seguindo o padrao visual do `RobosCharts` (ChartCard) com:
+## O que sera modificado
 
-**Cards resumo no topo (3 cards):**
-- Margem media geral (media de todos os horarios)
-- Hora com maior demanda de margem (pico)
-- Contratos medios por dia
+### Arquivo: `src/components/operations/MarginAnalysis.tsx`
 
-**Grafico de barras por hora (9h-18h):**
-- Barra principal: margem media necessaria (R$)
-- Linha de referencia (ReferenceLine): margem de pico/seguranca
-- Tooltip premium (padrao escuro) mostrando:
-  - Hora
-  - Media de contratos
-  - Max contratos
-  - Margem media (R$)
-  - Margem recomendada de pico (R$)
+#### 1. Expandir o calculo no `useMemo`
 
-**Design:**
-- Segue o padrao visual premium existente (gradientes, framer-motion, cores condicionais)
-- Cores: azul/cyan para a barra media, amber/dourado para a linha de pico
-- Icone: `DollarSign` ou `Shield` do lucide-react
+Adicionar ao agrupamento por hora:
+- `totalLosses`: soma das perdas naquela hora
+- `lossCount`: quantidade de operacoes negativas naquela hora
+- `totalWins`: soma dos ganhos naquela hora
+- `winCount`: quantidade de operacoes positivas naquela hora
 
-### 4. Integracao no Dashboard
-- Posicionar o `MarginAnalysis` logo apos o `RobosCharts` e antes do `AdvancedMetrics`
-- Passar `filteredOperations` como prop (que agora inclui `contracts`)
+E nos dados finais por hora:
+- `avgStop`: media dos resultados negativos (stop ideal)
+- `avgGain`: media dos resultados positivos (gain ideal)
+- `payoff`: razao gain/stop (quanto ganha para cada real que perde)
+
+#### 2. Adicionar 2 novos cards resumo (total: 5 cards)
+
+Os 3 cards atuais permanecem. Serao adicionados:
+
+| Card | Valor | Cor |
+|------|-------|-----|
+| Stop Ideal (geral) | Media dos stops de todas as horas | Vermelho (red-400) |
+| Gain Ideal (geral) | Media dos gains de todas as horas | Verde (emerald-400) |
+
+O grid passara de 3 para 5 colunas (em telas grandes) ou 2-3 colunas em telas menores.
+
+#### 3. Expandir o grafico de barras
+
+Adicionar ao grafico existente:
+- Uma segunda barra (agrupada) ou indicadores visuais para stop/gain por hora
+- Alternativa mais limpa: manter o grafico de margem como esta e adicionar um **segundo grafico menor** abaixo mostrando stop vs gain por hora lado a lado (barras vermelhas para stop, verdes para gain)
+
+**Abordagem escolhida**: Adicionar um segundo grafico compacto de barras agrupadas (stop vs gain) logo abaixo do grafico de margem, mantendo a separacao visual clara.
+
+#### 4. Expandir o tooltip
+
+Adicionar ao tooltip existente:
+- Stop Ideal (R$) -- em vermelho
+- Gain Ideal (R$) -- em verde
+- Payoff daquela hora (razao gain/stop)
+
+#### 5. Atualizar a legenda
+
+Adicionar indicadores para:
+- Barra vermelha = Stop Medio
+- Barra verde = Gain Medio
 
 ## Detalhes tecnicos
 
-### Arquivos modificados
-- `src/components/operations/OperationsDashboard.tsx` -- remover imports/blocos antigos, adicionar import/bloco novo, expandir interface e query
-
-### Arquivo novo
-- `src/components/operations/MarginAnalysis.tsx` -- componente de analise de margem
-
-### Fluxo de dados
+### Novas constantes no calculo por hora
 
 ```text
-OperationsDashboard
-  |-- loadOperations() busca "contracts" junto com os demais campos
-  |-- filteredOperations inclui contracts
-  |
-  MarginAnalysis (recebe filteredOperations)
-    |-- Agrupa por (data + hora)
-    |-- Soma contratos por janela horaria por dia
-    |-- Para cada hora: calcula media e max ao longo dos dias
-    |-- Aplica R$ 150 por contrato
-    |-- Renderiza grafico de barras + cards resumo
+Para cada hora h:
+  avgStop = totalLosses[h] / lossCount[h]   (valor negativo)
+  avgGain = totalWins[h] / winCount[h]       (valor positivo)
+  payoff  = avgGain / |avgStop|              (razao)
 ```
 
-### Constantes
+### Novos campos no summaryStats
+
 ```text
-MARGIN_PER_CONTRACT = 150  (R$ 150 ja com desagio)
-MARKET_HOURS = [9, 10, 11, 12, 13, 14, 15, 16, 17]  (horario de mercado)
+overallAvgStop  = media dos avgStop de todas as horas com dados
+overallAvgGain  = media dos avgGain de todas as horas com dados
+overallPayoff   = overallAvgGain / |overallAvgStop|
 ```
+
+### Layout do segundo grafico (Stop vs Gain)
+
+```text
+[Barra vermelha (Stop)] [Barra verde (Gain)]  -- por hora
+   9h   10h   11h   12h   13h   14h   15h   16h   17h
+```
+
+- Altura: ~220px (mais compacto que o grafico principal de 320px)
+- Barras agrupadas lado a lado
+- Gradiente vermelho para stop, gradiente verde para gain
+
+### Arquivo modificado
+- `src/components/operations/MarginAnalysis.tsx` -- unico arquivo alterado
+
+### Nenhum arquivo novo necessario
+Toda a logica sera adicionada dentro do componente existente.
+
