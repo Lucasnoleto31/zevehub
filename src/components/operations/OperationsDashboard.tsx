@@ -91,6 +91,7 @@ const OperationsDashboard = ({ userId }: OperationsDashboardProps) => {
   const [yearlyStats, setYearlyStats] = useState<any[]>([]);
   const [strategyStats, setStrategyStats] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [rpcData, setRpcData] = useState<any>(null);
 
   useEffect(() => {
     loadOperations();
@@ -232,21 +233,20 @@ const OperationsDashboard = ({ userId }: OperationsDashboardProps) => {
     setStrategyStats(strategyStatsArray);
   };
 
-  // RPC-based data
-  const [rpcData, setRpcData] = useState<any>(null);
-
   // Fetch via RPC instead of batch loading all operations
   const loadOperations = async () => {
     try {
-      // Use RPC for aggregated data
-      const { data: rpc, error: rpcError } = await supabase.rpc('get_operations_dashboard', {
-        p_user_id: userId,
-        p_date_from: null,
-        p_date_to: null,
-      });
-
-      if (rpcError) throw rpcError;
-      if (rpc) setRpcData(rpc);
+      // Use RPC for aggregated data (with fallback)
+      try {
+        const { data: rpc, error: rpcError } = await supabase.rpc('get_operations_dashboard', {
+          p_user_id: userId,
+          p_date_from: null,
+          p_date_to: null,
+        });
+        if (!rpcError && rpc) setRpcData(rpc);
+      } catch (rpcErr) {
+        console.warn("RPC fallback - using client-side aggregation:", rpcErr);
+      }
 
       // Also fetch a lightweight set of operations for sub-components that need raw data
       // Only fetch the most recent 5000 for calendar/heatmap/advanced metrics
