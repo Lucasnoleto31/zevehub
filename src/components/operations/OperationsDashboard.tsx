@@ -253,62 +253,8 @@ const OperationsDashboard = ({ userId }: OperationsDashboardProps) => {
         console.warn("RPC fallback - using client-side aggregation:", rpcErr);
       }
 
-      // Build synthetic operations from the FIRST RPC data (already loaded!)
-      // No second RPC needed — reuse dailyResults, byHour, byStrategy
-      if (rpc) {
-        const syntheticOps: Operation[] = [];
-        const dailyResults = rpc.dailyResults || [];
-        const byHour = rpc.byHour || [];
-        const byStrategy = rpc.byStrategy || [];
-
-        // Build date-to-dow lookup
-        const datesByDow: Record<number, string> = {};
-        for (const d of dailyResults) {
-          const date = new Date(d.date + 'T12:00:00');
-          const dow = date.getDay();
-          if (!datesByDow[dow]) datesByDow[dow] = d.date;
-        }
-
-        // 1 op per day (for Calendar + TopDays)
-        for (const d of dailyResults) {
-          syntheticOps.push({
-            operation_date: d.date,
-            operation_time: '10:00:00',
-            result: d.result,
-            strategy: null,
-            contracts: d.operations,
-          });
-        }
-
-        // 1 op per hour cell (for Heatmap — uses hour distribution)
-        for (const h of byHour) {
-          // Find a date for this data point
-          const anyDate = dailyResults[0]?.date || '2026-01-01';
-          const hours = String(h.hour).padStart(2, '0');
-          syntheticOps.push({
-            operation_date: anyDate,
-            operation_time: `${hours}:00:00`,
-            result: h.result,
-            strategy: null,
-            contracts: h.operations,
-          });
-        }
-
-        // 1 op per strategy (for AdvancedMetrics)
-        for (const s of byStrategy) {
-          const anyDate = dailyResults[0]?.date || '2026-01-01';
-          syntheticOps.push({
-            operation_date: anyDate,
-            operation_time: '10:00:00',
-            result: s.result,
-            strategy: s.strategy,
-            contracts: s.operations,
-          });
-        }
-
-        setOperations(syntheticOps);
-      }
-
+      // All data comes from RPC — no need for operations array
+      // Sub-components (heatmap, calendar) removed in favor of RPC-powered charts
       setLoadingOps(false);
       setLoading(false);
       setAvailableStrategies([...ALLOWED_STRATEGIES].sort());
@@ -803,26 +749,20 @@ const OperationsDashboard = ({ userId }: OperationsDashboardProps) => {
       />
 
 
-      {/* Advanced Metrics, Calendar, Heatmap — load progressively */}
-      {loadingOps ? (
-        <div className="text-center py-12 text-muted-foreground">
-          <div className="animate-spin w-8 h-8 border-2 border-primary/20 border-t-primary rounded-full mx-auto mb-4"></div>
-          <p>Carregando métricas detalhadas ({operations.length.toLocaleString()} operações)...</p>
-        </div>
-      ) : (
-        <>
-          <AdvancedMetrics operations={filteredOperations} />
-          <PerformanceCalendar operations={filteredOperations.map(op => ({
-            id: `${op.operation_date}-${op.operation_time}`,
-            operation_date: op.operation_date,
-            result: op.result,
-            strategy: op.strategy || undefined,
-          }))} />
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <PerformanceHeatmap operations={filteredOperations} />
-            <TopPerformanceDays operations={filteredOperations} />
-          </div>
-        </>
+      {/* Strategy Cards from RPC data */}
+      {rpcData && (
+        <RobosStrategyCards
+          strategyStats={(rpcData.byStrategy || []).map((s: any) => ({
+            strategy: s.strategy,
+            totalOperations: s.operations,
+            positiveDays: s.wins,
+            negativeDays: s.operations - s.wins,
+            winRate: s.operations > 0 ? (s.wins / s.operations) * 100 : 0,
+            totalResult: s.result,
+            averageResult: s.operations > 0 ? s.result / s.operations : 0,
+            payoff: 0,
+          }))}
+        />
       )}
     </div>
   );
