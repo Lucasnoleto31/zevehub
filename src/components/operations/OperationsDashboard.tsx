@@ -261,70 +261,42 @@ const OperationsDashboard = ({ userId }: OperationsDashboardProps) => {
 
         if (!detailError && detailData) {
           const syntheticOps: Operation[] = [];
-
-          // For heatmap: needs operation_date (with correct weekday) + operation_time (hour)
-          // byDowHour has dayOfWeek + hour + result + operations
-          const byDowHour = detailData.byDowHour || [];
           const byDay = detailData.byDay || [];
+          const byDowHour = detailData.byDowHour || [];
+          const byStrategyDay = detailData.byStrategyDay || [];
 
-          // Build a lookup of real dates by day-of-week
-          const datesByDow: Record<number, string[]> = {};
+          // Build date-to-dow lookup
+          const datesByDow: Record<number, string> = {};
           for (const d of byDay) {
             const date = new Date(d.date + 'T12:00:00');
             const dow = date.getDay();
-            if (!datesByDow[dow]) datesByDow[dow] = [];
-            datesByDow[dow].push(d.date);
+            if (!datesByDow[dow]) datesByDow[dow] = d.date;
           }
 
-          // Create ops from byStrategyDay (has strategy info for AdvancedMetrics)
-          const byStrategyDay = detailData.byStrategyDay || [];
+          // 1 op per strategy per day (for AdvancedMetrics + Calendar + TopDays)
+          // ~500-1000 entries instead of 130k
           for (const sd of byStrategyDay) {
-            // Split wins and losses proportionally
-            const winsCount = sd.wins || 0;
-            const lossCount = sd.operations - winsCount;
-            const avgWin = winsCount > 0 ? Math.max(sd.result, 0) / Math.max(winsCount, 1) : 0;
-            const avgLoss = lossCount > 0 ? Math.min(sd.result, 0) / Math.max(lossCount, 1) : 0;
-
-            // Add winning ops
-            for (let i = 0; i < winsCount; i++) {
-              syntheticOps.push({
-                operation_date: sd.date,
-                operation_time: '10:00:00',
-                result: avgWin || 1,
-                strategy: sd.strategy,
-                contracts: 1,
-              });
-            }
-            // Add losing ops
-            for (let i = 0; i < lossCount; i++) {
-              syntheticOps.push({
-                operation_date: sd.date,
-                operation_time: '10:00:00',
-                result: avgLoss || -1,
-                strategy: sd.strategy,
-                contracts: 1,
-              });
-            }
+            syntheticOps.push({
+              operation_date: sd.date,
+              operation_time: '10:00:00',
+              result: sd.result,
+              strategy: sd.strategy,
+              contracts: sd.operations,
+            });
           }
 
-          // Overlay heatmap time data: replace operation_time with real hours
-          // Create additional ops specifically for heatmap hour distribution
+          // 1 op per dow×hour cell (for Heatmap) — ~50-100 entries
           for (const cell of byDowHour) {
-            const dates = datesByDow[cell.dayOfWeek] || [];
-            if (dates.length === 0) continue;
-            // Spread operations across available dates for this DOW
-            const date = dates[0];
+            const date = datesByDow[cell.dayOfWeek];
+            if (!date) continue;
             const hours = String(cell.hour).padStart(2, '0');
-            for (let i = 0; i < cell.operations; i++) {
-              const dateIdx = i % dates.length;
-              syntheticOps.push({
-                operation_date: dates[dateIdx],
-                operation_time: `${hours}:00:00`,
-                result: cell.result / cell.operations,
-                strategy: null,
-                contracts: 1,
-              });
-            }
+            syntheticOps.push({
+              operation_date: date,
+              operation_time: `${hours}:00:00`,
+              result: cell.result,
+              strategy: null,
+              contracts: cell.operations,
+            });
           }
 
           setOperations(syntheticOps);
