@@ -248,22 +248,37 @@ const OperationsDashboard = ({ userId }: OperationsDashboardProps) => {
         console.warn("RPC fallback - using client-side aggregation:", rpcErr);
       }
 
-      // Also fetch a lightweight set of operations for sub-components that need raw data
-      // Only fetch the most recent 5000 for calendar/heatmap/advanced metrics
-      const { data: opsData, error: opsError } = await supabase
-        .from("trading_operations")
-        .select("operation_date, operation_time, result, strategy, contracts")
-        .eq("user_id", userId)
-        .in("strategy", ALLOWED_STRATEGIES)
-        .order("operation_date", { ascending: false })
-        .limit(5000);
+      // Fetch ALL operations for sub-components (heatmap, calendar, advanced metrics)
+      const batchSize = 1000;
+      let allOps: Operation[] = [];
+      let from = 0;
+      let hasMore = true;
 
-      if (!opsError && opsData) {
-        // Reverse since we fetch DESC for recency but components expect ASC
-        setOperations(opsData.reverse());
-        // Always show all allowed strategies, not just those in the 5000 sample
-        setAvailableStrategies([...ALLOWED_STRATEGIES].sort());
+      while (hasMore) {
+        const { data, error } = await supabase
+          .from("trading_operations")
+          .select("operation_date, operation_time, result, strategy, contracts")
+          .eq("user_id", userId)
+          .in("strategy", ALLOWED_STRATEGIES)
+          .order("operation_date", { ascending: true })
+          .range(from, from + batchSize - 1);
+
+        if (error) {
+          console.error("Erro ao carregar operações:", error);
+          break;
+        }
+
+        if (data && data.length > 0) {
+          allOps = allOps.concat(data);
+          from += batchSize;
+          hasMore = data.length === batchSize;
+        } else {
+          hasMore = false;
+        }
       }
+
+      setOperations(allOps);
+      setAvailableStrategies([...ALLOWED_STRATEGIES].sort());
     } catch (error) {
       console.error("Erro ao carregar operações:", error);
     } finally {
