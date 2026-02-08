@@ -8,12 +8,11 @@ import RobosFilters from "./RobosFilters";
 import RobosQuickStats from "./RobosQuickStats";
 import RobosCharts from "./RobosCharts";
 import RobosStrategyCards from "./RobosStrategyCards";
-import StrategyOptimizer from "./StrategyOptimizer";
+import MarginAnalysis from "./MarginAnalysis";
 import PerformanceHeatmap from "@/components/dashboard/PerformanceHeatmap";
 import TopPerformanceDays from "@/components/dashboard/TopPerformanceDays";
 import AdvancedMetrics from "@/components/dashboard/AdvancedMetrics";
 import PerformanceCalendar from "@/components/dashboard/PerformanceCalendar";
-import AIInsightsCard from "@/components/dashboard/AIInsightsCard";
 
 interface OperationsDashboardProps {
   userId: string;
@@ -24,6 +23,7 @@ interface Operation {
   operation_time: string;
   result: number;
   strategy: string | null;
+  contracts: number;
 }
 
 interface Stats {
@@ -118,7 +118,7 @@ const OperationsDashboard = ({ userId }: OperationsDashboardProps) => {
       while (hasMore) {
         const { data, error } = await supabase
           .from("trading_operations")
-          .select("operation_date, operation_time, result, strategy")
+          .select("operation_date, operation_time, result, strategy, contracts")
           .in("strategy", ALLOWED_STRATEGIES)
           .order("operation_date", { ascending: true })
           .range(from, from + batchSize - 1);
@@ -581,24 +581,6 @@ const OperationsDashboard = ({ userId }: OperationsDashboardProps) => {
     );
   }
 
-  const handleApplyOptimizedConfig = (config: {
-    strategy: string;
-    hours: string[];
-    weekdays: string[];
-    months: string[];
-  }) => {
-    setStrategyFilter([config.strategy]);
-    if (config.hours.length > 0) {
-      setHourFilter(config.hours);
-    }
-    if (config.weekdays.length > 0) {
-      setWeekdayFilter(config.weekdays);
-    }
-    if (config.months.length > 0) {
-      setMonthFilter(config.months);
-    }
-  };
-
   return (
     <div className="space-y-8">
       {/* Hero Section */}
@@ -613,14 +595,6 @@ const OperationsDashboard = ({ userId }: OperationsDashboardProps) => {
         monthlyConsistency={stats.monthlyConsistency}
         positiveMonths={stats.positiveMonths}
         negativeMonths={stats.negativeMonths}
-      />
-
-      {/* Strategy Optimizer - Melhor Configuração por Robô */}
-      <StrategyOptimizer
-        operations={operations}
-        strategies={availableStrategies}
-        onApplyConfig={handleApplyOptimizedConfig}
-        onOpenFilters={() => setFiltersOpen(true)}
       />
 
       {/* Filters */}
@@ -656,6 +630,8 @@ const OperationsDashboard = ({ userId }: OperationsDashboardProps) => {
         hourDistribution={hourDistribution}
       />
 
+      {/* Margin Analysis */}
+      <MarginAnalysis operations={filteredOperations} />
 
       {/* Advanced Metrics */}
       <AdvancedMetrics operations={filteredOperations} />
@@ -667,9 +643,6 @@ const OperationsDashboard = ({ userId }: OperationsDashboardProps) => {
         result: op.result,
         strategy: op.strategy || undefined,
       }))} />
-
-      {/* AI Insights */}
-      <AIInsightsCard operations={filteredOperations} />
 
       {/* Heatmap & Top Days */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
