@@ -107,35 +107,15 @@ const OperationsDashboard = ({ userId }: OperationsDashboardProps) => {
     }
   }, [filteredOperations]);
 
-  // FASE 1: Fetch filtrado por estratégias permitidas no banco
+  // Single RPC call — replaces 136+ sequential batch fetches
   const loadOperations = async () => {
     try {
-      let allOperations: Operation[] = [];
-      let from = 0;
-      const batchSize = 1000;
-      let hasMore = true;
+      const { data, error } = await supabase.rpc('get_robot_operations');
+      if (error) throw error;
 
-      while (hasMore) {
-        const { data, error } = await supabase
-          .from("trading_operations")
-          .select("operation_date, operation_time, result, strategy, contracts")
-          .in("strategy", ALLOWED_STRATEGIES)
-          .order("operation_date", { ascending: true })
-          .range(from, from + batchSize - 1);
-
-        if (error) throw error;
-
-        if (data && data.length > 0) {
-          allOperations = [...allOperations, ...data];
-          from += batchSize;
-          hasMore = data.length === batchSize;
-        } else {
-          hasMore = false;
-        }
-      }
-
+      const allOperations: Operation[] = data || [];
       setOperations(allOperations);
-      
+
       const strategies = Array.from(new Set(
         allOperations
           .map(op => op.strategy)
