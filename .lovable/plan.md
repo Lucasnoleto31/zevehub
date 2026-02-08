@@ -1,41 +1,83 @@
 
+# Margem Media Necessaria por Hora
 
-# Limpeza Completa do Banco de Dados - /operations
+## Resumo
+Remover o **Otimizador de Estrategias** e o **AI Insights** do dashboard Geral (/operations) e substituir por um novo componente de **Analise de Margem por Hora**, mostrando quanto capital e necessario por janela de horario baseado no historico de operacoes.
 
-## Situacao Atual
+## Regra de calculo
+- Margem fixa: **R$ 150,00 por contrato** (ja com desagio de 30% aplicado)
+- Para cada dia operado, agrupa operacoes por hora e soma os contratos naquela janela
+- Calcula a **media de contratos simultaneos por hora** (ao longo de todos os dias)
+- Calcula o **pico maximo de contratos por hora** (pior cenario historico)
+- Margem media = media_contratos x R$ 150
+- Margem recomendada (pico) = max_contratos x R$ 150
 
-| Tabela | Registros |
-|--------|-----------|
-| `trading_operations` | 75.260 |
-| `notifications` (vinculadas) | ~52.247.037 |
-| `ai_classification_logs` (vinculadas) | 0 |
+## O que sera feito
 
-O volume massivo de notificacoes (~52 milhoes) e a causa raiz dos timeouts em tentativas anteriores. A exclusao em cascata tenta remover todas essas notificacoes junto com cada operacao, causando estouro de tempo.
+### 1. Remocoes no OperationsDashboard.tsx
+- Remover import do `StrategyOptimizer`
+- Remover import do `AIInsightsCard`
+- Remover o bloco `<StrategyOptimizer ... />` (linhas 618-624)
+- Remover o bloco `<AIInsightsCard ... />` (linha 671-672)
+- Remover a funcao `handleApplyOptimizedConfig` (que era usada apenas pelo StrategyOptimizer)
 
-## Plano de Execucao
+### 2. Atualizar query de dados
+- Adicionar `contracts` ao select da query: `"operation_date, operation_time, result, strategy, contracts"`
+- Atualizar a interface `Operation` para incluir `contracts: number`
 
-### Passo 1: Limpar notificacoes vinculadas primeiro
-Executar via migracao SQL um `TRUNCATE` na tabela `notifications` (ou pelo menos `DELETE` das vinculadas a operacoes). Como sao ~52 milhoes de registros, o `TRUNCATE` e a unica abordagem viavel.
+### 3. Novo componente: MarginAnalysis.tsx
 
-### Passo 2: Limpar tabela principal
-Apos remover as dependencias, executar `TRUNCATE TABLE trading_operations CASCADE` para limpar todas as operacoes.
+Um card premium seguindo o padrao visual do `RobosCharts` (ChartCard) com:
 
-### SQL a ser executado (via migracao)
+**Cards resumo no topo (3 cards):**
+- Margem media geral (media de todos os horarios)
+- Hora com maior demanda de margem (pico)
+- Contratos medios por dia
+
+**Grafico de barras por hora (9h-18h):**
+- Barra principal: margem media necessaria (R$)
+- Linha de referencia (ReferenceLine): margem de pico/seguranca
+- Tooltip premium (padrao escuro) mostrando:
+  - Hora
+  - Media de contratos
+  - Max contratos
+  - Margem media (R$)
+  - Margem recomendada de pico (R$)
+
+**Design:**
+- Segue o padrao visual premium existente (gradientes, framer-motion, cores condicionais)
+- Cores: azul/cyan para a barra media, amber/dourado para a linha de pico
+- Icone: `DollarSign` ou `Shield` do lucide-react
+
+### 4. Integracao no Dashboard
+- Posicionar o `MarginAnalysis` logo apos o `RobosCharts` e antes do `AdvancedMetrics`
+- Passar `filteredOperations` como prop (que agora inclui `contracts`)
+
+## Detalhes tecnicos
+
+### Arquivos modificados
+- `src/components/operations/OperationsDashboard.tsx` -- remover imports/blocos antigos, adicionar import/bloco novo, expandir interface e query
+
+### Arquivo novo
+- `src/components/operations/MarginAnalysis.tsx` -- componente de analise de margem
+
+### Fluxo de dados
 
 ```text
--- Passo 1: Truncar notificacoes (52M+ registros - DELETE seria inviavel)
-TRUNCATE TABLE notifications CASCADE;
-
--- Passo 2: Limpar classificacoes de IA (por seguranca)
-DELETE FROM ai_classification_logs WHERE operation_id IS NOT NULL;
-
--- Passo 3: Truncar operacoes
-TRUNCATE TABLE trading_operations CASCADE;
+OperationsDashboard
+  |-- loadOperations() busca "contracts" junto com os demais campos
+  |-- filteredOperations inclui contracts
+  |
+  MarginAnalysis (recebe filteredOperations)
+    |-- Agrupa por (data + hora)
+    |-- Soma contratos por janela horaria por dia
+    |-- Para cada hora: calcula media e max ao longo dos dias
+    |-- Aplica R$ 150 por contrato
+    |-- Renderiza grafico de barras + cards resumo
 ```
 
-## Detalhes Tecnicos
-
-- **Por que TRUNCATE em vez de DELETE?** O `TRUNCATE` nao dispara triggers por linha e ignora o overhead transacional, tornando-o instantaneo mesmo para milhoes de registros. O `DELETE` de 52M de notificacoes causaria timeout inevitavelmente.
-- **Nota sobre notificacoes:** O `TRUNCATE TABLE notifications CASCADE` removera TODAS as notificacoes (nao apenas as vinculadas a operacoes). Se houver notificacoes que nao sao de operacoes e precisam ser mantidas, isso precisa ser discutido antes.
-- **Irreversibilidade:** Esta acao nao pode ser desfeita. Todos os dados serao permanentemente removidos.
-
+### Constantes
+```text
+MARGIN_PER_CONTRACT = 150  (R$ 150 ja com desagio)
+MARKET_HOURS = [9, 10, 11, 12, 13, 14, 15, 16, 17]  (horario de mercado)
+```
