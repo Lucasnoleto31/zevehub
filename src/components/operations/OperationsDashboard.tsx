@@ -255,17 +255,14 @@ const OperationsDashboard = ({ userId }: OperationsDashboardProps) => {
         .select("operation_date, operation_time, result, strategy, contracts")
         .eq("user_id", userId)
         .in("strategy", ALLOWED_STRATEGIES)
-        .order("operation_date", { ascending: true })
+        .order("operation_date", { ascending: false })
         .limit(5000);
 
       if (!opsError && opsData) {
-        setOperations(opsData);
-        const strategies = Array.from(new Set(
-          opsData
-            .map(op => op.strategy)
-            .filter((s): s is string => s != null && s.trim() !== '')
-        ));
-        setAvailableStrategies(strategies.sort());
+        // Reverse since we fetch DESC for recency but components expect ASC
+        setOperations(opsData.reverse());
+        // Always show all allowed strategies, not just those in the 5000 sample
+        setAvailableStrategies([...ALLOWED_STRATEGIES].sort());
       }
     } catch (error) {
       console.error("Erro ao carregar operações:", error);
