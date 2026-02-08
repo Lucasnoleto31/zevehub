@@ -13,6 +13,8 @@ import PerformanceHeatmap from "@/components/dashboard/PerformanceHeatmap";
 import TopPerformanceDays from "@/components/dashboard/TopPerformanceDays";
 import AdvancedMetrics from "@/components/dashboard/AdvancedMetrics";
 import PerformanceCalendar from "@/components/dashboard/PerformanceCalendar";
+import StrategyEvolution from "./StrategyEvolution";
+import MonthlyStrategyTable from "./MonthlyStrategyTable";
 
 interface OperationsDashboardProps {
   userId: string;
@@ -643,6 +645,14 @@ const OperationsDashboard = ({ userId }: OperationsDashboardProps) => {
         hourDistribution={hourDistribution}
       />
 
+      {/* Strategy Cards */}
+      <RobosStrategyCards strategyStats={strategyStats} filteredOperations={filteredOperations} />
+
+      {/* Strategy Evolution */}
+      <StrategyEvolution filteredOperations={filteredOperations} />
+
+      {/* Monthly Strategy Table */}
+      <MonthlyStrategyTable filteredOperations={filteredOperations} />
 
       {/* Advanced Metrics */}
       <AdvancedMetrics operations={filteredOperations} />
