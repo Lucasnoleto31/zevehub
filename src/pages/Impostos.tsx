@@ -49,10 +49,10 @@ import {
 import { format, startOfMonth, endOfMonth, subMonths, getYear, getMonth } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { motion, AnimatePresence } from "framer-motion";
-import jsPDF from "jspdf";
-import autoTable from "jspdf-autotable";
+// jsPDF and autoTable are dynamically imported where used
 import { PremiumPageLayout, PremiumCard, PremiumSection } from "@/components/layout/PremiumPageLayout";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface MonthlyResult {
   year: number;
@@ -84,7 +84,8 @@ const MIN_TAX_AMOUNT = 10; // DARF mínimo de R$ 10,00
 
 const Impostos = () => {
   const navigate = useNavigate();
-  const [userId, setUserId] = useState<string | null>(null);
+  const { user } = useAuth();
+  const userId = user?.id ?? null;
   const [isLoading, setIsLoading] = useState(true);
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [monthlyResults, setMonthlyResults] = useState<MonthlyResult[]>([]);
@@ -99,23 +100,10 @@ const Impostos = () => {
   }, []);
 
   useEffect(() => {
-    checkAuth();
-  }, []);
-
-  useEffect(() => {
     if (userId) {
       calculateMonthlyTaxes();
     }
   }, [userId, selectedYear]);
-
-  const checkAuth = async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-      navigate("/auth");
-      return;
-    }
-    setUserId(user.id);
-  };
 
   const calculateMonthlyTaxes = async () => {
     if (!userId) return;
@@ -273,6 +261,8 @@ const Impostos = () => {
     if (!selectedMonth) return;
 
     try {
+      const jsPDF = (await import('jspdf')).default;
+      const autoTable = (await import('jspdf-autotable')).default;
       const doc = new jsPDF();
       const pageWidth = doc.internal.pageSize.getWidth();
       const today = format(new Date(), "dd/MM/yyyy");

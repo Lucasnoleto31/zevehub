@@ -35,10 +35,9 @@ import { ShieldCheck, TrendingUp, Target, DollarSign, Calendar, BarChart3, FileD
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import jsPDF from "jspdf";
-import autoTable from "jspdf-autotable";
-import * as XLSX from "xlsx";
+// jsPDF, autoTable, and XLSX are dynamically imported where used
 import { PremiumPageLayout, PremiumCard, PremiumSection } from "@/components/layout/PremiumPageLayout";
+import { useAuth } from "@/contexts/AuthContext";
 
 const GerenciamentoRisco = () => {
   const [capital, setCapital] = useState(5000);
@@ -46,33 +45,22 @@ const GerenciamentoRisco = () => {
   const [stopPontos, setStopPontos] = useState(200);
   const [taxaAcerto, setTaxaAcerto] = useState(30);
   const [ativo, setAtivo] = useState<"WIN" | "WDO">("WIN");
-  const [isAdmin, setIsAdmin] = useState(false);
-  const [userId, setUserId] = useState<string | null>(null);
+  const { user, isAdmin } = useAuth();
+  const userId = user?.id ?? null;
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     const loadSettings = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
+      if (!userId) {
         setIsLoading(false);
         return;
       }
-      
-      setUserId(user.id);
-
-      const { data: roleData } = await supabase
-        .from("user_roles")
-        .select("role")
-        .eq("user_id", user.id)
-        .eq("role", "admin")
-        .maybeSingle();
-      setIsAdmin(!!roleData);
 
       const { data: settings } = await supabase
         .from("risk_management_settings")
         .select("*")
-        .eq("user_id", user.id)
+        .eq("user_id", userId)
         .maybeSingle();
 
       if (settings) {
@@ -87,7 +75,7 @@ const GerenciamentoRisco = () => {
     };
     
     loadSettings();
-  }, []);
+  }, [userId]);
 
   useEffect(() => {
     if (!userId || isLoading) return;
@@ -171,8 +159,10 @@ const GerenciamentoRisco = () => {
     return value.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   };
 
-  const exportToPDF = () => {
+  const exportToPDF = async () => {
     try {
+      const jsPDF = (await import('jspdf')).default;
+      const autoTable = (await import('jspdf-autotable')).default;
       const doc = new jsPDF();
       const pageWidth = doc.internal.pageSize.getWidth();
       const today = new Date().toLocaleDateString("pt-BR");
@@ -316,7 +306,7 @@ const GerenciamentoRisco = () => {
     }
   };
 
-  const exportToExcel = () => {
+  const exportToExcel = async () => {
     try {
       const today = new Date().toLocaleDateString("pt-BR");
       
@@ -353,6 +343,7 @@ const GerenciamentoRisco = () => {
         ]),
       ];
 
+      const XLSX = await import('xlsx');
       const wb = XLSX.utils.book_new();
       
       const wsParams = XLSX.utils.aoa_to_sheet(parametros);

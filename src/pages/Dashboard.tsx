@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { User } from "@supabase/supabase-js";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -22,6 +21,7 @@ import { RestrictedAccess } from "@/components/dashboard/RestrictedAccess";
 import { TradingDashboard } from "@/components/trading/TradingDashboard";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface ProfitOperation {
   id: string;
@@ -50,9 +50,8 @@ interface UnreadMessage {
 
 const Dashboard = () => {
   const navigate = useNavigate();
-  const [user, setUser] = useState<User | null>(null);
+  const { user, profile: authProfile, isAdmin, isLoading: authLoading } = useAuth();
   const [profile, setProfile] = useState<any>(null);
-  const [roles, setRoles] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [accessStatus, setAccessStatus] = useState<string>("aprovado");
   const [operations, setOperations] = useState<ProfitOperation[]>([]);
@@ -62,66 +61,39 @@ const Dashboard = () => {
   const [currentMessageIndex, setCurrentMessageIndex] = useState(0);
 
   useEffect(() => {
-    checkUser();
-  }, []);
+    if (!authLoading && user) {
+      loadDashboardData();
+    }
+  }, [authLoading, user]);
 
-  const checkUser = async () => {
+  useEffect(() => {
+    if (authProfile) {
+      setProfile(authProfile);
+      setAccessStatus(authProfile?.access_status || "pendente");
+    }
+  }, [authProfile]);
+
+  const loadDashboardData = async () => {
+    if (!user) return;
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      if (!session) {
-        navigate("/auth");
-        return;
-      }
-
-      setUser(session.user);
-
-      const { data: profileData } = await supabase
-        .from("profiles")
-        .select("*")
-        .eq("id", session.user.id)
-        .single();
-
-      // Verificar se o trial expirou
-      if (profileData?.trial_expires_at && profileData?.access_status === "aprovado") {
-        const trialExpires = new Date(profileData.trial_expires_at);
+      // Check trial expiration
+      if (authProfile?.trial_expires_at && authProfile?.access_status === "aprovado") {
+        const trialExpires = new Date(authProfile.trial_expires_at);
         if (trialExpires < new Date()) {
-          // Bloquear automaticamente
           await supabase
             .from("profiles")
-            .update({ 
-              access_status: "bloqueado",
-              trial_expires_at: null 
-            })
-            .eq("id", session.user.id);
-          
-          // Criar notificação
+            .update({ access_status: "bloqueado", trial_expires_at: null })
+            .eq("id", user.id);
           await supabase.from("messages").insert({
-            user_id: session.user.id,
+            user_id: user.id,
             title: "Período de Teste Expirado",
             content: "Seu período de teste de 3 dias expirou. Entre em contato com seu assessor pelo WhatsApp +55 62 9994-4855 para continuar usando a plataforma.",
             priority: "high",
             is_global: false,
           });
-          
           setAccessStatus("bloqueado");
-          setProfile({ ...profileData, access_status: "bloqueado" });
-        } else {
-          setProfile(profileData);
-          setAccessStatus(profileData?.access_status || "pendente");
+          setProfile({ ...authProfile, access_status: "bloqueado" });
         }
-      } else {
-        setProfile(profileData);
-        setAccessStatus(profileData?.access_status || "pendente");
-      }
-
-      const { data: rolesData } = await supabase
-        .from("user_roles")
-        .select("role")
-        .eq("user_id", session.user.id);
-
-      if (rolesData) {
-        setRoles(rolesData.map((r) => r.role));
       }
 
       // Fetch profit_operations with pagination (handles 216k+ records)
@@ -134,7 +106,7 @@ const Dashboard = () => {
         const { data: opsData, error: opsError } = await supabase
           .from("profit_operations")
           .select("id, user_id, open_time, close_time, operation_result, strategy_id, asset")
-          .eq("user_id", session.user.id)
+          .eq("user_id", user.id)
           .order("open_time", { ascending: false })
           .range(from, from + batchSize - 1);
 
@@ -152,24 +124,20 @@ const Dashboard = () => {
       setOperations(allOps);
 
       // Fetch strategies
-      const { data: strategiesData, error: strategiesError } = await supabase
+      const { data: strategiesData } = await supabase
         .from("strategies")
         .select("id, name")
-        .eq("user_id", session.user.id)
+        .eq("user_id", user.id)
         .eq("is_active", true)
         .order("name");
 
-      if (strategiesError) {
-        console.error("Erro ao carregar estratégias:", strategiesError);
-      } else {
-        setStrategies(strategiesData || []);
-      }
+      setStrategies(strategiesData || []);
 
-      // Fetch unread messages from admin
+      // Fetch unread messages
       const { data: messagesData } = await supabase
         .from("messages")
         .select("id, title, content, priority, created_at, is_global, attachment_url")
-        .or(`user_id.eq.${session.user.id},is_global.eq.true`)
+        .or(`user_id.eq.${user.id},is_global.eq.true`)
         .not("created_by", "is", null)
         .eq("read", false)
         .order("created_at", { ascending: false });
@@ -178,7 +146,6 @@ const Dashboard = () => {
         setUnreadMessages(messagesData);
         setShowMessagesDialog(true);
       }
-
     } catch (error) {
       console.error("Erro ao carregar dados:", error);
     } finally {
@@ -242,7 +209,6 @@ const Dashboard = () => {
 
   const currentMessage = unreadMessages[currentMessageIndex];
 
-  const isAdmin = roles.includes("admin");
   const hasFullAccess = accessStatus === "aprovado" || isAdmin;
 
   if (loading) {

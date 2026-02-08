@@ -45,6 +45,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { TradingDashboard } from "@/components/trading/TradingDashboard";
+import { useAuth } from "@/contexts/AuthContext";
 
 
 interface ProfitOperation {
@@ -79,8 +80,8 @@ interface Strategy {
 
 const Trading = () => {
   const navigate = useNavigate();
-  const [loading, setLoading] = useState(true);
-  const [userId, setUserId] = useState<string | null>(null);
+  const { user, isLoading: loading } = useAuth();
+  const userId = user?.id ?? null;
   const [importing, setImporting] = useState(false);
   const [importProgress, setImportProgress] = useState(0);
   const [importErrors, setImportErrors] = useState<string[]>([]);
@@ -91,18 +92,7 @@ const Trading = () => {
   const [isCreatingNewStrategy, setIsCreatingNewStrategy] = useState(false);
   const queryClient = useQueryClient();
 
-  useEffect(() => {
-    const checkAuth = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        navigate("/auth");
-        return;
-      }
-      setUserId(session.user.id);
-      setLoading(false);
-    };
-    checkAuth();
-  }, [navigate]);
+  // Auth is handled by ProtectedRoute + AuthContext
 
   // Fetch strategies (only manual, not robot strategies)
   const { data: strategies = [] } = useQuery({

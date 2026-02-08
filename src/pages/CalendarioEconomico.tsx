@@ -49,6 +49,7 @@ import { ptBR } from "date-fns/locale";
 import { motion, AnimatePresence } from "framer-motion";
 import { PremiumPageLayout, PremiumCard, PremiumSection } from "@/components/layout/PremiumPageLayout";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface EconomicEvent {
   id: string;
@@ -102,13 +103,13 @@ const CATEGORY_NAMES: Record<string, string> = {
 
 const CalendarioEconomico = () => {
   const navigate = useNavigate();
+  const { isAdmin } = useAuth();
   const [isLoading, setIsLoading] = useState(true);
   const [events, setEvents] = useState<EconomicEvent[]>([]);
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [selectedCountry, setSelectedCountry] = useState<string>("all");
   const [selectedImpact, setSelectedImpact] = useState<string>("all");
-  const [isAdmin, setIsAdmin] = useState(false);
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [editingEvent, setEditingEvent] = useState<EconomicEvent | null>(null);
   const [formData, setFormData] = useState({
@@ -124,26 +125,8 @@ const CalendarioEconomico = () => {
   });
 
   useEffect(() => {
-    checkAuth();
     loadEvents();
   }, [currentMonth]);
-
-  const checkAuth = async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-      navigate("/auth");
-      return;
-    }
-
-    const { data: roleData } = await supabase
-      .from("user_roles")
-      .select("role")
-      .eq("user_id", user.id)
-      .eq("role", "admin")
-      .maybeSingle();
-    
-    setIsAdmin(!!roleData);
-  };
 
   const loadEvents = async () => {
     setIsLoading(true);

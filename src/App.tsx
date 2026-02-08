@@ -1,3 +1,4 @@
+import { lazy, Suspense } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -9,30 +10,50 @@ import OfflineIndicator from "@/components/OfflineIndicator";
 import { TourProvider } from "@/contexts/TourContext";
 import { TourOverlay } from "@/components/tour/TourOverlay";
 import { TourLauncher } from "@/components/tour/TourLauncher";
+import { AuthProvider } from "@/contexts/AuthContext";
+import { ProtectedRoute } from "@/components/ProtectedRoute";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
-import Dashboard from "./pages/Dashboard";
-import Admin from "./pages/Admin";
-import Operations from "./pages/Operations";
-import OperationDetail from "./pages/OperationDetail";
-import Profile from "./pages/Profile";
-import Financas from "./pages/Financas";
-import GerenciamentoRisco from "./pages/GerenciamentoRisco";
-import Onboarding from "./pages/Onboarding";
-import Mensagens from "./pages/Mensagens";
-import Impostos from "./pages/Impostos";
-import CalendarioEconomico from "./pages/CalendarioEconomico";
-
-import Trading from "./pages/Trading";
 import NotFound from "./pages/NotFound";
 import { useEffect } from "react";
 import { registerServiceWorker } from "@/lib/register-sw";
 
-const queryClient = new QueryClient();
+// Lazy loaded pages
+const Dashboard = lazy(() => import("./pages/Dashboard"));
+const Admin = lazy(() => import("./pages/Admin"));
+const Operations = lazy(() => import("./pages/Operations"));
+const OperationDetail = lazy(() => import("./pages/OperationDetail"));
+const Trading = lazy(() => import("./pages/Trading"));
+const Profile = lazy(() => import("./pages/Profile"));
+const Financas = lazy(() => import("./pages/Financas"));
+const GerenciamentoRisco = lazy(() => import("./pages/GerenciamentoRisco"));
+const Onboarding = lazy(() => import("./pages/Onboarding"));
+const Mensagens = lazy(() => import("./pages/Mensagens"));
+const Impostos = lazy(() => import("./pages/Impostos"));
+const CalendarioEconomico = lazy(() => import("./pages/CalendarioEconomico"));
+
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 5 * 60 * 1000,
+      gcTime: 10 * 60 * 1000,
+      retry: 1,
+      refetchOnWindowFocus: false,
+    },
+  },
+});
+
+const LoadingFallback = () => (
+  <div className="min-h-screen flex items-center justify-center bg-background">
+    <div className="relative">
+      <div className="w-20 h-20 border-4 border-primary/20 rounded-full" />
+      <div className="absolute top-0 left-0 w-20 h-20 border-4 border-transparent border-t-primary rounded-full animate-spin" />
+    </div>
+  </div>
+);
 
 const App = () => {
   useEffect(() => {
-    // Registra o Service Worker para funcionalidade offline
     registerServiceWorker().catch(console.error);
   }, []);
 
@@ -41,34 +62,36 @@ const App = () => {
       <QueryClientProvider client={queryClient}>
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
           <TooltipProvider>
-            <TourProvider>
-              <Toaster />
-              <Sonner />
-              <OfflineIndicator />
-              <TourOverlay />
-              <TourLauncher />
-              <BrowserRouter>
-                <Routes>
-                  <Route path="/" element={<Index />} />
-                  <Route path="/auth" element={<Auth />} />
-                  <Route path="/onboarding" element={<Onboarding />} />
-                  <Route path="/dashboard" element={<Dashboard />} />
-                  <Route path="/admin" element={<Admin />} />
-                  
-                  <Route path="/operations" element={<Operations />} />
-                  <Route path="/operation/:id" element={<OperationDetail />} />
-                  <Route path="/trading" element={<Trading />} />
-                  <Route path="/profile" element={<Profile />} />
-                  <Route path="/financas" element={<Financas />} />
-                  <Route path="/risco" element={<GerenciamentoRisco />} />
-                  <Route path="/mensagens" element={<Mensagens />} />
-                  <Route path="/impostos" element={<Impostos />} />
-                  <Route path="/calendario" element={<CalendarioEconomico />} />
-                  {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-                  <Route path="*" element={<NotFound />} />
-                </Routes>
-              </BrowserRouter>
-            </TourProvider>
+            <AuthProvider>
+              <TourProvider>
+                <Toaster />
+                <Sonner />
+                <OfflineIndicator />
+                <TourOverlay />
+                <TourLauncher />
+                <BrowserRouter>
+                  <Suspense fallback={<LoadingFallback />}>
+                    <Routes>
+                      <Route path="/" element={<Index />} />
+                      <Route path="/auth" element={<Auth />} />
+                      <Route path="/onboarding" element={<Onboarding />} />
+                      <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+                      <Route path="/admin" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
+                      <Route path="/operations" element={<ProtectedRoute><Operations /></ProtectedRoute>} />
+                      <Route path="/operation/:id" element={<ProtectedRoute><OperationDetail /></ProtectedRoute>} />
+                      <Route path="/trading" element={<ProtectedRoute><Trading /></ProtectedRoute>} />
+                      <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+                      <Route path="/financas" element={<ProtectedRoute><Financas /></ProtectedRoute>} />
+                      <Route path="/risco" element={<ProtectedRoute><GerenciamentoRisco /></ProtectedRoute>} />
+                      <Route path="/mensagens" element={<ProtectedRoute><Mensagens /></ProtectedRoute>} />
+                      <Route path="/impostos" element={<ProtectedRoute><Impostos /></ProtectedRoute>} />
+                      <Route path="/calendario" element={<ProtectedRoute><CalendarioEconomico /></ProtectedRoute>} />
+                      <Route path="*" element={<NotFound />} />
+                    </Routes>
+                  </Suspense>
+                </BrowserRouter>
+              </TourProvider>
+            </AuthProvider>
           </TooltipProvider>
         </ThemeProvider>
       </QueryClientProvider>

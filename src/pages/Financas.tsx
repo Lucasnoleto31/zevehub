@@ -24,10 +24,9 @@ import {
   TrendingUp, TrendingDown, Calendar, Target, DollarSign, PiggyBank,
   LayoutDashboard, ListChecks, Settings, FileDown, AlertCircle, CheckCircle2, Upload, FileSpreadsheet, Filter, Bell, RefreshCw, Goal
 } from "lucide-react";
-import jsPDF from "jspdf";
-import autoTable from "jspdf-autotable";
-import * as XLSX from "xlsx";
+// jsPDF, autoTable, and XLSX are dynamically imported where used
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface Categoria {
   id: string;
@@ -99,9 +98,7 @@ const TIPOS_META = [
 export default function Financas() {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const [user, setUser] = useState<any>(null);
-  const [isAdmin, setIsAdmin] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const { user, isAdmin, isLoading: loading } = useAuth();
   const [activeTab, setActiveTab] = useState("dashboard");
 
   // Data states
@@ -168,10 +165,6 @@ export default function Financas() {
   const [importLoading, setImportLoading] = useState(false);
 
   useEffect(() => {
-    checkUser();
-  }, []);
-
-  useEffect(() => {
     if (user) {
       loadData();
     }
@@ -181,25 +174,6 @@ export default function Financas() {
   useEffect(() => {
     setLancamentoCategoriaId("");
   }, [lancamentoTipoTransacao]);
-
-  const checkUser = async () => {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) {
-      navigate("/auth");
-      return;
-    }
-    setUser(session.user);
-
-    const { data: adminRole } = await supabase
-      .from("user_roles")
-      .select("*")
-      .eq("user_id", session.user.id)
-      .eq("role", "admin")
-      .maybeSingle();
-
-    setIsAdmin(!!adminRole);
-    setLoading(false);
-  };
 
   const loadData = async () => {
     if (!user) return;
@@ -660,9 +634,7 @@ export default function Financas() {
   const handleBulkDeleteLancamentos = async () => {
     if (selectedLancamentos.length === 0) return;
 
-    for (const id of selectedLancamentos) {
-      await supabase.from("lancamentos_financas").delete().eq("id", id);
-    }
+    await supabase.from("lancamentos_financas").delete().in("id", selectedLancamentos);
     
     toast({ title: `${selectedLancamentos.length} lançamentos excluídos` });
     setSelectedLancamentos([]);
@@ -847,7 +819,9 @@ export default function Financas() {
     toast({ title: "CSV exportado" });
   };
 
-  const handleExportPDF = () => {
+  const handleExportPDF = async () => {
+    const jsPDF = (await import('jspdf')).default;
+    const autoTable = (await import('jspdf-autotable')).default;
     const doc = new jsPDF();
     const mesAtual = format(new Date(), "MMMM yyyy", { locale: ptBR });
     const pageWidth = doc.internal.pageSize.width;
@@ -999,7 +973,8 @@ export default function Financas() {
     toast({ title: "Relatório PDF gerado com sucesso!" });
   };
 
-  const handleDownloadTemplate = () => {
+  const handleDownloadTemplate = async () => {
+    const XLSX = await import('xlsx');
     const template = [
       { Data: "2024-01-15", Valor: 150.00, Tipo: "despesa", Categoria: "Alimentação", Descricao: "Supermercado", Recorrente: "Não", Frequencia: "" },
       { Data: "2024-01-16", Valor: 50.00, Tipo: "despesa", Categoria: "Transporte", Descricao: "Uber", Recorrente: "Não", Frequencia: "" },
@@ -1030,8 +1005,9 @@ export default function Financas() {
     if (!file) return;
 
     const reader = new FileReader();
-    reader.onload = (event) => {
+    reader.onload = async (event) => {
       try {
+        const XLSX = await import('xlsx');
         const data = new Uint8Array(event.target?.result as ArrayBuffer);
         const workbook = XLSX.read(data, { type: "array" });
         const sheetName = workbook.SheetNames[0];

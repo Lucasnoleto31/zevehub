@@ -15,6 +15,7 @@ import { OperationsFilters, type FilterValues } from "@/components/operations/Op
 import ApolloDataReplacer from "@/components/operations/ApolloDataReplacer";
 import { PremiumPageLayout, PremiumCard, PremiumLoader } from "@/components/layout/PremiumPageLayout";
 import { motion } from "framer-motion";
+import { useAuth } from "@/contexts/AuthContext";
 
 const itemVariants = {
   hidden: { opacity: 0, y: 20 },
@@ -27,9 +28,7 @@ const itemVariants = {
 
 const Operations = () => {
   const navigate = useNavigate();
-  const [loading, setLoading] = useState(true);
-  const [user, setUser] = useState<any>(null);
-  const [isAdmin, setIsAdmin] = useState(false);
+  const { user, isAdmin, isLoading: loading } = useAuth();
   const [filters, setFilters] = useState<FilterValues>({
     strategies: [],
     asset: "",
@@ -39,35 +38,6 @@ const Operations = () => {
     timeTo: "",
     resultType: "all",
   });
-
-  useEffect(() => {
-    checkUser();
-  }, []);
-
-  const checkUser = async () => {
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      if (!session) {
-        navigate("/auth");
-        return;
-      }
-
-      setUser(session.user);
-
-      const { data: rolesData } = await supabase
-        .from("user_roles")
-        .select("role")
-        .eq("user_id", session.user.id);
-
-      const hasAdminRole = rolesData?.some(r => r.role === "admin");
-      setIsAdmin(hasAdminRole || false);
-    } catch (error) {
-      console.error("Erro ao verificar usuário:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   if (loading) {
     return <PremiumLoader />;

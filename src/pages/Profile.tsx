@@ -15,6 +15,7 @@ import { ActiveSessions } from "@/components/profile/ActiveSessions";
 import { AvatarCropDialog } from "@/components/profile/AvatarCropDialog";
 import { PremiumPageLayout, PremiumCard, PremiumLoader } from "@/components/layout/PremiumPageLayout";
 import { motion } from "framer-motion";
+import { useAuth } from "@/contexts/AuthContext";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -38,7 +39,7 @@ const itemVariants = {
 
 const Profile = () => {
   const navigate = useNavigate();
-  const [user, setUser] = useState<User | null>(null);
+  const { user, profile: authProfile, isLoading: authLoading, refreshProfile } = useAuth();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -67,41 +68,19 @@ const Profile = () => {
   const [imageToCrop, setImageToCrop] = useState<string | null>(null);
 
   useEffect(() => {
-    checkUser();
-  }, []);
-
-  const checkUser = async () => {
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      if (!session) {
-        navigate("/auth");
-        return;
-      }
-
-      setUser(session.user);
-
-      const { data: profileData } = await supabase
-        .from("profiles")
-        .select("*")
-        .eq("id", session.user.id)
-        .single();
-
-      if (profileData) {
-        setFormData({
-          full_name: profileData.full_name || "",
-          email: profileData.email || "",
-          phone: profileData.phone || "",
-          avatar_url: profileData.avatar_url || "",
-          totp_enabled: profileData.totp_enabled || false,
-        });
-      }
-    } catch (error) {
-      console.error("Erro ao carregar dados:", error);
-    } finally {
+    if (!authLoading && authProfile) {
+      setFormData({
+        full_name: authProfile.full_name || "",
+        email: authProfile.email || "",
+        phone: authProfile.phone || "",
+        avatar_url: authProfile.avatar_url || "",
+        totp_enabled: authProfile.totp_enabled || false,
+      });
+      setLoading(false);
+    } else if (!authLoading) {
       setLoading(false);
     }
-  };
+  }, [authLoading, authProfile]);
 
   const handleAvatarSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -393,7 +372,7 @@ const Profile = () => {
               userId={user.id}
               email={formData.email}
               totpEnabled={formData.totp_enabled}
-              onUpdate={checkUser}
+              onUpdate={refreshProfile}
             />
           </motion.div>
         )}
