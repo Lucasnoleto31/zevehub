@@ -107,7 +107,7 @@ const OperationsDashboard = ({ userId }: OperationsDashboardProps) => {
     // When no date/strategy filter is active and we have RPC data, use it for main stats
     if (rpcData && dateFilter === "all" && strategyFilter.length === 0 && hourFilter.length === 0 && weekdayFilter.length === 0 && monthFilter.length === 0) {
       applyRPCStats(rpcData);
-    } else if (filteredOperations.length > 0) {
+    } else if (filteredOperations.length > 0 && !rpcData) {
       calculateStats(filteredOperations);
       generateCharts(filteredOperations);
     }
@@ -812,7 +812,18 @@ const OperationsDashboard = ({ userId }: OperationsDashboardProps) => {
           <PerformanceHeatmap operations={filteredOperations} preAggregatedData={heatmapData.length > 0 ? heatmapData : undefined} />
 
           {/* Strategy Cards */}
-          <RobosStrategyCards strategyStats={strategyStats} />
+          <RobosStrategyCards strategyStats={rpcData ? (rpcData.byStrategy || []).map((s: any) => ({
+            strategy: s.strategy,
+            totalOps: s.operations,
+            totalResult: s.result,
+            winRate: s.operations > 0 ? (s.wins / s.operations) * 100 : 0,
+            payoff: 0,
+            averageWin: 0,
+            averageLoss: 0,
+            maxDrawdown: 0,
+            positive: s.wins,
+            negative: s.operations - s.wins,
+          })) : strategyStats} />
 
           {/* Advanced Metrics */}
           <AdvancedMetrics operations={filteredOperations} />
