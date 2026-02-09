@@ -15,6 +15,7 @@ import AdvancedMetrics from "@/components/dashboard/AdvancedMetrics";
 import PerformanceCalendar from "@/components/dashboard/PerformanceCalendar";
 import StrategyEvolution from "./StrategyEvolution";
 import MonthlyStrategyTable from "./MonthlyStrategyTable";
+import MarginAnalysis from "./MarginAnalysis";
 
 interface OperationsDashboardProps {
   userId: string;
@@ -653,6 +654,9 @@ const OperationsDashboard = ({ userId }: OperationsDashboardProps) => {
 
       {/* Monthly Strategy Table */}
       <MonthlyStrategyTable filteredOperations={filteredOperations} />
+
+      {/* Margin Analysis */}
+      <MarginAnalysis filteredOperations={filteredOperations} />
 
       {/* Advanced Metrics */}
       <AdvancedMetrics operations={filteredOperations} />
