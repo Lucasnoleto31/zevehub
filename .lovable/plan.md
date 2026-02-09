@@ -1,99 +1,65 @@
 
 
-# Recriar MarginAnalysis com Stop/Gain Ideal (+40% seguranca) + Corrigir Build Error
+# Margem Media Necessaria por Hora
 
 ## Resumo
 
-Dois itens de trabalho:
-1. Recriar o componente `MarginAnalysis.tsx` (foi deletado anteriormente) com Stop/Gain Ideal por hora, ja incluindo a margem de seguranca de +40% no Stop desde o inicio
-2. Corrigir o erro de build no `TradingDashboard.tsx` (RPC `get_trading_dashboard` inexistente)
+Modificar o componente `MarginAnalysis.tsx` existente para adicionar a analise de margem de capital necessaria por hora, baseada em R$ 150,00 por contrato. O componente ja tem a estrutura de cards, graficos e tooltips -- sera expandido com a logica de margem por contrato.
 
----
+## O que ja existe e sera mantido
 
-## 1. Novo arquivo: `src/components/operations/MarginAnalysis.tsx`
+O componente atual ja calcula:
+- Contratos por (data, hora) via `dateHourContractMap`
+- Margem media e pico por hora (usando `contracts * 100` simplificado)
+- Stop/Gain ideal com +40% de seguranca
+- 5 cards resumo + 2 graficos + legenda
 
-### Logica de calculo (useMemo)
+## Alteracoes
 
-Recebe `filteredOperations` como prop. Dois agrupamentos:
+### 1. Constante de margem por contrato
 
-**Mapa de contratos** (para margem):
-- `dateHourContractMap[data][hora] = max(contratos)`
-- Para cada hora: margem media, margem pico
-
-**Mapa de resultados** (para stop/gain):
-- `dateHourResultMap[data][hora] += resultado`
-- Para cada hora h (9-17):
-  - Dias positivos: dias onde soma > 0 -> `avgGain = media`
-  - Dias negativos: dias onde soma < 0 -> `avgStop = |media| * 1.4` (com margem de seguranca)
-  - `winDays`, `lossDays`, `payoff = avgGain / avgStop`
-
-### Constante de seguranca
+Alterar o calculo simplificado de `contracts * 100` para usar a constante correta:
 
 ```text
-STOP_SAFETY_MARGIN = 1.4  // +40%
+MARGIN_PER_CONTRACT = 150  // R$ 150,00 por contrato (ja com desagio de 30%)
 ```
 
-### Cards resumo (5 cards)
+Linha afetada no calculo: `const margin = contracts * 100` sera alterada para `const margin = contracts * MARGIN_PER_CONTRACT`.
 
-| Card | Valor | Cor | Sublabel |
-|------|-------|-----|----------|
-| Margem Media | media geral | cyan | Margem media por hora |
-| Margem Pico | maximo geral | amber | Maior pico registrado |
-| Total Horas | horas com dados | violet | Janelas analisadas |
-| Stop Ideal | media geral stops | red | Media + 40% margem de seguranca |
-| Gain Ideal | media geral gains | emerald | Media dos resultados positivos |
+### 2. Adicionar card "Contratos Medios/Dia"
 
-Grid: `grid-cols-2 sm:grid-cols-3 lg:grid-cols-5`
+Substituir o card "Total Horas" (que mostra apenas a quantidade de janelas analisadas, informacao pouco util) por um card mais relevante:
 
-### Grafico 1: Margem por hora
-- BarChart com barras para margem media e linha para margem pico
-- Tooltip customizado incluindo gain ideal, stop ideal, dias positivos/negativos
+| Card antigo | Card novo |
+|-------------|-----------|
+| Total Horas (violet) | Contratos Medios/Dia (violet) |
 
-### Grafico 2: Stop vs Gain por hora
-- BarChart com barras agrupadas (verde = gain, vermelho = stop)
-- Altura compacta (~220px)
-- Titulo: "Stop e Gain Ideal por Hora"
-- Subtitulo: "Baseado no resultado medio acumulado por janela (stop com +40% de seguranca)"
-- Tooltip com payoff ratio
+O valor sera calculado como: total de contratos em todas as operacoes dividido pelo numero de dias unicos operados.
 
-### Legenda
-- Margem Media, Margem Pico, Gain Ideal, Stop Ideal
+### 3. Atualizar sublabels dos cards de margem
 
----
+- Margem Media: "R$ 150/contrato x media horaria"
+- Margem Pico: "Pior cenario historico registrado"
 
-## 2. Integracao no OperationsDashboard.tsx
+### 4. Sem alteracao nos graficos
 
-Importar e renderizar `MarginAnalysis` apos `RobosCharts` e antes de `AdvancedMetrics`:
+Os graficos ja mostram margem media (barras) e margem pico (linha) por hora, e stop/gain ideal por hora. A unica mudanca e o valor absoluto (de x100 para x150).
 
-```text
-RobosCharts
-MarginAnalysis       <-- NOVO
-AdvancedMetrics
-PerformanceCalendar
-Heatmap + TopDays
-```
+## Detalhes tecnicos
 
----
+### Arquivo modificado
+- `src/components/operations/MarginAnalysis.tsx` -- unico arquivo alterado
 
-## 3. Correcao do build error: TradingDashboard.tsx
+### Mudancas especificas
 
-Remover toda a logica de RPC inexistente:
-- Remover `interface RPCDashboardData` (linhas 77-94)
-- Remover estados `rpcData`, `rpcLoading` (linhas 410-411)
-- Remover funcao `fetchRPCData` e seu useEffect (linhas 413-456)
-- Remover o bloco de loading baseado em `rpcLoading` (linhas 995-1004)
-- Remover a condicao `userId && !rpcData` do empty state (linha 1006)
-- No `useMemo` de `stats`, remover o caminho RPC (`if (rpcData && userId)`) e manter apenas o calculo local baseado em `filteredOperations`
+1. **Linha 23**: Adicionar `const MARGIN_PER_CONTRACT = 150;`
+2. **Linha 59**: Alterar `const margin = contracts * 100` para `const margin = contracts * MARGIN_PER_CONTRACT`
+3. **Calculo de contratos medios/dia**: Novo campo `avgContractsPerDay` no `summaryStats`, calculado a partir do total de contratos / dias unicos
+4. **Cards array** (linha ~130): Substituir card "Total Horas" por "Contratos Medios/Dia"
+5. **Sublabels**: Atualizar textos descritivos dos cards de margem
 
-O componente ja recebe `operations` como prop e calcula tudo localmente -- o RPC era redundante e causa o erro de build.
-
----
-
-## Arquivos
-
-| Arquivo | Acao |
-|---------|------|
-| `src/components/operations/MarginAnalysis.tsx` | **Criar** |
-| `src/components/operations/OperationsDashboard.tsx` | Importar MarginAnalysis + renderizar |
-| `src/components/trading/TradingDashboard.tsx` | Remover RPC inexistente |
+### Impacto
+- Valores de margem serao 50% maiores (de x100 para x150)
+- Card "Total Horas" substituido por metrica mais util
+- Nenhuma alteracao estrutural no componente
 
