@@ -36,7 +36,7 @@ const MarginAnalysis = ({ filteredOperations }: MarginAnalysisProps) => {
 
       // Contracts map
       if (!dateHourContractMap[date]) dateHourContractMap[date] = {};
-      dateHourContractMap[date][hour] = Math.max(dateHourContractMap[date][hour] || 0, op.contracts);
+      dateHourContractMap[date][hour] = (dateHourContractMap[date][hour] || 0) + op.contracts;
 
       // Results map
       if (!dateHourResultMap[date]) dateHourResultMap[date] = {};
