@@ -1,57 +1,52 @@
 
 
-# Comparativo de Performance por Estrategia (com +40% no Stop)
+# Curva de Performance por Estrategia (Equity Comparativo)
 
 ## Resumo
 
-Implementar o grafico comparativo de performance por estrategia ja aprovado, aplicando o multiplicador de +40% (STOP_SAFETY_MARGIN = 1.4) nos resultados negativos (stops) de cada estrategia por hora -- a mesma logica ja usada no grafico de Stop e Gain Ideal.
+Criar um grafico de curva de equity (AreaChart) comparando a evolucao acumulada de cada estrategia ao longo do tempo, similar a imagem de referencia. Cada estrategia tera sua propria linha com cor distinta.
 
 ## Alteracoes
 
 ### Arquivo: `src/components/operations/MarginAnalysis.tsx`
 
-### 1. Novo calculo no useMemo
+### 1. Novo calculo no useMemo: equity acumulada por estrategia
 
-Agrupar operacoes por `(strategy, date, hour)`, somar resultados por hora/dia, e calcular a media por hora para cada estrategia. Para resultados negativos (stop), multiplicar por 1.4 (+40% margem de seguranca).
+Agrupar operacoes por `(strategy, date)`, somar resultados por dia, ordenar por data e calcular o acumulado progressivo para cada estrategia.
 
 ```text
 Para cada operacao:
-  strategyDateHourMap[strategy][date][hour] += result
+  strategyDateMap[strategy][date] += result
 
-Para cada strategy, para cada hour (9-17):
-  media = soma dos resultados / dias com operacao
-  se media < 0: media = media * 1.4  (aplica +40%)
+Para cada strategy:
+  ordenar datas cronologicamente
+  acumular resultado dia a dia
+
+Formato final:
+  { date: "01/01", "Alaska & Square": 5000, "Apollo": 3200, "Ares": -800, "Orion": 1500 }
 ```
 
-Retornar `strategyHourlyData` e `activeStrategies`.
+### 2. Novo grafico: AreaChart com multiplas linhas
 
-### 2. Cores fixas por estrategia
+Inserido entre o grafico de Margem por Hora e o de Stop/Gain. Especificacoes:
 
-```text
-Alaska & Square -> #22d3ee (cyan)
-Apollo          -> #a78bfa (violet)
-Ares            -> #f97316 (orange)
-Orion           -> #34d399 (emerald)
-```
+- `AreaChart` com uma `<Area>` por estrategia presente nos dados
+- Cada Area com cor da estrategia, fill com gradiente transparente, stroke com `strokeWidth={2}`
+- `ReferenceLine` em y=0 (linha pontilhada)
+- Tooltip premium (fundo `#0a0a1a`) listando o acumulado de cada estrategia naquela data, com valores coloridos (verde positivo, vermelho negativo)
+- Header com icone TrendingUp, titulo "Curva de Performance" e subtitulo "Evolucao do resultado acumulado por estrategia"
+- Valor total acumulado (soma de todas) exibido no canto superior direito em destaque
+- Borda: `border-emerald-500/20`
+- YAxis com formatacao em `k` (ex: R$80k)
+- XAxis com datas no formato `dd/mm`
+- Amostragem inteligente: se mais de 365 pontos, reduzir para ~365 para performance
 
-### 3. Novo grafico: LineChart comparativo
+### 3. Gradientes
 
-Inserido entre o grafico de Margem por Hora e o de Stop/Gain:
-
-- `LineChart` com uma `<Line>` por estrategia presente nos dados
-- `strokeWidth={2.5}`, dots com raio 4
-- Tooltip premium (fundo `#0a0a1a`) com valores coloridos (verde positivo, vermelho negativo)
-- Titulo: "Performance por Estrategia"
-- Subtitulo: "Resultado medio por hora e estrategia (stops com +40% de seguranca)"
-- Borda: `border-amber-500/20`
-
-### 4. Imports e legenda
-
-- Adicionar `LineChart` ao import do recharts
-- Expandir legenda com as cores das estrategias
+Criar um gradiente para cada estrategia com opacidade baixa (0.15) para o fill das areas, mantendo as linhas solidas.
 
 ### Impacto
 - Nenhuma alteracao nos cards ou graficos existentes
 - Novo bloco de calculo dentro do mesmo useMemo
-- Valores de stop por estrategia ficam 40% maiores (mais conservadores)
+- Novo grafico visual inserido entre Margem por Hora e Stop/Gain
 
