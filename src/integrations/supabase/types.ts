@@ -465,7 +465,15 @@ export type Database = {
           updated_at?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "community_posts_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       community_titles: {
         Row: {
@@ -1076,6 +1084,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "post_mentions_mentioned_by_fkey"
+            columns: ["mentioned_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "post_mentions_post_id_fkey"
             columns: ["post_id"]
             isOneToOne: false
@@ -1164,12 +1179,12 @@ export type Database = {
         Row: {
           access_approved_at: string | null
           access_approved_by: string | null
-          access_status: string | null
+          access_status: Database["public"]["Enums"]["access_status"] | null
           assessor_id: string | null
           avatar_url: string | null
           cpf: string | null
           created_at: string
-          daily_login_streak: number | null
+          daily_login_streak: number
           email: string
           followers_count: number | null
           following_count: number | null
@@ -1177,12 +1192,14 @@ export type Database = {
           genial_id: string | null
           has_genial_account: boolean | null
           id: string
-          investment_profile: string | null
+          investment_profile:
+            | Database["public"]["Enums"]["investment_profile"]
+            | null
           last_login: string | null
           last_login_date: string | null
-          level: number | null
+          level: number
           phone: string | null
-          points: number | null
+          points: number
           status: string | null
           totp_enabled: boolean | null
           totp_secret: string | null
@@ -1193,12 +1210,12 @@ export type Database = {
         Insert: {
           access_approved_at?: string | null
           access_approved_by?: string | null
-          access_status?: string | null
+          access_status?: Database["public"]["Enums"]["access_status"] | null
           assessor_id?: string | null
           avatar_url?: string | null
           cpf?: string | null
           created_at?: string
-          daily_login_streak?: number | null
+          daily_login_streak?: number
           email: string
           followers_count?: number | null
           following_count?: number | null
@@ -1206,12 +1223,14 @@ export type Database = {
           genial_id?: string | null
           has_genial_account?: boolean | null
           id: string
-          investment_profile?: string | null
+          investment_profile?:
+            | Database["public"]["Enums"]["investment_profile"]
+            | null
           last_login?: string | null
           last_login_date?: string | null
-          level?: number | null
+          level?: number
           phone?: string | null
-          points?: number | null
+          points?: number
           status?: string | null
           totp_enabled?: boolean | null
           totp_secret?: string | null
@@ -1222,12 +1241,12 @@ export type Database = {
         Update: {
           access_approved_at?: string | null
           access_approved_by?: string | null
-          access_status?: string | null
+          access_status?: Database["public"]["Enums"]["access_status"] | null
           assessor_id?: string | null
           avatar_url?: string | null
           cpf?: string | null
           created_at?: string
-          daily_login_streak?: number | null
+          daily_login_streak?: number
           email?: string
           followers_count?: number | null
           following_count?: number | null
@@ -1235,12 +1254,14 @@ export type Database = {
           genial_id?: string | null
           has_genial_account?: boolean | null
           id?: string
-          investment_profile?: string | null
+          investment_profile?:
+            | Database["public"]["Enums"]["investment_profile"]
+            | null
           last_login?: string | null
           last_login_date?: string | null
-          level?: number | null
+          level?: number
           phone?: string | null
-          points?: number | null
+          points?: number
           status?: string | null
           totp_enabled?: boolean | null
           totp_secret?: string | null
@@ -1713,10 +1734,24 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "user_community_titles_granted_by_fkey"
+            columns: ["granted_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "user_community_titles_title_id_fkey"
             columns: ["title_id"]
             isOneToOne: false
             referencedRelation: "community_titles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_community_titles_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -1740,7 +1775,22 @@ export type Database = {
           following_id?: string
           id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "user_follows_follower_id_fkey"
+            columns: ["follower_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_follows_following_id_fkey"
+            columns: ["following_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_notifications: {
         Row: {
@@ -1775,6 +1825,13 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "user_notifications_actor_id_fkey"
+            columns: ["actor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "user_notifications_comment_id_fkey"
             columns: ["comment_id"]
             isOneToOne: false
@@ -1786,6 +1843,13 @@ export type Database = {
             columns: ["post_id"]
             isOneToOne: false
             referencedRelation: "community_posts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_notifications_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -1947,15 +2011,6 @@ export type Database = {
           strategy: string
         }[]
       }
-      get_financas_summary: {
-        Args: { p_month?: string; p_user_id: string }
-        Returns: Json
-      }
-      get_operations_dashboard: {
-        Args: { p_date_from?: string; p_date_to?: string; p_user_id: string }
-        Returns: Json
-      }
-      get_operations_detail: { Args: { p_user_id: string }; Returns: Json }
       get_post_reactions: {
         Args: { p_post_id: string }
         Returns: {
@@ -1963,10 +2018,6 @@ export type Database = {
           like_count: number
           love_count: number
         }[]
-      }
-      get_trading_dashboard: {
-        Args: { p_date_from?: string; p_date_to?: string; p_user_id: string }
-        Returns: Json
       }
       has_approved_access: { Args: { _user_id: string }; Returns: boolean }
       has_role: {
