@@ -1,130 +1,61 @@
 
 
-# Evolucao Comparativa + Tabela Mensal por Estrategia
+# Recriar Analise de Margem, Gain e Stop por Horario
 
 ## Resumo
 
-Criar 2 novos componentes para o dashboard `/operations` e corrigir o erro de build do `TradingDashboard.tsx`.
+Recriar o componente `MarginAnalysis` que mostra a analise de margem acumulada, ganho ideal e stop ideal por janela de horario, com o buffer de +40% de protecao no stop.
 
----
+## Novo componente: MarginAnalysis.tsx
 
-## 1. StrategyEvolution.tsx (novo componente)
+### Dados calculados (via useMemo a partir de filteredOperations)
 
-Grafico multi-linha mostrando a curva de equity acumulada de CADA estrategia separadamente, no mesmo grafico.
+Para cada hora do mercado (9h-18h):
+- **Margem acumulada**: soma de todos os resultados naquela hora
+- **Gain ideal**: media dos resultados positivos naquela hora
+- **Stop ideal**: media do valor absoluto dos resultados negativos naquela hora **x 1.4** (buffer de 40%)
 
-### Dados
-- Recebe `filteredOperations` como prop
-- Agrupa operacoes por `(operation_date, strategy)`
-- Para cada estrategia, acumula resultado dia a dia
-- Gera array de pontos: `{ date, Alaska: 1200, Apollo: 800, Ares: 500, Orion: 1500 }`
+### Cards resumo (3 cards no topo)
+1. **Margem Total** - soma de todas as margens por hora (icone DollarSign, borda emerald)
+2. **Gain Ideal** - media geral dos gains por hora (icone TrendingUp, borda cyan)
+3. **Stop Ideal** - media geral dos stops por hora com sublabel "Media + 40% margem de seguranca" (icone Shield, borda rose/red)
 
-### Visual
-- `AreaChart` com uma `Area` por estrategia (4 cores distintas)
-- Gradientes preenchidos com opacidade baixa
-- Legenda interativa
-- Tooltip premium mostrando o acumulado de cada estrategia na data
-- Card com icone `TrendingUp`, borda cyan
-- Altura do grafico: 350px
+### Grafico de barras (BarChart)
+- Eixo X: horas (9h, 10h, ..., 18h)
+- 3 barras por hora:
+  - Verde: Margem acumulada
+  - Cyan: Gain ideal
+  - Vermelho: Stop ideal (com buffer 40%)
+- Tooltip premium com os 3 valores + quantidade de operacoes na hora
+- Descricao do grafico mencionando que o stop inclui +40% de seguranca
 
-### Cores por estrategia
-- Alaska & Square: cyan-400
-- Apollo: amber-400
-- Ares: violet-400
-- Orion: emerald-400
-
----
-
-## 2. MonthlyStrategyTable.tsx (novo componente)
-
-Tabela/matriz mostrando resultado de cada estrategia em cada mes.
-
-### Dados
-- Recebe `filteredOperations` como prop
-- Agrupa por `(strategy, YYYY-MM)`
-- Gera estrutura: `{ strategy, Jan, Fev, Mar, ..., Dez, total }`
-- Linha final com TOTAL por mes
-
-### Visual
-- Tabela usando componentes `Table/TableHead/TableRow/TableCell`
-- Valores coloridos: verde (positivo), vermelho (negativo)
-- Celulas com hover mostrando tooltip (qtde operacoes, win rate)
-- Linha de total com fundo diferenciado
-- Coluna final com total por estrategia
-- Card com icone `Calendar`, borda violet
-- Scroll horizontal em mobile
-
----
-
-## 3. Correcao do build error em TradingDashboard.tsx
-
-O erro referencia `supabase.rpc('get_trading_dashboard')` que nao existe. A solucao e remover toda a logica de RPC (`fetchRPCData`, `rpcData`, `rpcLoading`) e a interface `RPCDashboardData`, ja que o componente ja recebe `operations` como prop e calcula tudo localmente.
-
----
-
-## 4. Integracao no OperationsDashboard.tsx
-
-Adicionar os 2 novos componentes no JSX, apos `RobosCharts` e antes de `AdvancedMetrics`:
-
+### Constante
 ```text
-RobosCharts
-RobosStrategyCards       <-- REATIVADO
-StrategyEvolution        <-- NOVO
-MonthlyStrategyTable     <-- NOVO
-AdvancedMetrics
-PerformanceCalendar
-Heatmap + TopDays
+STOP_SAFETY_MARGIN = 1.4
 ```
 
-Tambem reativar `RobosStrategyCards` passando `strategyStats` e `filteredOperations`.
-
----
-
-## Detalhes tecnicos
-
-### Arquivos criados
-| Arquivo | Descricao |
-|---------|-----------|
-| `src/components/operations/StrategyEvolution.tsx` | Curvas de equity comparativas |
-| `src/components/operations/MonthlyStrategyTable.tsx` | Tabela mes x estrategia |
-
-### Arquivos modificados
-| Arquivo | Alteracao |
-|---------|-----------|
-| `src/components/operations/OperationsDashboard.tsx` | Importar e renderizar novos componentes + reativar StrategyCards |
-| `src/components/trading/TradingDashboard.tsx` | Remover RPC inexistente para corrigir build error |
-
-### Props dos novos componentes
-
+### Formula do Stop
 ```text
-StrategyEvolution:
-  - filteredOperations: Operation[]
-
-MonthlyStrategyTable:
-  - filteredOperations: Operation[]
+stopIdeal = Math.round(|media_perdas_hora| * 1.4)
 ```
 
-### Dependencias
-- Recharts (ja instalado) para StrategyEvolution
-- Table components de `@/components/ui/table` para MonthlyStrategyTable
-- Framer Motion (ja instalado) para animacoes
+## Integracao no OperationsDashboard.tsx
 
-### Logica do StrategyEvolution
+- Importar `MarginAnalysis`
+- Adicionar `<MarginAnalysis filteredOperations={filteredOperations} />` apos `MonthlyStrategyTable` e antes de `AdvancedMetrics`
 
-```text
-1. Agrupar ops por (date, strategy) -> dailyByStrategy[date][strategy] += result
-2. Ordenar datas cronologicamente
-3. Para cada data, acumular resultado por estrategia
-4. Gerar array: [{ date: "01/01", "Alaska & Square": 1200, "Apollo": 800, ... }]
-5. Renderizar AreaChart com Area por estrategia
-```
+## Design visual
 
-### Logica do MonthlyStrategyTable
+Segue o padrao premium do dashboard:
+- Card com gradiente sutil e borda colorida
+- Animacao de entrada com Framer Motion
+- Cores semanticas (emerald=margem, cyan=gain, rose=stop)
+- Tooltip solido com backdrop-blur
 
-```text
-1. Extrair meses unicos (YYYY-MM) das operacoes
-2. Para cada (strategy, month): somar resultado e contar ops
-3. Gerar linhas da tabela: uma por estrategia + linha TOTAL
-4. Colunas: Estrategia | Meses encontrados | Total
-5. Celulas coloridas por valor positivo/negativo
-```
+## Arquivos
+
+| Arquivo | Acao |
+|---------|------|
+| `src/components/operations/MarginAnalysis.tsx` | **Novo** |
+| `src/components/operations/OperationsDashboard.tsx` | Importar e renderizar MarginAnalysis |
 
