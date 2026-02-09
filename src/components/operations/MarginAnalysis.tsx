@@ -21,7 +21,7 @@ const MARGIN_PER_CONTRACT = 150; // R$ 150,00 por contrato (já com deságio de 
 const MarginAnalysis = ({ filteredOperations }: MarginAnalysisProps) => {
   const { hourlyData, summaryStats } = useMemo(() => {
     if (filteredOperations.length === 0) {
-      return { hourlyData: [], summaryStats: { avgMargin: 0, peakMargin: 0, avgContractsPerDay: 0, overallAvgStop: 0, overallAvgGain: 0 } };
+      return { hourlyData: [], summaryStats: { avgMargin: 0, avgContractsPerDay: 0, overallAvgStop: 0, overallAvgGain: 0 } };
     }
 
     // Map 1: contracts by (date, hour) → margem
@@ -44,7 +44,7 @@ const MarginAnalysis = ({ filteredOperations }: MarginAnalysisProps) => {
     }
 
     const hourlyMap: Record<number, {
-      marginSum: number; marginCount: number; marginPeak: number;
+      marginSum: number; marginCount: number;
       gainSum: number; gainCount: number;
       lossSum: number; lossCount: number;
       winDays: number; lossDays: number;
@@ -55,12 +55,11 @@ const MarginAnalysis = ({ filteredOperations }: MarginAnalysisProps) => {
       for (const [hourStr, contracts] of Object.entries(hours)) {
         const hour = parseInt(hourStr);
         if (!hourlyMap[hour]) {
-          hourlyMap[hour] = { marginSum: 0, marginCount: 0, marginPeak: 0, gainSum: 0, gainCount: 0, lossSum: 0, lossCount: 0, winDays: 0, lossDays: 0 };
+          hourlyMap[hour] = { marginSum: 0, marginCount: 0, gainSum: 0, gainCount: 0, lossSum: 0, lossCount: 0, winDays: 0, lossDays: 0 };
         }
         const margin = contracts * MARGIN_PER_CONTRACT;
         hourlyMap[hour].marginSum += margin;
         hourlyMap[hour].marginCount++;
-        if (margin > hourlyMap[hour].marginPeak) hourlyMap[hour].marginPeak = margin;
       }
     }
 
@@ -68,7 +67,7 @@ const MarginAnalysis = ({ filteredOperations }: MarginAnalysisProps) => {
     const allDates = Object.keys(dateHourResultMap);
     for (let hour = 9; hour <= 17; hour++) {
       if (!hourlyMap[hour]) {
-        hourlyMap[hour] = { marginSum: 0, marginCount: 0, marginPeak: 0, gainSum: 0, gainCount: 0, lossSum: 0, lossCount: 0, winDays: 0, lossDays: 0 };
+        hourlyMap[hour] = { marginSum: 0, marginCount: 0, gainSum: 0, gainCount: 0, lossSum: 0, lossCount: 0, winDays: 0, lossDays: 0 };
       }
       for (const date of allDates) {
         const result = dateHourResultMap[date]?.[hour];
@@ -87,7 +86,6 @@ const MarginAnalysis = ({ filteredOperations }: MarginAnalysisProps) => {
 
     const data = [];
     let totalAvgMargin = 0;
-    let globalPeakMargin = 0;
     let totalAvgGain = 0;
     let totalAvgStop = 0;
     let gainHourCount = 0;
@@ -98,20 +96,17 @@ const MarginAnalysis = ({ filteredOperations }: MarginAnalysisProps) => {
       if (!h || (h.marginCount === 0 && h.gainCount === 0 && h.lossCount === 0)) continue;
 
       const avgMargin = h.marginCount > 0 ? Math.round(h.marginSum / h.marginCount) : 0;
-      const peakMargin = h.marginPeak;
       const avgGain = h.gainCount > 0 ? Math.round(h.gainSum / h.gainCount) : 0;
       const avgStop = h.lossCount > 0 ? Math.round(Math.abs(h.lossSum / h.lossCount) * STOP_SAFETY_MARGIN) : 0;
       const payoff = avgStop > 0 ? parseFloat((avgGain / avgStop).toFixed(2)) : 0;
 
       totalAvgMargin += avgMargin;
-      if (peakMargin > globalPeakMargin) globalPeakMargin = peakMargin;
       if (avgGain > 0) { totalAvgGain += avgGain; gainHourCount++; }
       if (avgStop > 0) { totalAvgStop += avgStop; stopHourCount++; }
 
       data.push({
         hour: `${hour}h`,
         avgMargin,
-        peakMargin,
         avgGain,
         avgStop,
         winDays: h.winDays,
@@ -131,7 +126,6 @@ const MarginAnalysis = ({ filteredOperations }: MarginAnalysisProps) => {
       hourlyData: data,
       summaryStats: {
         avgMargin: totalHours > 0 ? Math.round(totalAvgMargin / totalHours) : 0,
-        peakMargin: globalPeakMargin,
         avgContractsPerDay,
         overallAvgStop: stopHourCount > 0 ? Math.round(totalAvgStop / stopHourCount) : 0,
         overallAvgGain: gainHourCount > 0 ? Math.round(totalAvgGain / gainHourCount) : 0,
@@ -145,7 +139,6 @@ const MarginAnalysis = ({ filteredOperations }: MarginAnalysisProps) => {
 
   const cards = [
     { label: "Margem Média", value: formatCurrency(summaryStats.avgMargin), color: "text-cyan-600 dark:text-cyan-400", bg: "bg-cyan-500/15", icon: Shield, sub: "R$ 150/contrato x média horária" },
-    { label: "Margem Pico", value: formatCurrency(summaryStats.peakMargin), color: "text-amber-600 dark:text-amber-400", bg: "bg-amber-500/15", icon: AlertTriangle, sub: "Pior cenário histórico registrado" },
     { label: "Contratos Médios/Dia", value: String(summaryStats.avgContractsPerDay), color: "text-violet-600 dark:text-violet-400", bg: "bg-violet-500/15", icon: TrendingUp, sub: "Média de contratos por dia operado" },
     { label: "Stop Ideal", value: formatCurrency(summaryStats.overallAvgStop), color: "text-red-600 dark:text-red-400", bg: "bg-red-500/15", icon: AlertTriangle, sub: "Média + 40% margem de segurança" },
     { label: "Gain Ideal", value: formatCurrency(summaryStats.overallAvgGain), color: "text-emerald-600 dark:text-emerald-400", bg: "bg-emerald-500/15", icon: Target, sub: "Média dos resultados positivos" },
@@ -158,7 +151,6 @@ const MarginAnalysis = ({ filteredOperations }: MarginAnalysisProps) => {
       <div className="rounded-xl border border-border/50 bg-[#0a0a1a] px-4 py-3 text-xs shadow-2xl space-y-1">
         <p className="font-bold text-white text-sm">{label}</p>
         <p className="text-cyan-400">Margem Média: {formatCurrency(d.avgMargin)}</p>
-        <p className="text-amber-400">Margem Pico: {formatCurrency(d.peakMargin)}</p>
         <p className="text-emerald-400">Gain Ideal: {formatCurrency(d.avgGain)}</p>
         <p className="text-red-400">Stop Ideal: {formatCurrency(d.avgStop)}</p>
         <p className="text-muted-foreground">Dias +: {d.winDays} | Dias -: {d.lossDays}</p>
@@ -183,7 +175,7 @@ const MarginAnalysis = ({ filteredOperations }: MarginAnalysisProps) => {
   return (
     <div className="space-y-6">
       {/* Summary Cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3">
         {cards.map((card, i) => (
           <motion.div
             key={card.label}
@@ -227,7 +219,6 @@ const MarginAnalysis = ({ filteredOperations }: MarginAnalysisProps) => {
               <YAxis tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" tickFormatter={(v) => `${v}`} />
               <Tooltip content={<MarginTooltip />} />
               <Bar dataKey="avgMargin" fill="url(#marginGrad)" radius={[6, 6, 0, 0]} name="Margem Média" />
-              <Line type="monotone" dataKey="peakMargin" stroke="#f59e0b" strokeWidth={2} dot={{ r: 3, fill: "#f59e0b" }} name="Margem Pico" />
             </ComposedChart>
           </ResponsiveContainer>
         </div>
@@ -269,7 +260,6 @@ const MarginAnalysis = ({ filteredOperations }: MarginAnalysisProps) => {
       {/* Legend */}
       <div className="flex flex-wrap items-center justify-center gap-4 text-xs text-muted-foreground">
         <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded-sm bg-cyan-400" /> Margem Média</div>
-        <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded-sm bg-amber-400" /> Margem Pico</div>
         <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded-sm bg-emerald-400" /> Gain Ideal</div>
         <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded-sm bg-red-400" /> Stop Ideal</div>
       </div>
