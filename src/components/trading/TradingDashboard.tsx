@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useCallback } from "react";
+import { useState, useMemo } from "react";
 import { motion } from "framer-motion";
 import { format, parseISO, getHours, getYear } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -72,25 +72,6 @@ interface TradingDashboardProps {
   operations?: ProfitOperation[];
   strategies: Strategy[];
   userId?: string;
-}
-
-// RPC response shape from get_trading_dashboard
-interface RPCDashboardData {
-  totalOperations: number;
-  totalWins: number;
-  totalLosses: number;
-  winRate: number;
-  totalProfit: number;
-  totalLoss: number;
-  netResult: number;
-  payoff: number;
-  bestDay: { date: string; result: number } | null;
-  worstDay: { date: string; result: number } | null;
-  dailyResults: { date: string; result: number; operations: number; wins: number; losses: number }[];
-  byStrategy: { strategy: string; operations: number; wins: number; result: number }[];
-  byAsset: { asset: string; operations: number; wins: number; result: number }[];
-  byHour: { hour: number; operations: number; wins: number; result: number }[];
-  monthlyResults: { month: string; result: number; operations: number; winRate: number }[];
 }
 
 // Animated Value Component
@@ -406,54 +387,6 @@ export const TradingDashboard = ({ operations = [], strategies, userId }: Tradin
     to: undefined
   });
 
-  // RPC-based data fetching (when userId is provided)
-  const [rpcData, setRpcData] = useState<RPCDashboardData | null>(null);
-  const [rpcLoading, setRpcLoading] = useState(false);
-
-  const fetchRPCData = useCallback(async () => {
-    if (!userId) return;
-    setRpcLoading(true);
-    try {
-      let dateFrom: string | null = null;
-      let dateTo: string | null = null;
-      const now = new Date();
-
-      switch (periodFilter) {
-        case "7d": dateFrom = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString(); break;
-        case "30d": dateFrom = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString(); break;
-        case "90d": dateFrom = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000).toISOString(); break;
-        case "ytd": dateFrom = new Date(now.getFullYear(), 0, 1).toISOString(); break;
-        case "custom":
-          if (customDateRange.from) dateFrom = customDateRange.from.toISOString();
-          if (customDateRange.to) {
-            const end = new Date(customDateRange.to);
-            end.setHours(23, 59, 59, 999);
-            dateTo = end.toISOString();
-          }
-          break;
-      }
-
-      const { data, error } = await supabase.rpc('get_trading_dashboard', {
-        p_user_id: userId,
-        p_date_from: dateFrom,
-        p_date_to: dateTo,
-      });
-
-      if (!error && data) {
-        setRpcData(data as unknown as RPCDashboardData);
-      }
-    } catch (err) {
-      console.error('Error fetching trading dashboard RPC:', err);
-    } finally {
-      setRpcLoading(false);
-    }
-  }, [userId, periodFilter, customDateRange]);
-
-  useEffect(() => {
-    if (userId) {
-      fetchRPCData();
-    }
-  }, [fetchRPCData]);
 
   // Filter operations
   const filteredOperations = useMemo(() => {
@@ -489,232 +422,9 @@ export const TradingDashboard = ({ operations = [], strategies, userId }: Tradin
     return filtered;
   }, [operations, periodFilter, strategyFilter, customDateRange]);
 
-  // Calculate all statistics - from RPC data or raw operations
+  // Calculate all statistics from raw operations
   const stats = useMemo(() => {
-    // === RPC PATH: compute stats from pre-aggregated data ===
-    if (rpcData && userId) {
-      const dr = rpcData.dailyResults || [];
-      const totalResult = rpcData.netResult || 0;
-
-      if (dr.length === 0 && rpcData.totalOperations === 0) {
-        return {
-          totalResult: 0, totalOperations: 0, totalDays: 0,
-          winRate: 0, payoff: 0, consistency: 0,
-          positiveDays: 0, negativeDays: 0, positiveMonths: 0, negativeMonths: 0,
-          bestTrade: 0, worstTrade: 0, monthlyAvg: 0,
-          stdDev: 0, volatility: 0, currentStreak: 0, streakType: null as 'W' | 'L' | null,
-          equityCurve: [] as { index: number; result: number; total: number; date: string }[],
-          maxBalance: 0, minBalance: 0,
-          maxDrawdown: 0, maxDrawdownDuration: 0,
-          profitFactor: 0, expectancy: 0, sharpeRatio: 0, recoveryFactor: 0,
-          monthlyData: [] as { month: string; monthKey: string; result: number }[],
-          yearlyData: [] as { year: string; result: number }[],
-          hourlyData: [] as any[],
-          calendarData: [] as any[],
-          bestDays: [] as { date: string; result: number; count: number }[],
-          worstDays: [] as { date: string; result: number; count: number }[],
-          dayResults: {} as Record<string, { result: number; count: number }>,
-          weekdayHourData: {} as Record<string, { result: number; count: number; winCount: number; lossCount: number }>
-        };
-      }
-
-      // Daily-level aggregations
-      const dayResults: Record<string, { result: number; count: number }> = {};
-      const dailyValues: number[] = [];
-      dr.forEach(d => {
-        dayResults[d.date] = { result: d.result, count: d.operations };
-        dailyValues.push(d.result);
-      });
-
-      const positiveDays = dailyValues.filter(v => v > 0).length;
-      const negativeDays = dailyValues.filter(v => v < 0).length;
-      const totalDays = dr.length;
-      const consistency = totalDays > 0 ? (positiveDays / totalDays * 100) : 0;
-
-      // Streak from daily results
-      const sortedDays = [...dr].sort((a, b) => a.date.localeCompare(b.date));
-      let currentStreak = 0;
-      let streakType: 'W' | 'L' | null = null;
-      for (let i = sortedDays.length - 1; i >= 0; i--) {
-        const r = sortedDays[i].result;
-        if (i === sortedDays.length - 1) {
-          streakType = r > 0 ? 'W' : r < 0 ? 'L' : null;
-          currentStreak = r !== 0 ? 1 : 0;
-        } else {
-          const t = r > 0 ? 'W' : r < 0 ? 'L' : null;
-          if (t === streakType && t !== null) currentStreak++;
-          else break;
-        }
-      }
-
-      // Equity curve from daily results
-      let cumulative = 0;
-      let maxBalance = 0;
-      let minBalance = 0;
-      let peak = 0;
-      let maxDrawdown = 0;
-      let maxDrawdownDuration = 0;
-      let currentDrawdownDuration = 0;
-
-      const fullEquityCurve = sortedDays.map((d, idx) => {
-        cumulative += d.result;
-        maxBalance = Math.max(maxBalance, cumulative);
-        minBalance = Math.min(minBalance, cumulative);
-        if (cumulative > peak) {
-          peak = cumulative;
-          if (currentDrawdownDuration > maxDrawdownDuration) maxDrawdownDuration = currentDrawdownDuration;
-          currentDrawdownDuration = 0;
-        } else {
-          currentDrawdownDuration++;
-          const dd = peak - cumulative;
-          if (dd > maxDrawdown) maxDrawdown = dd;
-        }
-        return {
-          index: idx + 1,
-          result: d.result,
-          total: cumulative,
-          date: format(parseISO(d.date), 'dd/MM', { locale: ptBR })
-        };
-      });
-
-      const MAX_CHART_POINTS = 365;
-      const equityCurve = fullEquityCurve.length > MAX_CHART_POINTS
-        ? fullEquityCurve.filter((_, i) => i % Math.ceil(fullEquityCurve.length / MAX_CHART_POINTS) === 0 || i === fullEquityCurve.length - 1)
-        : fullEquityCurve;
-
-      // Derived metrics
-      const avgWin = rpcData.totalWins > 0 ? rpcData.totalProfit / rpcData.totalWins : 0;
-      const avgLoss = rpcData.totalLosses > 0 ? Math.abs(rpcData.totalLoss) / rpcData.totalLosses : 0;
-      const profitFactor = Math.abs(rpcData.totalLoss) > 0 ? rpcData.totalProfit / Math.abs(rpcData.totalLoss) : rpcData.totalProfit > 0 ? Infinity : 0;
-      const expectancy = rpcData.totalOperations > 0
-        ? (rpcData.winRate / 100) * avgWin - ((100 - rpcData.winRate) / 100) * avgLoss
-        : 0;
-
-      // Std dev and Sharpe from daily results
-      const dailyMean = totalDays > 0 ? dailyValues.reduce((s, v) => s + v, 0) / totalDays : 0;
-      const dailyVariance = totalDays > 0 ? dailyValues.reduce((sum, r) => sum + Math.pow(r - dailyMean, 2), 0) / totalDays : 0;
-      const dailyStdDev = Math.sqrt(dailyVariance);
-      const sharpeRatio = dailyStdDev > 0 ? (dailyMean / dailyStdDev) * Math.sqrt(252) : 0;
-
-      // Per-operation std dev approximation (use daily as proxy)
-      const mean = rpcData.totalOperations > 0 ? totalResult / rpcData.totalOperations : 0;
-      const stdDev = dailyStdDev; // approximation
-      const volatility = mean !== 0 ? (stdDev / Math.abs(mean)) * 100 : 0;
-      const recoveryFactor = maxDrawdown > 0 ? totalResult / maxDrawdown : 0;
-
-      // Monthly data
-      const mr = rpcData.monthlyResults || [];
-      const monthlyData = mr.map(m => ({
-        month: format(parseISO(m.month + '-01'), 'MMM/yy', { locale: ptBR }),
-        monthKey: m.month,
-        result: m.result,
-      }));
-      const positiveMonths = mr.filter(m => m.result > 0).length;
-      const negativeMonths = mr.filter(m => m.result < 0).length;
-      const monthlyAvg = mr.length > 0 ? mr.reduce((s, m) => s + m.result, 0) / mr.length : 0;
-
-      // Yearly data from monthly
-      const yearAgg: Record<string, number> = {};
-      mr.forEach(m => {
-        const year = m.month.substring(0, 4);
-        yearAgg[year] = (yearAgg[year] || 0) + m.result;
-      });
-      const yearlyData = Object.entries(yearAgg).map(([year, result]) => ({ year, result })).sort((a, b) => a.year.localeCompare(b.year));
-
-      // Hourly data
-      const bh = rpcData.byHour || [];
-      const marketHours = [9, 10, 11, 12, 13, 14, 15, 16, 17, 18];
-      const hourMap: Record<number, typeof bh[0]> = {};
-      bh.forEach(h => { hourMap[h.hour] = h; });
-      const hourlyData = marketHours.map(hour => {
-        const h = hourMap[hour];
-        const ops = h?.operations || 0;
-        const wins = h?.wins || 0;
-        const losses = ops - wins;
-        const result = h?.result || 0;
-        return {
-          hour: `${hour}h`,
-          result,
-          count: ops,
-          wins: result > 0 ? result : 0, // approx
-          losses: result < 0 ? Math.abs(result) : 0,
-          winCount: wins,
-          lossCount: losses,
-          winRate: ops > 0 ? (wins / ops) * 100 : 0,
-          avg: ops > 0 ? result / ops : 0
-        };
-      });
-
-      // Calendar data from daily results
-      const calendarData = dr.map(d => ({
-        date: d.date,
-        result: d.result,
-        count: d.operations,
-        dayOfWeek: format(parseISO(d.date), 'EEE', { locale: ptBR }),
-        day: format(parseISO(d.date), 'dd'),
-        month: format(parseISO(d.date), 'MMM', { locale: ptBR })
-      }));
-
-      // Best/worst days
-      const rankedDays = dr.map(d => ({ date: d.date, result: d.result, count: d.operations })).sort((a, b) => b.result - a.result);
-      const bestDays = rankedDays.slice(0, 5);
-      const worstDays = rankedDays.slice(-5).reverse();
-
-      // Best/worst trade approximation (use best/worst day)
-      const bestTrade = rpcData.bestDay?.result || 0;
-      const worstTrade = rpcData.worstDay?.result || 0;
-
-      // Weekday-hour heatmap from daily results (weekday only, no per-hour breakdown)
-      const weekdayHourData: Record<string, { result: number; count: number; winCount: number; lossCount: number }> = {};
-      dr.forEach(d => {
-        const date = new Date(d.date + 'T12:00:00');
-        const weekday = date.getDay();
-        // Distribute across market hours proportionally
-        bh.forEach(h => {
-          const key = `${weekday}-${h.hour}`;
-          if (!weekdayHourData[key]) weekdayHourData[key] = { result: 0, count: 0, winCount: 0, lossCount: 0 };
-        });
-      });
-
-      return {
-        totalResult,
-        totalOperations: rpcData.totalOperations,
-        totalDays,
-        winRate: rpcData.winRate,
-        payoff: rpcData.payoff,
-        consistency,
-        positiveDays,
-        negativeDays,
-        positiveMonths,
-        negativeMonths,
-        bestTrade,
-        worstTrade,
-        monthlyAvg,
-        stdDev,
-        volatility,
-        currentStreak,
-        streakType,
-        equityCurve,
-        maxBalance,
-        minBalance,
-        maxDrawdown,
-        maxDrawdownDuration,
-        profitFactor,
-        expectancy,
-        sharpeRatio,
-        recoveryFactor,
-        monthlyData,
-        yearlyData,
-        hourlyData,
-        calendarData,
-        bestDays,
-        worstDays,
-        dayResults,
-        weekdayHourData
-      };
-    }
-
-    // === LEGACY PATH: compute from raw operations ===
+    // === Compute from raw operations ===
     const ops = filteredOperations;
     const n = ops.length;
 
@@ -986,24 +696,13 @@ export const TradingDashboard = ({ operations = [], strategies, userId }: Tradin
       dayResults,
       weekdayHourData
     };
-  }, [filteredOperations, rpcData, userId]);
+  }, [filteredOperations]);
 
   const formatCurrency = (value: number) => {
     return value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
   };
 
-  if (rpcLoading) {
-    return (
-      <div className="flex items-center justify-center py-24">
-        <div className="relative">
-          <div className="w-20 h-20 border-4 border-primary/20 rounded-full" />
-          <div className="absolute top-0 left-0 w-20 h-20 border-4 border-transparent border-t-primary rounded-full animate-spin" />
-        </div>
-      </div>
-    );
-  }
-
-  if (!userId && operations.length === 0 || userId && !rpcData) {
+  if (operations.length === 0) {
     return (
       <motion.div
         initial={{ opacity: 0 }}
