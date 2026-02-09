@@ -1,26 +1,57 @@
 
 
-# Remover Card "Margem Pico"
+# Comparativo de Performance por Estrategia (com +40% no Stop)
 
-## Alteracao
+## Resumo
+
+Implementar o grafico comparativo de performance por estrategia ja aprovado, aplicando o multiplicador de +40% (STOP_SAFETY_MARGIN = 1.4) nos resultados negativos (stops) de cada estrategia por hora -- a mesma logica ja usada no grafico de Stop e Gain Ideal.
+
+## Alteracoes
 
 ### Arquivo: `src/components/operations/MarginAnalysis.tsx`
 
-Remover o segundo card do array `cards` (Margem Pico, cor amber, icone AlertTriangle) e ajustar o grid de 5 para 4 cards.
+### 1. Novo calculo no useMemo
 
-### Mudancas especificas:
+Agrupar operacoes por `(strategy, date, hour)`, somar resultados por hora/dia, e calcular a media por hora para cada estrategia. Para resultados negativos (stop), multiplicar por 1.4 (+40% margem de seguranca).
 
-1. **Remover do array `cards`** (linha ~133): Remover o objeto `{ label: "Margem Pico", value: formatCurrency(summaryStats.peakMargin), ... }`
+```text
+Para cada operacao:
+  strategyDateHourMap[strategy][date][hour] += result
 
-2. **Remover do `summaryStats`**: Remover `peakMargin` do retorno e do calculo de `globalPeakMargin`
+Para cada strategy, para cada hour (9-17):
+  media = soma dos resultados / dias com operacao
+  se media < 0: media = media * 1.4  (aplica +40%)
+```
 
-3. **Remover dos dados horarios**: Remover `peakMargin` do objeto `data.push()`
+Retornar `strategyHourlyData` e `activeStrategies`.
 
-4. **Remover do Grafico 1**: Remover a `<Line>` de `peakMargin` do ComposedChart (linha do pico amber)
+### 2. Cores fixas por estrategia
 
-5. **Remover do Tooltip**: Remover a linha "Margem Pico" do `MarginTooltip`
+```text
+Alaska & Square -> #22d3ee (cyan)
+Apollo          -> #a78bfa (violet)
+Ares            -> #f97316 (orange)
+Orion           -> #34d399 (emerald)
+```
 
-6. **Remover da Legenda**: Remover o item "Margem Pico" (quadrado amber)
+### 3. Novo grafico: LineChart comparativo
 
-7. **Ajustar grid**: De `grid-cols-2 sm:grid-cols-3 lg:grid-cols-5` para `grid-cols-2 sm:grid-cols-2 lg:grid-cols-4`
+Inserido entre o grafico de Margem por Hora e o de Stop/Gain:
+
+- `LineChart` com uma `<Line>` por estrategia presente nos dados
+- `strokeWidth={2.5}`, dots com raio 4
+- Tooltip premium (fundo `#0a0a1a`) com valores coloridos (verde positivo, vermelho negativo)
+- Titulo: "Performance por Estrategia"
+- Subtitulo: "Resultado medio por hora e estrategia (stops com +40% de seguranca)"
+- Borda: `border-amber-500/20`
+
+### 4. Imports e legenda
+
+- Adicionar `LineChart` ao import do recharts
+- Expandir legenda com as cores das estrategias
+
+### Impacto
+- Nenhuma alteracao nos cards ou graficos existentes
+- Novo bloco de calculo dentro do mesmo useMemo
+- Valores de stop por estrategia ficam 40% maiores (mais conservadores)
 
