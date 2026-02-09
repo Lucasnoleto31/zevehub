@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { motion } from "framer-motion";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Line, ComposedChart, Legend } from "recharts";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Line, ComposedChart, Legend, LineChart } from "recharts";
 import { Shield, TrendingUp, AlertTriangle, Target } from "lucide-react";
 
 interface Operation {
@@ -18,16 +18,25 @@ interface MarginAnalysisProps {
 const STOP_SAFETY_MARGIN = 1.4; // +40% margem de segurança
 const MARGIN_PER_CONTRACT = 150; // R$ 150,00 por contrato (já com deságio de 30%)
 
+const STRATEGY_COLORS: Record<string, string> = {
+  "Alaska & Square": "#22d3ee",
+  "Apollo": "#a78bfa",
+  "Ares": "#f97316",
+  "Orion": "#34d399",
+};
+
 const MarginAnalysis = ({ filteredOperations }: MarginAnalysisProps) => {
-  const { hourlyData, summaryStats } = useMemo(() => {
+  const { hourlyData, summaryStats, strategyHourlyData, activeStrategies } = useMemo(() => {
     if (filteredOperations.length === 0) {
-      return { hourlyData: [], summaryStats: { avgMargin: 0, avgContractsPerDay: 0, overallAvgStop: 0, overallAvgGain: 0 } };
+      return { hourlyData: [], summaryStats: { avgMargin: 0, avgContractsPerDay: 0, overallAvgStop: 0, overallAvgGain: 0 }, strategyHourlyData: [], activeStrategies: [] };
     }
 
     // Map 1: contracts by (date, hour) → margem
     const dateHourContractMap: Record<string, Record<number, number>> = {};
     // Map 2: results by (date, hour) → stop/gain
     const dateHourResultMap: Record<string, Record<number, number>> = {};
+    // Map 3: results by (strategy, date, hour)
+    const strategyDateHourMap: Record<string, Record<string, Record<number, number>>> = {};
 
     for (const op of filteredOperations) {
       const date = op.operation_date;
@@ -41,6 +50,12 @@ const MarginAnalysis = ({ filteredOperations }: MarginAnalysisProps) => {
       // Results map
       if (!dateHourResultMap[date]) dateHourResultMap[date] = {};
       dateHourResultMap[date][hour] = (dateHourResultMap[date][hour] || 0) + op.result;
+
+      // Strategy results map
+      const strat = op.strategy || "Sem Estratégia";
+      if (!strategyDateHourMap[strat]) strategyDateHourMap[strat] = {};
+      if (!strategyDateHourMap[strat][date]) strategyDateHourMap[strat][date] = {};
+      strategyDateHourMap[strat][date][hour] = (strategyDateHourMap[strat][date][hour] || 0) + op.result;
     }
 
     const hourlyMap: Record<number, {
@@ -122,6 +137,32 @@ const MarginAnalysis = ({ filteredOperations }: MarginAnalysisProps) => {
     const totalContracts = filteredOperations.reduce((sum, op) => sum + op.contracts, 0);
     const avgContractsPerDay = uniqueDays > 0 ? Math.round((totalContracts / uniqueDays) * 10) / 10 : 0;
 
+    // === Strategy performance by hour ===
+    const strategies = Object.keys(strategyDateHourMap).filter(s => STRATEGY_COLORS[s]);
+    const stratData: Record<string, number>[] = [];
+
+    for (let hour = 9; hour <= 17; hour++) {
+      const row: Record<string, number | string> = { hour: `${hour}h` } as any;
+      let hasData = false;
+      for (const strat of strategies) {
+        let sum = 0;
+        let count = 0;
+        for (const [, hours] of Object.entries(strategyDateHourMap[strat])) {
+          if (hours[hour] !== undefined) {
+            sum += hours[hour];
+            count++;
+          }
+        }
+        if (count > 0) {
+          let avg = Math.round(sum / count);
+          if (avg < 0) avg = Math.round(avg * STOP_SAFETY_MARGIN);
+          row[strat] = avg;
+          hasData = true;
+        }
+      }
+      if (hasData) stratData.push(row as any);
+    }
+
     return {
       hourlyData: data,
       summaryStats: {
@@ -130,6 +171,8 @@ const MarginAnalysis = ({ filteredOperations }: MarginAnalysisProps) => {
         overallAvgStop: stopHourCount > 0 ? Math.round(totalAvgStop / stopHourCount) : 0,
         overallAvgGain: gainHourCount > 0 ? Math.round(totalAvgGain / gainHourCount) : 0,
       },
+      strategyHourlyData: stratData,
+      activeStrategies: strategies,
     };
   }, [filteredOperations]);
 
@@ -224,7 +267,55 @@ const MarginAnalysis = ({ filteredOperations }: MarginAnalysisProps) => {
         </div>
       </motion.div>
 
-      {/* Chart 2: Stop vs Gain by hour */}
+      {/* Chart 2: Strategy Performance by hour */}
+      {strategyHourlyData.length > 0 && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.35 }}
+          className="rounded-2xl p-6 bg-gradient-to-br from-card via-card/95 to-accent/5 border border-amber-500/20"
+        >
+          <h3 className="text-base font-bold mb-1">Performance por Estratégia</h3>
+          <p className="text-xs text-muted-foreground mb-4">Resultado médio por hora e estratégia (stops com +40% de segurança)</p>
+          <div style={{ height: 280 }}>
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={strategyHourlyData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.3} />
+                <XAxis dataKey="hour" tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" />
+                <YAxis tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" tickFormatter={(v) => `${v}`} />
+                <Tooltip
+                  content={({ active, payload, label }: any) => {
+                    if (!active || !payload?.length) return null;
+                    return (
+                      <div className="rounded-xl border border-border/50 bg-[#0a0a1a] px-4 py-3 text-xs shadow-2xl space-y-1">
+                        <p className="font-bold text-white text-sm">{label}</p>
+                        {payload.map((p: any) => (
+                          <p key={p.dataKey} style={{ color: p.color }}>
+                            {p.dataKey}: <span className={p.value >= 0 ? "text-emerald-400" : "text-red-400"}>{formatCurrency(p.value)}</span>
+                          </p>
+                        ))}
+                      </div>
+                    );
+                  }}
+                />
+                {activeStrategies.map((strat) => (
+                  <Line
+                    key={strat}
+                    type="monotone"
+                    dataKey={strat}
+                    stroke={STRATEGY_COLORS[strat]}
+                    strokeWidth={2.5}
+                    dot={{ r: 4, fill: STRATEGY_COLORS[strat] }}
+                    connectNulls
+                  />
+                ))}
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        </motion.div>
+      )}
+
+      {/* Chart 3: Stop vs Gain by hour */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -262,6 +353,13 @@ const MarginAnalysis = ({ filteredOperations }: MarginAnalysisProps) => {
         <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded-sm bg-cyan-400" /> Margem Média</div>
         <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded-sm bg-emerald-400" /> Gain Ideal</div>
         <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded-sm bg-red-400" /> Stop Ideal</div>
+        <div className="border-l border-border/50 h-4" />
+        {activeStrategies.map((strat) => (
+          <div key={strat} className="flex items-center gap-1.5">
+            <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: STRATEGY_COLORS[strat] }} />
+            {strat}
+          </div>
+        ))}
       </div>
     </div>
   );
