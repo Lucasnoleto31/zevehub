@@ -8,6 +8,7 @@ import RobosFilters from "./RobosFilters";
 import RobosQuickStats from "./RobosQuickStats";
 import RobosCharts from "./RobosCharts";
 import RobosStrategyCards from "./RobosStrategyCards";
+import MarginAnalysis from "./MarginAnalysis";
 
 import PerformanceHeatmap from "@/components/dashboard/PerformanceHeatmap";
 import TopPerformanceDays from "@/components/dashboard/TopPerformanceDays";
@@ -643,6 +644,8 @@ const OperationsDashboard = ({ userId }: OperationsDashboardProps) => {
         hourDistribution={hourDistribution}
       />
 
+      {/* Margin Analysis with Stop/Gain */}
+      <MarginAnalysis filteredOperations={filteredOperations} />
 
       {/* Advanced Metrics */}
       <AdvancedMetrics operations={filteredOperations} />
