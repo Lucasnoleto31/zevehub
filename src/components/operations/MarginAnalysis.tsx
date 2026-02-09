@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { motion } from "framer-motion";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Line, ComposedChart, Legend } from "recharts";
-import { Shield, TrendingUp, Clock, AlertTriangle, Target } from "lucide-react";
+import { Shield, TrendingUp, AlertTriangle, Target } from "lucide-react";
 
 interface Operation {
   operation_date: string;
@@ -16,11 +16,12 @@ interface MarginAnalysisProps {
 }
 
 const STOP_SAFETY_MARGIN = 1.4; // +40% margem de segurança
+const MARGIN_PER_CONTRACT = 150; // R$ 150,00 por contrato (já com deságio de 30%)
 
 const MarginAnalysis = ({ filteredOperations }: MarginAnalysisProps) => {
   const { hourlyData, summaryStats } = useMemo(() => {
     if (filteredOperations.length === 0) {
-      return { hourlyData: [], summaryStats: { avgMargin: 0, peakMargin: 0, totalHours: 0, overallAvgStop: 0, overallAvgGain: 0 } };
+      return { hourlyData: [], summaryStats: { avgMargin: 0, peakMargin: 0, avgContractsPerDay: 0, overallAvgStop: 0, overallAvgGain: 0 } };
     }
 
     // Map 1: contracts by (date, hour) → margem
@@ -56,7 +57,7 @@ const MarginAnalysis = ({ filteredOperations }: MarginAnalysisProps) => {
         if (!hourlyMap[hour]) {
           hourlyMap[hour] = { marginSum: 0, marginCount: 0, marginPeak: 0, gainSum: 0, gainCount: 0, lossSum: 0, lossCount: 0, winDays: 0, lossDays: 0 };
         }
-        const margin = contracts * 100; // simplified margin calc
+        const margin = contracts * MARGIN_PER_CONTRACT;
         hourlyMap[hour].marginSum += margin;
         hourlyMap[hour].marginCount++;
         if (margin > hourlyMap[hour].marginPeak) hourlyMap[hour].marginPeak = margin;
@@ -121,12 +122,17 @@ const MarginAnalysis = ({ filteredOperations }: MarginAnalysisProps) => {
 
     const totalHours = data.length;
 
+    // Calculate avg contracts per day
+    const uniqueDays = new Set(filteredOperations.map(op => op.operation_date)).size;
+    const totalContracts = filteredOperations.reduce((sum, op) => sum + op.contracts, 0);
+    const avgContractsPerDay = uniqueDays > 0 ? Math.round((totalContracts / uniqueDays) * 10) / 10 : 0;
+
     return {
       hourlyData: data,
       summaryStats: {
         avgMargin: totalHours > 0 ? Math.round(totalAvgMargin / totalHours) : 0,
         peakMargin: globalPeakMargin,
-        totalHours,
+        avgContractsPerDay,
         overallAvgStop: stopHourCount > 0 ? Math.round(totalAvgStop / stopHourCount) : 0,
         overallAvgGain: gainHourCount > 0 ? Math.round(totalAvgGain / gainHourCount) : 0,
       },
@@ -138,9 +144,9 @@ const MarginAnalysis = ({ filteredOperations }: MarginAnalysisProps) => {
   const formatCurrency = (v: number) => `R$ ${v.toLocaleString("pt-BR")}`;
 
   const cards = [
-    { label: "Margem Média", value: formatCurrency(summaryStats.avgMargin), color: "text-cyan-600 dark:text-cyan-400", bg: "bg-cyan-500/15", icon: Shield, sub: "Margem média por hora" },
-    { label: "Margem Pico", value: formatCurrency(summaryStats.peakMargin), color: "text-amber-600 dark:text-amber-400", bg: "bg-amber-500/15", icon: AlertTriangle, sub: "Maior pico registrado" },
-    { label: "Total Horas", value: String(summaryStats.totalHours), color: "text-violet-600 dark:text-violet-400", bg: "bg-violet-500/15", icon: Clock, sub: "Janelas analisadas" },
+    { label: "Margem Média", value: formatCurrency(summaryStats.avgMargin), color: "text-cyan-600 dark:text-cyan-400", bg: "bg-cyan-500/15", icon: Shield, sub: "R$ 150/contrato x média horária" },
+    { label: "Margem Pico", value: formatCurrency(summaryStats.peakMargin), color: "text-amber-600 dark:text-amber-400", bg: "bg-amber-500/15", icon: AlertTriangle, sub: "Pior cenário histórico registrado" },
+    { label: "Contratos Médios/Dia", value: String(summaryStats.avgContractsPerDay), color: "text-violet-600 dark:text-violet-400", bg: "bg-violet-500/15", icon: TrendingUp, sub: "Média de contratos por dia operado" },
     { label: "Stop Ideal", value: formatCurrency(summaryStats.overallAvgStop), color: "text-red-600 dark:text-red-400", bg: "bg-red-500/15", icon: AlertTriangle, sub: "Média + 40% margem de segurança" },
     { label: "Gain Ideal", value: formatCurrency(summaryStats.overallAvgGain), color: "text-emerald-600 dark:text-emerald-400", bg: "bg-emerald-500/15", icon: Target, sub: "Média dos resultados positivos" },
   ];
