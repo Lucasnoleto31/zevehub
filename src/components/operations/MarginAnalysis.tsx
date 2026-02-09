@@ -347,58 +347,6 @@ const MarginAnalysis = ({ filteredOperations }: MarginAnalysisProps) => {
         </div>
       </motion.div>
 
-      {/* Chart 2: Strategy Performance by hour */}
-      {strategyHourlyData.length > 0 && (
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.35 }}
-          className="rounded-2xl p-6 bg-gradient-to-br from-card via-card/95 to-accent/5 border border-amber-500/20"
-        >
-          <h3 className="text-base font-bold mb-1">Performance por Estratégia</h3>
-          <p className="text-xs text-muted-foreground mb-4">
-            Resultado médio por hora e estratégia (stops com +40% de segurança)
-          </p>
-          <div style={{ height: 280 }}>
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={strategyHourlyData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.3} />
-                <XAxis dataKey="hour" tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" />
-                <YAxis tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" tickFormatter={(v) => `${v}`} />
-                <Tooltip
-                  content={({ active, payload, label }: any) => {
-                    if (!active || !payload?.length) return null;
-                    return (
-                      <div className="rounded-xl border border-border/50 bg-[#0a0a1a] px-4 py-3 text-xs shadow-2xl space-y-1">
-                        <p className="font-bold text-white text-sm">{label}</p>
-                        {payload.map((p: any) => (
-                          <p key={p.dataKey} style={{ color: p.color }}>
-                            {p.dataKey}:{" "}
-                            <span className={p.value >= 0 ? "text-emerald-400" : "text-red-400"}>
-                              {formatCurrency(p.value)}
-                            </span>
-                          </p>
-                        ))}
-                      </div>
-                    );
-                  }}
-                />
-                {activeStrategies.map((strat) => (
-                  <Line
-                    key={strat}
-                    type="monotone"
-                    dataKey={strat}
-                    stroke={STRATEGY_COLORS[strat]}
-                    strokeWidth={2.5}
-                    dot={{ r: 4, fill: STRATEGY_COLORS[strat] }}
-                    connectNulls
-                  />
-                ))}
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
-        </motion.div>
-      )}
 
       {/* Chart 3: Stop vs Gain by hour */}
       <motion.div
