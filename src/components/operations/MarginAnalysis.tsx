@@ -8,10 +8,10 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-  Line,
   ComposedChart,
-  Legend,
-  LineChart,
+  AreaChart,
+  Area,
+  ReferenceLine,
 } from "recharts";
 import { Shield, TrendingUp, AlertTriangle, Target } from "lucide-react";
 
@@ -38,13 +38,14 @@ const STRATEGY_COLORS: Record<string, string> = {
 };
 
 const MarginAnalysis = ({ filteredOperations }: MarginAnalysisProps) => {
-  const { hourlyData, summaryStats, strategyHourlyData, activeStrategies } = useMemo(() => {
+  const { hourlyData, summaryStats, activeStrategies, equityData, totalAccumulated } = useMemo(() => {
     if (filteredOperations.length === 0) {
       return {
         hourlyData: [],
         summaryStats: { avgMargin: 0, avgContractsPerDay: 0, overallAvgStop: 0, overallAvgGain: 0 },
-        strategyHourlyData: [],
         activeStrategies: [],
+        equityData: [],
+        totalAccumulated: 0,
       };
     }
 
@@ -185,31 +186,54 @@ const MarginAnalysis = ({ filteredOperations }: MarginAnalysisProps) => {
     const totalContracts = filteredOperations.reduce((sum, op) => sum + op.contracts, 0);
     const avgContractsPerDay = uniqueDays > 0 ? Math.round((totalContracts / uniqueDays) * 10) / 10 : 0;
 
-    // === Strategy performance by hour ===
+    // === Equity curve by strategy ===
     const strategies = Object.keys(strategyDateHourMap).filter((s) => STRATEGY_COLORS[s]);
-    const stratData: Record<string, number>[] = [];
 
-    for (let hour = 9; hour <= 17; hour++) {
-      const row: Record<string, number | string> = { hour: `${hour}h` } as any;
-      let hasData = false;
+    const strategyDateMap: Record<string, Record<string, number>> = {};
+    for (const op of filteredOperations) {
+      const strat = op.strategy || "Sem Estratégia";
+      if (!STRATEGY_COLORS[strat]) continue;
+      if (!strategyDateMap[strat]) strategyDateMap[strat] = {};
+      strategyDateMap[strat][op.operation_date] = (strategyDateMap[strat][op.operation_date] || 0) + op.result;
+    }
+
+    // Collect all unique dates across strategies
+    const allEquityDates = new Set<string>();
+    for (const strat of strategies) {
+      if (strategyDateMap[strat]) {
+        for (const d of Object.keys(strategyDateMap[strat])) allEquityDates.add(d);
+      }
+    }
+    const sortedDates = Array.from(allEquityDates).sort();
+
+    // Build cumulative data
+    const accumulators: Record<string, number> = {};
+    strategies.forEach((s) => (accumulators[s] = 0));
+
+    let rawEquity: Record<string, any>[] = sortedDates.map((date) => {
+      const [, m, d] = date.split("-");
+      const row: Record<string, any> = { date: `${d}/${m}` };
       for (const strat of strategies) {
-        let sum = 0;
-        let count = 0;
-        for (const [, hours] of Object.entries(strategyDateHourMap[strat])) {
-          if (hours[hour] !== undefined) {
-            sum += hours[hour];
-            count++;
-          }
-        }
-        if (count > 0) {
-          let avg = Math.round(sum / count);
-          if (avg < 0) avg = Math.round(avg * STOP_SAFETY_MARGIN);
-          row[strat] = avg;
-          hasData = true;
+        accumulators[strat] += strategyDateMap[strat]?.[date] || 0;
+        row[strat] = Math.round(accumulators[strat]);
+      }
+      return row;
+    });
+
+    // Downsample if > 365 points
+    if (rawEquity.length > 365) {
+      const step = rawEquity.length / 365;
+      const sampled: typeof rawEquity = [];
+      for (let i = 0; i < rawEquity.length; i++) {
+        if (i === 0 || i === rawEquity.length - 1 || Math.floor(i / step) !== Math.floor((i - 1) / step)) {
+          sampled.push(rawEquity[i]);
         }
       }
-      if (hasData) stratData.push(row as any);
+      rawEquity = sampled;
     }
+
+    const lastRow = rawEquity.length > 0 ? rawEquity[rawEquity.length - 1] : {};
+    const total = strategies.reduce((s, strat) => s + (lastRow[strat] || 0), 0);
 
     return {
       hourlyData: data,
@@ -219,8 +243,9 @@ const MarginAnalysis = ({ filteredOperations }: MarginAnalysisProps) => {
         overallAvgStop: stopHourCount > 0 ? Math.round(totalAvgStop / stopHourCount) : 0,
         overallAvgGain: gainHourCount > 0 ? Math.round(totalAvgGain / gainHourCount) : 0,
       },
-      strategyHourlyData: stratData,
       activeStrategies: strategies,
+      equityData: rawEquity,
+      totalAccumulated: total,
     };
   }, [filteredOperations]);
 
@@ -347,6 +372,80 @@ const MarginAnalysis = ({ filteredOperations }: MarginAnalysisProps) => {
         </div>
       </motion.div>
 
+
+      {/* Chart 2: Equity Curve by Strategy */}
+      {equityData.length > 0 && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.35 }}
+          className="rounded-2xl p-6 bg-gradient-to-br from-card via-card/95 to-accent/5 border border-emerald-500/20"
+        >
+          <div className="flex items-center justify-between mb-1">
+            <div className="flex items-center gap-2">
+              <div className="p-2 rounded-xl bg-emerald-500/15">
+                <TrendingUp className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+              </div>
+              <div>
+                <h3 className="text-base font-bold">Curva de Performance</h3>
+                <p className="text-xs text-muted-foreground">Evolução do resultado acumulado por estratégia</p>
+              </div>
+            </div>
+            <span className={`text-xl font-black tracking-tight ${totalAccumulated >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-red-600 dark:text-red-400"}`}>
+              {formatCurrency(totalAccumulated)}
+            </span>
+          </div>
+          <div style={{ height: 300 }} className="mt-4">
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={equityData}>
+                <defs>
+                  {activeStrategies.map((strat) => (
+                    <linearGradient key={strat} id={`equityGrad-${strat.replace(/\s+/g, "")}`} x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor={STRATEGY_COLORS[strat]} stopOpacity={0.15} />
+                      <stop offset="100%" stopColor={STRATEGY_COLORS[strat]} stopOpacity={0} />
+                    </linearGradient>
+                  ))}
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.3} />
+                <XAxis dataKey="date" tick={{ fontSize: 10 }} stroke="hsl(var(--muted-foreground))" interval="preserveStartEnd" />
+                <YAxis tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} />
+                <ReferenceLine y={0} stroke="hsl(var(--border))" strokeDasharray="3 3" />
+                <Tooltip
+                  content={({ active, payload, label }: any) => {
+                    if (!active || !payload?.length) return null;
+                    const d = payload[0]?.payload;
+                    return (
+                      <div className="rounded-xl border border-border/50 bg-[#0a0a1a] px-4 py-3 text-xs shadow-2xl space-y-1">
+                        <p className="font-bold text-white text-sm">{label}</p>
+                        {activeStrategies.map((strat) => {
+                          const val = d[strat];
+                          if (val === undefined) return null;
+                          return (
+                            <p key={strat} style={{ color: STRATEGY_COLORS[strat] }}>
+                              {strat}: {formatCurrency(val)}
+                            </p>
+                          );
+                        })}
+                      </div>
+                    );
+                  }}
+                />
+                {activeStrategies.map((strat) => (
+                  <Area
+                    key={strat}
+                    type="monotone"
+                    dataKey={strat}
+                    stroke={STRATEGY_COLORS[strat]}
+                    strokeWidth={2}
+                    fill={`url(#equityGrad-${strat.replace(/\s+/g, "")})`}
+                    dot={false}
+                  />
+                ))}
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+        </motion.div>
+      )}
 
       {/* Chart 3: Stop vs Gain by hour */}
       <motion.div
