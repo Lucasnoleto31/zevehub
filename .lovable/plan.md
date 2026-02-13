@@ -1,52 +1,38 @@
 
 
-# Curva de Performance por Estrategia (Equity Comparativo)
+# Exclusao de Todos os Registros de Operacoes
 
 ## Resumo
 
-Criar um grafico de curva de equity (AreaChart) comparando a evolucao acumulada de cada estrategia ao longo do tempo, similar a imagem de referencia. Cada estrategia tera sua propria linha com cor distinta.
+Excluir todos os 219.111 registros da tabela `trading_operations` do banco de dados.
 
-## Alteracoes
+## Abordagem
 
-### Arquivo: `src/components/operations/MarginAnalysis.tsx`
+Utilizar `TRUNCATE TABLE trading_operations CASCADE` via a ferramenta de migracao do banco de dados. O TRUNCATE e necessario (em vez de DELETE) porque:
 
-### 1. Novo calculo no useMemo: equity acumulada por estrategia
+- A tabela possui triggers que geram notificacoes para cada exclusao
+- DELETE em 219k registros causaria timeout pelo volume de notificacoes em cascata
+- TRUNCATE ignora triggers e e instantaneo
 
-Agrupar operacoes por `(strategy, date)`, somar resultados por dia, ordenar por data e calcular o acumulado progressivo para cada estrategia.
+## Detalhes Tecnicos
+
+### Comando SQL
 
 ```text
-Para cada operacao:
-  strategyDateMap[strategy][date] += result
-
-Para cada strategy:
-  ordenar datas cronologicamente
-  acumular resultado dia a dia
-
-Formato final:
-  { date: "01/01", "Alaska & Square": 5000, "Apollo": 3200, "Ares": -800, "Orion": 1500 }
+TRUNCATE TABLE trading_operations CASCADE;
 ```
 
-### 2. Novo grafico: AreaChart com multiplas linhas
+O CASCADE garante que registros dependentes em outras tabelas (como `notifications` e `ai_classification_logs` que referenciam `operation_id`) tambem sejam limpos.
 
-Inserido entre o grafico de Margem por Hora e o de Stop/Gain. Especificacoes:
+### Tabelas afetadas
 
-- `AreaChart` com uma `<Area>` por estrategia presente nos dados
-- Cada Area com cor da estrategia, fill com gradiente transparente, stroke com `strokeWidth={2}`
-- `ReferenceLine` em y=0 (linha pontilhada)
-- Tooltip premium (fundo `#0a0a1a`) listando o acumulado de cada estrategia naquela data, com valores coloridos (verde positivo, vermelho negativo)
-- Header com icone TrendingUp, titulo "Curva de Performance" e subtitulo "Evolucao do resultado acumulado por estrategia"
-- Valor total acumulado (soma de todas) exibido no canto superior direito em destaque
-- Borda: `border-emerald-500/20`
-- YAxis com formatacao em `k` (ex: R$80k)
-- XAxis com datas no formato `dd/mm`
-- Amostragem inteligente: se mais de 365 pontos, reduzir para ~365 para performance
-
-### 3. Gradientes
-
-Criar um gradiente para cada estrategia com opacidade baixa (0.15) para o fill das areas, mantendo as linhas solidas.
+- `trading_operations` - 219.111 registros (principal)
+- `notifications` - registros vinculados a operacoes
+- `ai_classification_logs` - logs de classificacao vinculados
 
 ### Impacto
-- Nenhuma alteracao nos cards ou graficos existentes
-- Novo bloco de calculo dentro do mesmo useMemo
-- Novo grafico visual inserido entre Margem por Hora e Stop/Gain
+
+- Acao irreversivel
+- Nenhuma alteracao de codigo necessaria
+- Os graficos e dashboards ficarao vazios ate novas operacoes serem inseridas
 
