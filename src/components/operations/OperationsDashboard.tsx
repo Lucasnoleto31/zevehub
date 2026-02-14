@@ -9,6 +9,9 @@ import RobosQuickStats from "./RobosQuickStats";
 import RobosCharts from "./RobosCharts";
 import RobosStrategyCards from "./RobosStrategyCards";
 import MarginAnalysis from "./MarginAnalysis";
+import CapitalSimulator from "./CapitalSimulator";
+import MonteCarloSimulator from "./MonteCarloSimulator";
+import IntradayDecay from "./IntradayDecay";
 
 import PerformanceHeatmap from "@/components/dashboard/PerformanceHeatmap";
 import TopPerformanceDays from "@/components/dashboard/TopPerformanceDays";
@@ -646,6 +649,15 @@ const OperationsDashboard = ({ userId }: OperationsDashboardProps) => {
 
       {/* Margin Analysis with Stop/Gain */}
       <MarginAnalysis filteredOperations={filteredOperations} />
+
+      {/* Capital Simulator */}
+      <CapitalSimulator filteredOperations={filteredOperations} />
+
+      {/* Monte Carlo Simulator */}
+      <MonteCarloSimulator filteredOperations={filteredOperations} />
+
+      {/* Intraday Decay */}
+      <IntradayDecay filteredOperations={filteredOperations} />
 
       {/* Advanced Metrics */}
       <AdvancedMetrics operations={filteredOperations} />
