@@ -1,38 +1,30 @@
 
 
-# Exclusao de Todos os Registros de Operacoes
+# Remover Cards de Analise do Calendario
 
 ## Resumo
 
-Excluir todos os 219.111 registros da tabela `trading_operations` do banco de dados.
-
-## Abordagem
-
-Utilizar `TRUNCATE TABLE trading_operations CASCADE` via a ferramenta de migracao do banco de dados. O TRUNCATE e necessario (em vez de DELETE) porque:
-
-- A tabela possui triggers que geram notificacoes para cada exclusao
-- DELETE em 219k registros causaria timeout pelo volume de notificacoes em cascata
-- TRUNCATE ignora triggers e e instantaneo
+Remover os dois cards "Recuperacao Apos Perdas" e "Padroes de Sequencia" do componente `PerformanceCalendar.tsx`, junto com toda a logica de calculo associada.
 
 ## Detalhes Tecnicos
 
-### Comando SQL
+### Arquivo: `src/components/dashboard/PerformanceCalendar.tsx`
 
-```text
-TRUNCATE TABLE trading_operations CASCADE;
-```
+**Remover logica de calculo (linhas 80-151):**
+- Bloco `recoveryStats`: calculo de recuperacao apos perdas (linhas 80-96)
+- Bloco `streakPatterns`: calculo de padroes de sequencia (linhas 98-151)
+- Simplificar o retorno do `useMemo` para retornar apenas `calendarDays` e `monthStats`
 
-O CASCADE garante que registros dependentes em outras tabelas (como `notifications` e `ai_classification_logs` que referenciam `operation_id`) tambem sejam limpos.
+**Remover cards do JSX (linhas 313-394):**
+- Card "Recuperacao Apos Perdas" (linhas 316-350)
+- Card "Padroes de Sequencia" (linhas 352-393)
+- Container grid que envolve ambos (linhas 314-394)
 
-### Tabelas afetadas
+**Remover imports nao utilizados:**
+- `Activity` e `TrendingUp` de lucide-react (se nao forem usados em outro lugar do componente)
 
-- `trading_operations` - 219.111 registros (principal)
-- `notifications` - registros vinculados a operacoes
-- `ai_classification_logs` - logs de classificacao vinculados
+**Remover destructuring:**
+- Atualizar a linha de destructuring do `useMemo` para remover `recoveryStats` e `streakPatterns`
 
-### Impacto
-
-- Acao irreversivel
-- Nenhuma alteracao de codigo necessaria
-- Os graficos e dashboards ficarao vazios ate novas operacoes serem inseridas
+Nenhum arquivo novo sera criado. Apenas limpeza de codigo existente.
 
