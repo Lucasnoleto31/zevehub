@@ -1,7 +1,7 @@
 import { useState, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, ChevronRight, Calendar, TrendingUp, TrendingDown, Activity, Target } from "lucide-react";
+import { ChevronLeft, ChevronRight, Calendar, TrendingUp, TrendingDown } from "lucide-react";
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isToday, addMonths, subMonths, getDay, startOfWeek, endOfWeek } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { motion, AnimatePresence } from "framer-motion";
@@ -35,7 +35,7 @@ const PerformanceCalendar = ({ operations }: PerformanceCalendarProps) => {
 
   const weekDays = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
 
-  const { calendarDays, monthStats, recoveryStats, streakPatterns } = useMemo(() => {
+  const { calendarDays, monthStats } = useMemo(() => {
     const monthStart = startOfMonth(currentMonth);
     const monthEnd = endOfMonth(currentMonth);
     const calendarStart = startOfWeek(monthStart);
@@ -77,78 +77,9 @@ const PerformanceCalendar = ({ operations }: PerformanceCalendarProps) => {
     const lossDays = monthDays.filter(d => d.result < 0).length;
     const tradingDays = monthDays.length;
 
-    // Recovery after losses calculation
-    const sortedDays = [...monthDays].sort((a, b) => a.date.getTime() - b.date.getTime());
-    let recoveryResults: number[] = [];
-    
-    for (let i = 0; i < sortedDays.length - 1; i++) {
-      if (sortedDays[i].result < 0 && sortedDays[i + 1]) {
-        recoveryResults.push(sortedDays[i + 1].result);
-      }
-    }
-    
-    const avgRecovery = recoveryResults.length > 0 
-      ? recoveryResults.reduce((sum, r) => sum + r, 0) / recoveryResults.length 
-      : 0;
-    const positiveRecoveries = recoveryResults.filter(r => r > 0).length;
-    const recoveryRate = recoveryResults.length > 0 
-      ? (positiveRecoveries / recoveryResults.length) * 100 
-      : 0;
-
-    // Streak patterns
-    let currentStreak = 0;
-    let maxWinStreak = 0;
-    let maxLossStreak = 0;
-    let afterWinStreakResults: number[] = [];
-    let afterLossStreakResults: number[] = [];
-    
-    for (let i = 0; i < sortedDays.length; i++) {
-      const day = sortedDays[i];
-      
-      if (day.result > 0) {
-        if (currentStreak < 0) {
-          // End of loss streak
-          if (Math.abs(currentStreak) >= 2) {
-            afterLossStreakResults.push(day.result);
-          }
-          currentStreak = 1;
-        } else {
-          currentStreak++;
-        }
-        maxWinStreak = Math.max(maxWinStreak, currentStreak);
-      } else if (day.result < 0) {
-        if (currentStreak > 0) {
-          // End of win streak
-          if (currentStreak >= 2) {
-            afterWinStreakResults.push(day.result);
-          }
-          currentStreak = -1;
-        } else {
-          currentStreak--;
-        }
-        maxLossStreak = Math.max(maxLossStreak, Math.abs(currentStreak));
-      }
-    }
-
-    const avgAfterWinStreak = afterWinStreakResults.length > 0
-      ? afterWinStreakResults.reduce((sum, r) => sum + r, 0) / afterWinStreakResults.length
-      : 0;
-    const avgAfterLossStreak = afterLossStreakResults.length > 0
-      ? afterLossStreakResults.reduce((sum, r) => sum + r, 0) / afterLossStreakResults.length
-      : 0;
-
     return {
       calendarDays,
       monthStats: { totalResult, winDays, lossDays, tradingDays },
-      recoveryStats: { avgRecovery, recoveryRate, totalRecoveries: recoveryResults.length },
-      streakPatterns: { 
-        maxWinStreak, 
-        maxLossStreak, 
-        avgAfterWinStreak, 
-        avgAfterLossStreak,
-        afterWinStreakCount: afterWinStreakResults.length,
-        afterLossStreakCount: afterLossStreakResults.length
-      }
     };
   }, [operations, currentMonth]);
 
@@ -310,88 +241,6 @@ const PerformanceCalendar = ({ operations }: PerformanceCalendarProps) => {
         </CardContent>
       </Card>
 
-      {/* Stats Cards */}
-      <div className="grid gap-4 md:grid-cols-2">
-        {/* Recovery Stats */}
-        <Card className="border-border/50 bg-card/50 backdrop-blur-sm">
-          <CardHeader className="pb-3">
-            <CardTitle className="flex items-center gap-2 text-base font-semibold">
-              <TrendingUp className="h-4 w-4 text-emerald-500" />
-              Recuperação Após Perdas
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-muted-foreground">Resultado médio no dia seguinte</span>
-              <span className={`font-semibold ${recoveryStats.avgRecovery >= 0 ? "text-emerald-500" : "text-red-500"}`}>
-                {formatCurrency(recoveryStats.avgRecovery)}
-              </span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-muted-foreground">Taxa de recuperação</span>
-              <span className="font-semibold text-primary">
-                {recoveryStats.recoveryRate.toFixed(1)}%
-              </span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-muted-foreground">Dias analisados</span>
-              <span className="font-semibold">{recoveryStats.totalRecoveries}</span>
-            </div>
-            <div className="mt-2 rounded-lg bg-muted/30 p-3">
-              <p className="text-xs text-muted-foreground">
-                {recoveryStats.recoveryRate >= 60 
-                  ? "✓ Boa capacidade de recuperação após dias negativos"
-                  : recoveryStats.recoveryRate >= 40
-                  ? "⚠ Recuperação moderada - mantenha disciplina após perdas"
-                  : "⚠ Dificuldade em recuperar após perdas - considere pausar após dias negativos"}
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Streak Patterns */}
-        <Card className="border-border/50 bg-card/50 backdrop-blur-sm">
-          <CardHeader className="pb-3">
-            <CardTitle className="flex items-center gap-2 text-base font-semibold">
-              <Activity className="h-4 w-4 text-primary" />
-              Padrões de Sequência
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <div className="grid grid-cols-2 gap-3">
-              <div className="rounded-lg bg-emerald-500/10 p-2 text-center">
-                <p className="text-xs text-muted-foreground">Maior sequência de ganhos</p>
-                <p className="text-xl font-bold text-emerald-500">{streakPatterns.maxWinStreak}</p>
-              </div>
-              <div className="rounded-lg bg-red-500/10 p-2 text-center">
-                <p className="text-xs text-muted-foreground">Maior sequência de perdas</p>
-                <p className="text-xl font-bold text-red-500">{streakPatterns.maxLossStreak}</p>
-              </div>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-muted-foreground">Resultado após 2+ ganhos seguidos</span>
-              <span className={`font-semibold ${streakPatterns.avgAfterWinStreak >= 0 ? "text-emerald-500" : "text-red-500"}`}>
-                {streakPatterns.afterWinStreakCount > 0 ? formatCurrency(streakPatterns.avgAfterWinStreak) : "N/A"}
-              </span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-muted-foreground">Resultado após 2+ perdas seguidas</span>
-              <span className={`font-semibold ${streakPatterns.avgAfterLossStreak >= 0 ? "text-emerald-500" : "text-red-500"}`}>
-                {streakPatterns.afterLossStreakCount > 0 ? formatCurrency(streakPatterns.avgAfterLossStreak) : "N/A"}
-              </span>
-            </div>
-            <div className="mt-2 rounded-lg bg-muted/30 p-3">
-              <p className="text-xs text-muted-foreground">
-                {streakPatterns.avgAfterWinStreak < 0 && streakPatterns.afterWinStreakCount >= 2
-                  ? "⚠ Tendência a perder após sequências de ganhos - evite overconfidence"
-                  : streakPatterns.avgAfterLossStreak > 0 && streakPatterns.afterLossStreakCount >= 2
-                  ? "✓ Boa recuperação após sequências negativas"
-                  : "Dados insuficientes para análise de padrões"}
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
 
       {/* Tooltip */}
       <AnimatePresence>
