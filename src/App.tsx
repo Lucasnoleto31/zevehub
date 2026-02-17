@@ -25,12 +25,10 @@ const Operations = lazy(() => import("./pages/Operations"));
 const OperationDetail = lazy(() => import("./pages/OperationDetail"));
 const Trading = lazy(() => import("./pages/Trading"));
 const Profile = lazy(() => import("./pages/Profile"));
-const Financas = lazy(() => import("./pages/Financas"));
 const GerenciamentoRisco = lazy(() => import("./pages/GerenciamentoRisco"));
 const Onboarding = lazy(() => import("./pages/Onboarding"));
 const Mensagens = lazy(() => import("./pages/Mensagens"));
 const Impostos = lazy(() => import("./pages/Impostos"));
-const CalendarioEconomico = lazy(() => import("./pages/CalendarioEconomico"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -81,11 +79,9 @@ const App = () => {
                       <Route path="/operation/:id" element={<ProtectedRoute><OperationDetail /></ProtectedRoute>} />
                       <Route path="/trading" element={<ProtectedRoute><Trading /></ProtectedRoute>} />
                       <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
-                      <Route path="/financas" element={<ProtectedRoute><Financas /></ProtectedRoute>} />
                       <Route path="/risco" element={<ProtectedRoute><GerenciamentoRisco /></ProtectedRoute>} />
                       <Route path="/mensagens" element={<ProtectedRoute><Mensagens /></ProtectedRoute>} />
                       <Route path="/impostos" element={<ProtectedRoute><Impostos /></ProtectedRoute>} />
-                      <Route path="/calendario" element={<ProtectedRoute><CalendarioEconomico /></ProtectedRoute>} />
                       <Route path="*" element={<NotFound />} />
                     </Routes>
                   </Suspense>
