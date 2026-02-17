@@ -5,12 +5,10 @@ import {
   LineChart,
   User,
   Shield,
-  Wallet,
   ShieldCheck,
   TrendingUp,
   Mail,
   Calculator,
-  Calendar,
 } from "lucide-react";
 
 import {
@@ -49,12 +47,6 @@ const menuItems = [
     color: "text-purple-500",
   },
   {
-    title: "Finanças",
-    url: "/financas",
-    icon: Wallet,
-    color: "text-yellow-500",
-  },
-  {
     title: "Gerenciamento de Risco",
     url: "/risco",
     icon: ShieldCheck,
@@ -65,12 +57,6 @@ const menuItems = [
     url: "/impostos",
     icon: Calculator,
     color: "text-red-500",
-  },
-  {
-    title: "Calendário",
-    url: "/calendario",
-    icon: Calendar,
-    color: "text-emerald-500",
   },
   {
     title: "Mensagens",

@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { TrendingUp, TrendingDown, Activity, Target, Info, Clock, Zap, Shield, ArrowUpRight, ArrowDownRight } from "lucide-react";
+import { TrendingUp, TrendingDown, Activity, Target, Info, Clock, Zap, Shield, ArrowUpRight, ArrowDownRight, Flame, BarChart3, HeartPulse } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { LineChart, Line, ResponsiveContainer, Area, AreaChart } from "recharts";
 import { cn } from "@/lib/utils";
@@ -19,6 +19,9 @@ interface Metrics {
   expectancy: number;
   recoveryFactor: number;
   drawdownDuration: number;
+  calmarRatio: number;
+  tailRatio: number;
+  ulcerIndex: number;
 }
 
 interface HistoricalMetrics {
@@ -29,6 +32,9 @@ interface HistoricalMetrics {
   expectancy: number;
   recoveryFactor: number;
   drawdownDuration: number;
+  calmarRatio: number;
+  tailRatio: number;
+  ulcerIndex: number;
 }
 
 interface AdvancedMetricsProps {
@@ -105,12 +111,9 @@ const AdvancedMetrics = ({ operations }: AdvancedMetricsProps) => {
   const calculateMetrics = (ops: Operation[]): Metrics => {
     if (ops.length === 0) {
       return {
-        sharpeRatio: 0,
-        maxDrawdown: 0,
-        profitFactor: 0,
-        expectancy: 0,
-        recoveryFactor: 0,
-        drawdownDuration: 0,
+        sharpeRatio: 0, maxDrawdown: 0, profitFactor: 0,
+        expectancy: 0, recoveryFactor: 0, drawdownDuration: 0,
+        calmarRatio: 0, tailRatio: 0, ulcerIndex: 0,
       };
     }
     
@@ -123,38 +126,42 @@ const AdvancedMetrics = ({ operations }: AdvancedMetricsProps) => {
     const dailyReturns = Array.from(dailyResults.values());
 
     const avgReturn = dailyReturns.reduce((a, b) => a + b, 0) / dailyReturns.length;
-    const variance =
-      dailyReturns.reduce((sum, ret) => sum + Math.pow(ret - avgReturn, 2), 0) /
-      dailyReturns.length;
+    const variance = dailyReturns.reduce((sum, ret) => sum + Math.pow(ret - avgReturn, 2), 0) / dailyReturns.length;
     const stdDev = Math.sqrt(variance);
-    const riskFreeRate = 0;
-    const sharpeRatio = stdDev !== 0 ? (avgReturn - riskFreeRate) / stdDev : 0;
+    const sharpeRatio = stdDev !== 0 ? avgReturn / stdDev : 0;
 
+    // Drawdown calculation + Ulcer Index data
     let peak = 0;
     let maxDrawdown = 0;
     let accumulated = 0;
+    const drawdownPercentages: number[] = [];
 
     dailyReturns.forEach((result) => {
       accumulated += result;
-      if (accumulated > peak) {
-        peak = accumulated;
-      }
+      if (accumulated > peak) peak = accumulated;
       const drawdown = peak - accumulated;
-      if (drawdown > maxDrawdown) {
-        maxDrawdown = drawdown;
-      }
+      if (drawdown > maxDrawdown) maxDrawdown = drawdown;
+      const ddPct = peak > 0 ? ((peak - accumulated) / peak) * 100 : 0;
+      drawdownPercentages.push(ddPct);
     });
 
-    // Single-pass: gains, losses, counts, totalProfit
+    // Ulcer Index: sqrt(mean of squared drawdown percentages)
+    const ulcerIndex = drawdownPercentages.length > 0
+      ? Math.sqrt(drawdownPercentages.reduce((sum, dd) => sum + dd * dd, 0) / drawdownPercentages.length)
+      : 0;
+
+    // Gains, losses, counts, totalProfit
     let gains = 0;
     let lossSum = 0;
     let winningTrades = 0;
     let losingTrades = 0;
     let totalProfit = 0;
+    const gainValues: number[] = [];
+    const lossValues: number[] = [];
     ops.forEach((op) => {
       totalProfit += op.result;
-      if (op.result > 0) { winningTrades++; gains += op.result; }
-      else if (op.result < 0) { losingTrades++; lossSum += Math.abs(op.result); }
+      if (op.result > 0) { winningTrades++; gains += op.result; gainValues.push(op.result); }
+      else if (op.result < 0) { losingTrades++; lossSum += Math.abs(op.result); lossValues.push(op.result); }
     });
 
     const profitFactor = lossSum !== 0 ? gains / lossSum : gains > 0 ? Infinity : 0;
@@ -166,6 +173,22 @@ const AdvancedMetrics = ({ operations }: AdvancedMetricsProps) => {
     const expectancy = winRate * avgWin - lossRate * avgLoss;
     const recoveryFactor = maxDrawdown !== 0 ? totalProfit / maxDrawdown : 0;
 
+    // Calmar Ratio: annualized return / max drawdown
+    const totalDays = dailyReturns.length;
+    const annualizedReturn = totalDays > 0 ? (totalProfit / totalDays) * 252 : 0;
+    const calmarRatio = maxDrawdown !== 0 ? annualizedReturn / maxDrawdown : 0;
+
+    // Tail Ratio: P95 of gains / |P5 of losses|
+    let tailRatio = 0;
+    if (gainValues.length > 0 && lossValues.length > 0) {
+      const sortedGains = [...gainValues].sort((a, b) => a - b);
+      const sortedLosses = [...lossValues].sort((a, b) => a - b);
+      const p95Gain = sortedGains[Math.floor(sortedGains.length * 0.95)] || sortedGains[sortedGains.length - 1];
+      const p5Loss = sortedLosses[Math.floor(sortedLosses.length * 0.05)] || sortedLosses[0];
+      tailRatio = p5Loss !== 0 ? p95Gain / Math.abs(p5Loss) : 0;
+    }
+
+    // Drawdown duration
     const sortedDates = Array.from(dailyResults.keys()).sort();
     let drawdownDurations: number[] = [];
     let currentDrawdownStart: string | null = null;
@@ -174,12 +197,10 @@ const AdvancedMetrics = ({ operations }: AdvancedMetricsProps) => {
 
     sortedDates.forEach((date, index) => {
       accumulatedValue += dailyResults.get(date) || 0;
-      
       if (accumulatedValue > peakValue) {
         if (currentDrawdownStart !== null) {
           const startIndex = sortedDates.indexOf(currentDrawdownStart);
-          const duration = index - startIndex;
-          drawdownDurations.push(duration);
+          drawdownDurations.push(index - startIndex);
           currentDrawdownStart = null;
         }
         peakValue = accumulatedValue;
@@ -187,13 +208,10 @@ const AdvancedMetrics = ({ operations }: AdvancedMetricsProps) => {
         currentDrawdownStart = date;
       }
     });
-
     if (currentDrawdownStart !== null) {
       const startIndex = sortedDates.indexOf(currentDrawdownStart);
-      const duration = sortedDates.length - 1 - startIndex;
-      drawdownDurations.push(duration);
+      drawdownDurations.push(sortedDates.length - 1 - startIndex);
     }
-
     const avgDrawdownDuration = drawdownDurations.length > 0
       ? drawdownDurations.reduce((a, b) => a + b, 0) / drawdownDurations.length
       : 0;
@@ -205,6 +223,9 @@ const AdvancedMetrics = ({ operations }: AdvancedMetricsProps) => {
       expectancy,
       recoveryFactor: isFinite(recoveryFactor) ? recoveryFactor : 0,
       drawdownDuration: avgDrawdownDuration,
+      calmarRatio: isFinite(calmarRatio) ? calmarRatio : 0,
+      tailRatio: isFinite(tailRatio) ? tailRatio : 0,
+      ulcerIndex: isFinite(ulcerIndex) ? ulcerIndex : 0,
     };
   };
 
@@ -539,6 +560,64 @@ const AdvancedMetrics = ({ operations }: AdvancedMetricsProps) => {
         index={5}
         sparklineData={historical}
         sparklineKey="drawdownDuration"
+        sparklineInverted={true}
+      />
+
+      <MetricCard
+        title="Calmar Ratio"
+        value={metrics.calmarRatio.toFixed(2)}
+        icon={Flame}
+        description={
+          metrics.calmarRatio > 3
+            ? "Retorno excepcional vs risco"
+            : metrics.calmarRatio > 1
+            ? "Bom retorno vs drawdown"
+            : "Retorno abaixo do risco"
+        }
+        tooltip="Retorno anualizado dividido pelo Max Drawdown. Mede o retorno em relação ao pior cenário. Valores acima de 1 indicam bom retorno ajustado ao risco extremo."
+        isPositive={metrics.calmarRatio > 1}
+        accentColor={metrics.calmarRatio > 1 ? "emerald" : "rose"}
+        index={6}
+        sparklineData={historical}
+        sparklineKey="calmarRatio"
+      />
+
+      <MetricCard
+        title="Tail Ratio"
+        value={metrics.tailRatio.toFixed(2)}
+        icon={BarChart3}
+        description={
+          metrics.tailRatio > 1.5
+            ? "Caudas muito favoráveis"
+            : metrics.tailRatio > 1
+            ? "Caudas favoráveis"
+            : "Caudas desfavoráveis"
+        }
+        tooltip="Razão entre os ganhos extremos (P95) e as perdas extremas (P5). Se > 1, os outliers jogam a seu favor."
+        isPositive={metrics.tailRatio > 1}
+        accentColor={metrics.tailRatio > 1 ? "cyan" : "rose"}
+        index={7}
+        sparklineData={historical}
+        sparklineKey="tailRatio"
+      />
+
+      <MetricCard
+        title="Ulcer Index"
+        value={metrics.ulcerIndex.toFixed(2)}
+        icon={HeartPulse}
+        description={
+          metrics.ulcerIndex < 5
+            ? "Curva de equity suave"
+            : metrics.ulcerIndex < 15
+            ? "Drawdowns moderados"
+            : "Drawdowns severos"
+        }
+        tooltip="Mede o estresse da curva de equity baseado na profundidade e duração dos drawdowns. Quanto menor, mais confortável a operação."
+        isPositive={metrics.ulcerIndex < 5}
+        accentColor={metrics.ulcerIndex < 5 ? "emerald" : metrics.ulcerIndex < 15 ? "amber" : "rose"}
+        index={8}
+        sparklineData={historical}
+        sparklineKey="ulcerIndex"
         sparklineInverted={true}
       />
     </div>
