@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { TrendingUp, TrendingDown, Activity, Target, Info, Clock, Zap, Shield, ArrowUpRight, ArrowDownRight, Flame, BarChart3, HeartPulse } from "lucide-react";
+import { TrendingUp, TrendingDown, Activity, Target, Info, Clock, Zap, Shield, ArrowUpRight, ArrowDownRight, Flame, BarChart3, HeartPulse, Gauge, Percent, Skull, Trophy, BarChart, Radio } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { LineChart, Line, ResponsiveContainer, Area, AreaChart } from "recharts";
 import { cn } from "@/lib/utils";
@@ -22,6 +22,13 @@ interface Metrics {
   calmarRatio: number;
   tailRatio: number;
   ulcerIndex: number;
+  sortinoRatio: number;
+  kellyCriterion: number;
+  riskOfRuin: number;
+  winStreakMax: number;
+  lossStreakMax: number;
+  coefficientOfVariation: number;
+  exposureRatio: number;
 }
 
 interface HistoricalMetrics {
@@ -35,6 +42,13 @@ interface HistoricalMetrics {
   calmarRatio: number;
   tailRatio: number;
   ulcerIndex: number;
+  sortinoRatio: number;
+  kellyCriterion: number;
+  riskOfRuin: number;
+  winStreakMax: number;
+  lossStreakMax: number;
+  coefficientOfVariation: number;
+  exposureRatio: number;
 }
 
 interface AdvancedMetricsProps {
@@ -114,6 +128,8 @@ const AdvancedMetrics = ({ operations }: AdvancedMetricsProps) => {
         sharpeRatio: 0, maxDrawdown: 0, profitFactor: 0,
         expectancy: 0, recoveryFactor: 0, drawdownDuration: 0,
         calmarRatio: 0, tailRatio: 0, ulcerIndex: 0,
+        sortinoRatio: 0, kellyCriterion: 0, riskOfRuin: 0,
+        winStreakMax: 0, lossStreakMax: 0, coefficientOfVariation: 0, exposureRatio: 0,
       };
     }
     
@@ -216,6 +232,53 @@ const AdvancedMetrics = ({ operations }: AdvancedMetricsProps) => {
       ? drawdownDurations.reduce((a, b) => a + b, 0) / drawdownDurations.length
       : 0;
 
+    // Sortino Ratio: avg return / downside deviation
+    const negativeReturns = dailyReturns.filter(r => r < 0);
+    const downsideVariance = negativeReturns.length > 0
+      ? negativeReturns.reduce((sum, r) => sum + Math.pow(r, 2), 0) / negativeReturns.length
+      : 0;
+    const downsideDev = Math.sqrt(downsideVariance);
+    const sortinoRatio = downsideDev !== 0 ? avgReturn / downsideDev : 0;
+
+    // Kelly Criterion: winRate - ((1 - winRate) / payoff)
+    const payoff = avgLoss !== 0 ? avgWin / avgLoss : 0;
+    const kellyCriterion = payoff !== 0 ? (winRate - ((1 - winRate) / payoff)) * 100 : 0;
+
+    // Risk of Ruin: ((1 - edge) / (1 + edge))^units
+    const edge = (winRate * payoff) - (1 - winRate);
+    const riskOfRuin = edge > 0 && edge < 1
+      ? Math.pow((1 - edge) / (1 + edge), 20) * 100
+      : edge <= 0 ? 100 : 0;
+
+    // Win/Loss Streak Max
+    let winStreakMax = 0, lossStreakMax = 0;
+    let curWin = 0, curLoss = 0;
+    const sortedDailyReturns = Array.from(dailyResults.entries())
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([, v]) => v);
+    sortedDailyReturns.forEach(r => {
+      if (r > 0) { curWin++; curLoss = 0; if (curWin > winStreakMax) winStreakMax = curWin; }
+      else if (r < 0) { curLoss++; curWin = 0; if (curLoss > lossStreakMax) lossStreakMax = curLoss; }
+      else { curWin = 0; curLoss = 0; }
+    });
+
+    // Coefficient of Variation
+    const coefficientOfVariation = avgReturn !== 0 ? (stdDev / Math.abs(avgReturn)) * 100 : 0;
+
+    // Exposure Ratio: days with ops / total business days in period
+    const allDates = Array.from(dailyResults.keys()).sort();
+    let exposureRatio = 0;
+    if (allDates.length >= 2) {
+      const firstDate = new Date(allDates[0]);
+      const lastDate = new Date(allDates[allDates.length - 1]);
+      const totalCalendarDays = Math.max(1, Math.round((lastDate.getTime() - firstDate.getTime()) / (1000 * 60 * 60 * 24)) + 1);
+      // Approximate business days as ~71.4% of calendar days
+      const businessDays = Math.max(1, Math.round(totalCalendarDays * 5 / 7));
+      exposureRatio = (allDates.length / businessDays) * 100;
+    } else if (allDates.length === 1) {
+      exposureRatio = 100;
+    }
+
     return {
       sharpeRatio: isFinite(sharpeRatio) ? sharpeRatio : 0,
       maxDrawdown,
@@ -226,6 +289,13 @@ const AdvancedMetrics = ({ operations }: AdvancedMetricsProps) => {
       calmarRatio: isFinite(calmarRatio) ? calmarRatio : 0,
       tailRatio: isFinite(tailRatio) ? tailRatio : 0,
       ulcerIndex: isFinite(ulcerIndex) ? ulcerIndex : 0,
+      sortinoRatio: isFinite(sortinoRatio) ? sortinoRatio : 0,
+      kellyCriterion: isFinite(kellyCriterion) ? kellyCriterion : 0,
+      riskOfRuin: isFinite(riskOfRuin) ? Math.min(riskOfRuin, 100) : 0,
+      winStreakMax,
+      lossStreakMax,
+      coefficientOfVariation: isFinite(coefficientOfVariation) ? coefficientOfVariation : 0,
+      exposureRatio: isFinite(exposureRatio) ? Math.min(exposureRatio, 100) : 0,
     };
   };
 
@@ -446,7 +516,7 @@ const AdvancedMetrics = ({ operations }: AdvancedMetricsProps) => {
   };
 
   const renderMetricsForStrategy = (metrics: Metrics, historical: HistoricalMetrics[]) => (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-5">
       <MetricCard
         title="Sharpe Ratio"
         value={metrics.sharpeRatio.toFixed(2)}
@@ -619,6 +689,122 @@ const AdvancedMetrics = ({ operations }: AdvancedMetricsProps) => {
         sparklineData={historical}
         sparklineKey="ulcerIndex"
         sparklineInverted={true}
+      />
+
+      <MetricCard
+        title="Sortino Ratio"
+        value={metrics.sortinoRatio.toFixed(2)}
+        icon={Gauge}
+        description={
+          metrics.sortinoRatio > 2
+            ? "Excelente retorno vs risco negativo"
+            : metrics.sortinoRatio > 1
+            ? "Bom retorno ajustado"
+            : "Retorno abaixo do risco"
+        }
+        tooltip="Semelhante ao Sharpe, mas penaliza apenas a volatilidade negativa (downside). Mais justo para estratégias com ganhos assimétricos. Acima de 1 é bom, acima de 2 é excelente."
+        isPositive={metrics.sortinoRatio > 1}
+        accentColor={metrics.sortinoRatio > 1 ? "emerald" : "rose"}
+        index={9}
+        sparklineData={historical}
+        sparklineKey="sortinoRatio"
+      />
+
+      <MetricCard
+        title="Kelly Criterion"
+        value={`${metrics.kellyCriterion.toFixed(1)}%`}
+        icon={Percent}
+        description={
+          metrics.kellyCriterion >= 5 && metrics.kellyCriterion <= 25
+            ? "Risco ótimo por operação"
+            : metrics.kellyCriterion > 25
+            ? "Risco agressivo sugerido"
+            : metrics.kellyCriterion > 0
+            ? "Risco conservador"
+            : "Não arriscar capital"
+        }
+        tooltip="Percentual ótimo de capital a arriscar por operação para maximizar crescimento a longo prazo. Entre 5-25% é ideal, acima de 25% é agressivo."
+        isPositive={metrics.kellyCriterion > 0}
+        accentColor={metrics.kellyCriterion >= 5 && metrics.kellyCriterion <= 25 ? "emerald" : metrics.kellyCriterion > 0 ? "amber" : "rose"}
+        index={10}
+        sparklineData={historical}
+        sparklineKey="kellyCriterion"
+      />
+
+      <MetricCard
+        title="Risk of Ruin"
+        value={`${metrics.riskOfRuin.toFixed(1)}%`}
+        icon={Skull}
+        description={
+          metrics.riskOfRuin < 1
+            ? "Risco de ruína desprezível"
+            : metrics.riskOfRuin < 10
+            ? "Risco de ruína moderado"
+            : "Risco de ruína elevado"
+        }
+        tooltip="Probabilidade estatística de perder todo o capital baseado na taxa de acerto e payoff atuais. Abaixo de 1% é excelente."
+        isPositive={metrics.riskOfRuin < 1}
+        accentColor={metrics.riskOfRuin < 1 ? "emerald" : metrics.riskOfRuin < 10 ? "amber" : "rose"}
+        index={11}
+        sparklineData={historical}
+        sparklineKey="riskOfRuin"
+        sparklineInverted={true}
+      />
+
+      <MetricCard
+        title="Win/Loss Streak"
+        value={`+${metrics.winStreakMax} / -${metrics.lossStreakMax} dias`}
+        icon={Trophy}
+        description={
+          metrics.winStreakMax > metrics.lossStreakMax
+            ? "Sequências positivas dominam"
+            : metrics.winStreakMax === metrics.lossStreakMax
+            ? "Sequências equilibradas"
+            : "Sequências negativas dominam"
+        }
+        tooltip="Maior sequência consecutiva de dias positivos e negativos. Streaks positivos maiores indicam consistência."
+        isPositive={metrics.winStreakMax >= metrics.lossStreakMax}
+        accentColor={metrics.winStreakMax > metrics.lossStreakMax ? "emerald" : metrics.winStreakMax === metrics.lossStreakMax ? "amber" : "rose"}
+        index={12}
+      />
+
+      <MetricCard
+        title="Coef. Variação"
+        value={`${metrics.coefficientOfVariation.toFixed(0)}%`}
+        icon={BarChart}
+        description={
+          metrics.coefficientOfVariation < 100
+            ? "Resultados previsíveis"
+            : metrics.coefficientOfVariation < 200
+            ? "Volatilidade moderada"
+            : "Alta imprevisibilidade"
+        }
+        tooltip="Desvio padrão / Média dos retornos diários × 100. Mede a estabilidade dos resultados. Abaixo de 100% indica boa previsibilidade."
+        isPositive={metrics.coefficientOfVariation < 100}
+        accentColor={metrics.coefficientOfVariation < 100 ? "emerald" : metrics.coefficientOfVariation < 200 ? "amber" : "rose"}
+        index={13}
+        sparklineData={historical}
+        sparklineKey="coefficientOfVariation"
+        sparklineInverted={true}
+      />
+
+      <MetricCard
+        title="Exposure Ratio"
+        value={`${metrics.exposureRatio.toFixed(0)}%`}
+        icon={Radio}
+        description={
+          metrics.exposureRatio > 80
+            ? "Alta presença no mercado"
+            : metrics.exposureRatio > 50
+            ? "Presença moderada"
+            : "Baixa exposição"
+        }
+        tooltip="Percentual de dias úteis com operações ativas no período. Acima de 80% indica alta frequência operacional."
+        isPositive={metrics.exposureRatio > 80}
+        accentColor={metrics.exposureRatio > 80 ? "emerald" : metrics.exposureRatio > 50 ? "amber" : "rose"}
+        index={14}
+        sparklineData={historical}
+        sparklineKey="exposureRatio"
       />
     </div>
   );
