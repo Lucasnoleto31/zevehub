@@ -16,7 +16,7 @@ interface MonthlyPerformanceTableProps {
 
 const MONTH_LABELS = ["JAN", "FEV", "MAR", "ABR", "MAI", "JUN", "JUL", "AGO", "SET", "OUT", "NOV", "DEZ"];
 
-const MonthlyPerformanceTable = ({ filteredOperations, capitalBase = 10000 }: MonthlyPerformanceTableProps) => {
+const MonthlyPerformanceTable = ({ filteredOperations, capitalBase = 25000 }: MonthlyPerformanceTableProps) => {
   const tableData = useMemo(() => {
     if (filteredOperations.length === 0) return [];
 
@@ -34,7 +34,6 @@ const MonthlyPerformanceTable = ({ filteredOperations, capitalBase = 10000 }: Mo
 
     return years.map(year => {
       const months = monthlyResults[year];
-      let capital = capitalBase;
       const monthlyPct: (number | null)[] = [];
       let yearAccumulated = 1;
 
@@ -43,10 +42,9 @@ const MonthlyPerformanceTable = ({ filteredOperations, capitalBase = 10000 }: Mo
         if (result === 0 && !(m in months)) {
           monthlyPct.push(null);
         } else {
-          const pct = capital > 0 ? (result / capital) * 100 : 0;
+          const pct = capitalBase > 0 ? (result / capitalBase) * 100 : 0;
           monthlyPct.push(pct);
           yearAccumulated *= (1 + pct / 100);
-          capital += result;
         }
       }
 
