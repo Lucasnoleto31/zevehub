@@ -15,6 +15,7 @@ import PerformanceHeatmap from "@/components/dashboard/PerformanceHeatmap";
 import TopPerformanceDays from "@/components/dashboard/TopPerformanceDays";
 import AdvancedMetrics from "@/components/dashboard/AdvancedMetrics";
 import PerformanceCalendar from "@/components/dashboard/PerformanceCalendar";
+import CrossValidationHeatmap from "./CrossValidationHeatmap";
 
 interface OperationsDashboardProps {
   userId: string;
@@ -661,6 +662,9 @@ const OperationsDashboard = ({ userId }: OperationsDashboardProps) => {
         result: op.result,
         strategy: op.strategy || undefined,
       }))} />
+
+      {/* Cross Validation Heatmap */}
+      <CrossValidationHeatmap operations={filteredOperations} />
 
       {/* Heatmap & Top Days */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
