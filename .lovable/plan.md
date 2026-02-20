@@ -1,89 +1,36 @@
 
 
-# Heatmap de Validacao Cruzada (Historico x Mes Atual)
+# Ajuste do Desempenho Mensal por Ano — Capital Fixo de R$ 25.000
 
 ## Resumo
 
-Criar um novo componente `CrossValidationHeatmap` que cruza o desempenho historico completo com o mes atual, gerando um sinal visual claro de "Ligar" ou "Nao Ligar" o robo para cada slot horario/dia da semana.
+Alterar o componente `MonthlyPerformanceTable.tsx` para:
 
----
+1. Usar capital base de **R$ 25.000** (em vez de R$ 10.000)
+2. Calcular cada mes como **resultado / 25.000 * 100** (capital fixo, sem acumular)
 
-## Logica de Validacao
+## Mudancas
 
-Para cada celula (dia da semana x hora):
+### Arquivo: `src/components/operations/MonthlyPerformanceTable.tsx`
 
-- **Camada 1 - Historico**: resultado total do slot considerando TODO o historico (excluindo mes atual)
-- **Camada 2 - Mes Atual**: resultado total do slot apenas no mes corrente
+**Linha 19** — Alterar o valor default de `capitalBase` de `10000` para `25000`
 
-Sinais:
-- **LIGAR** (verde): Historico positivo E Mes atual positivo
-- **ALERTA** (amarelo): Apenas um dos dois positivo (divergencia)
-- **NAO LIGAR** (vermelho): Historico negativo E Mes atual negativo
-- **SEM DADOS** (cinza): Sem operacoes em uma ou ambas as camadas
+**Linhas 37-49** — Simplificar o calculo removendo a acumulacao de capital:
+- Remover `let capital = capitalBase` e `capital += result`
+- Cada mes passa a ser: `(result / capitalBase) * 100` (denominador fixo)
+- O acumulado do ano continua sendo a composicao multiplicativa dos retornos mensais
 
----
-
-## O que mostra
-
-### Heatmap Grid (5 colunas x 9 linhas = Seg-Sex x 9h-17h)
-- Cada celula exibe um icone de sinal: check (ligar), alerta (divergencia), X (nao ligar)
-- Cores: verde forte (ambos positivos), amarelo/amber (divergencia), vermelho (ambos negativos)
-
-### Tooltip detalhado ao hover
-- Resultado historico (R$ total + numero de operacoes)
-- Resultado mes atual (R$ total + numero de operacoes)
-- Sinal final: "LIGAR", "DIVERGENCIA", "NAO LIGAR"
-- Detalhe da divergencia: qual camada esta negativa
-
-### Cards resumo abaixo do heatmap
-- **Slots para Ligar**: quantidade de celulas com sinal verde
-- **Slots em Alerta**: quantidade com divergencia
-- **Slots para Nao Ligar**: quantidade com sinal vermelho
-- **Score Geral**: percentual de slots verdes sobre o total com dados
-
-### Legenda
-- Verde = Historico + Mes Atual positivos (Ligar)
-- Amarelo = Divergencia (Cautela)
-- Vermelho = Ambos negativos (Nao Ligar)
-- Cinza = Sem dados suficientes
-
----
-
-## Detalhes Tecnicos
-
-### Arquivo criado
-- `src/components/operations/CrossValidationHeatmap.tsx`
-
-### Arquivo modificado
-- `src/components/operations/OperationsDashboard.tsx` - importar e posicionar antes do PerformanceHeatmap existente
-
-### Props
-- `filteredOperations` (mesmo padrao dos outros componentes)
-- Internamente separa as operacoes em "historico" (tudo exceto mes atual) e "mes atual" usando `new Date()` para determinar o mes corrente
-
-### Processamento
-1. Determinar o mes atual (YYYY-MM)
-2. Separar operacoes em dois grupos: `historical` (operation_date nao comeca com mes atual) e `currentMonth` (comeca com mes atual)
-3. Para cada celula (weekday x hour), calcular resultado total de cada grupo
-4. Aplicar logica de sinal cruzado
-5. Renderizar grid com cores e icones
-
-### Design
-- Card premium com titulo "Validacao Cruzada" e icone Shield/ShieldCheck
-- Tema com gradiente verde/amber/vermelho
-- Mesmo layout de grid do PerformanceHeatmap existente (consistencia visual)
-- Suporte a tema dark/light com toggle
-- Tooltips escuros com detalhamento das duas camadas
-- Animacoes framer-motion nas celulas
-- Responsivo com scroll horizontal em mobile
-
-### Posicionamento no Dashboard
-
-```text
-...
-PerformanceCalendar
---> CrossValidationHeatmap (NOVO)
-PerformanceHeatmap (existente)
-TopPerformanceDays
+Antes:
+```
+let capital = capitalBase;
+const pct = capital > 0 ? (result / capital) * 100 : 0;
+capital += result;
 ```
 
+Depois:
+```
+const pct = capitalBase > 0 ? (result / capitalBase) * 100 : 0;
+// sem alterar capital
+```
+
+Nenhum outro arquivo precisa ser alterado.
