@@ -1,36 +1,53 @@
 
 
-# Ajuste do Desempenho Mensal por Ano — Capital Fixo de R$ 25.000
+# Validacao Cruzada — Mes Atual = Todos os Marços de Todos os Anos
 
-## Resumo
+## Problema
 
-Alterar o componente `MonthlyPerformanceTable.tsx` para:
+Hoje o componente separa as operacoes assim:
+- **Historico**: tudo que NAO e marco de 2026
+- **Mes atual**: somente marco de 2026
 
-1. Usar capital base de **R$ 25.000** (em vez de R$ 10.000)
-2. Calcular cada mes como **resultado / 25.000 * 100** (capital fixo, sem acumular)
+Como marco de 2026 acabou de comecar, quase nao tem dados. Alem disso, a logica correta que voce quer e comparar o historico completo com a performance historica do mes corrente (marco) em TODOS os anos.
 
-## Mudancas
+## Solucao
 
-### Arquivo: `src/components/operations/MonthlyPerformanceTable.tsx`
+Alterar a separacao dos dados no `CrossValidationHeatmap.tsx`:
 
-**Linha 19** — Alterar o valor default de `capitalBase` de `10000` para `25000`
+- **Historico (Camada 1)**: TODAS as operacoes (sem filtro — todo o historico completo)
+- **Mes Atual (Camada 2)**: Todas as operacoes cujo mes (MM) seja igual ao mes atual, de QUALQUER ano (ex: marco de 2018, 2019, 2020, ..., 2026)
 
-**Linhas 37-49** — Simplificar o calculo removendo a acumulacao de capital:
-- Remover `let capital = capitalBase` e `capital += result`
-- Cada mes passa a ser: `(result / capitalBase) * 100` (denominador fixo)
-- O acumulado do ano continua sendo a composicao multiplicativa dos retornos mensais
+### Mudanca no codigo
+
+**Arquivo**: `src/components/operations/CrossValidationHeatmap.tsx`
+
+**Linhas 39-43** — Alterar a logica de separacao:
 
 Antes:
-```
-let capital = capitalBase;
-const pct = capital > 0 ? (result / capital) * 100 : 0;
-capital += result;
+```typescript
+const currentYM = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+const historical = operations.filter(op => !op.operation_date.startsWith(currentYM));
+const currentMonth = operations.filter(op => op.operation_date.startsWith(currentYM));
 ```
 
 Depois:
-```
-const pct = capitalBase > 0 ? (result / capitalBase) * 100 : 0;
-// sem alterar capital
+```typescript
+const currentMonthNum = String(now.getMonth() + 1).padStart(2, "0");
+const historical = operations; // historico completo
+const currentMonth = operations.filter(op => {
+  const month = op.operation_date.split("-")[1];
+  return month === currentMonthNum;
+});
 ```
 
-Nenhum outro arquivo precisa ser alterado.
+**Atualizar o subtitulo** do componente para refletir a nova logica:
+- De: "Historico completo x Mes atual"
+- Para: "Historico completo x Todos os [nome do mes]s"
+
+Exemplo: "Historico completo x Todos os Marcos" (quando o mes atual for marco)
+
+### Detalhes adicionais
+
+- Adicionar array de nomes de meses em portugues para exibir no subtitulo
+- Nenhum outro arquivo precisa ser alterado
+
