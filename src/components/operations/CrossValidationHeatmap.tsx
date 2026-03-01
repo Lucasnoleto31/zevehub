@@ -29,6 +29,7 @@ interface CellData {
 }
 
 const WEEKDAYS = ["Seg", "Ter", "Qua", "Qui", "Sex"];
+const MONTH_NAMES = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
 const HOURS = Array.from({ length: 9 }, (_, i) => `${i + 9}h`);
 
 const CrossValidationHeatmap = ({ operations }: CrossValidationHeatmapProps) => {
@@ -37,10 +38,13 @@ const CrossValidationHeatmap = ({ operations }: CrossValidationHeatmapProps) => 
 
   const { cells, summary } = useMemo(() => {
     const now = new Date();
-    const currentYM = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+    const currentMonthNum = String(now.getMonth() + 1).padStart(2, "0");
 
-    const historical = operations.filter(op => !op.operation_date.startsWith(currentYM));
-    const currentMonth = operations.filter(op => op.operation_date.startsWith(currentYM));
+    const historical = operations;
+    const currentMonth = operations.filter(op => {
+      const month = op.operation_date.split("-")[1];
+      return month === currentMonthNum;
+    });
 
     const weekdayMap: Record<number, string> = { 1: "Seg", 2: "Ter", 3: "Qua", 4: "Qui", 5: "Sex" };
 
@@ -178,7 +182,7 @@ const CrossValidationHeatmap = ({ operations }: CrossValidationHeatmapProps) => 
                   Validação Cruzada
                 </CardTitle>
                 <p className={`text-sm ${isDark ? "text-slate-400" : "text-slate-500"}`}>
-                  Histórico completo × Mês atual
+                  Histórico completo × Todos os {MONTH_NAMES[new Date().getMonth()]}s
                 </p>
               </div>
             </div>
