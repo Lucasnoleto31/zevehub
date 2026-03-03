@@ -1,53 +1,68 @@
 
 
-# Validacao Cruzada — Mes Atual = Todos os Marços de Todos os Anos
+# Curva de Performance Trade-by-Trade (em vez de dia-a-dia)
 
 ## Problema
 
-Hoje o componente separa as operacoes assim:
-- **Historico**: tudo que NAO e marco de 2026
-- **Mes atual**: somente marco de 2026
+Atualmente, tanto no dashboard de Operacoes (`OperationsDashboard`) quanto no dashboard de Trading (`TradingDashboard`), a curva de equity agrupa os resultados por dia e acumula o total diario. O usuario quer que cada ponto do grafico represente uma operacao individual, com a soma acumulada trade a trade.
 
-Como marco de 2026 acabou de comecar, quase nao tem dados. Alem disso, a logica correta que voce quer e comparar o historico completo com a performance historica do mes corrente (marco) em TODOS os anos.
+## Mudancas
 
-## Solucao
+### 1. `src/components/operations/OperationsDashboard.tsx` (linhas 510-519)
 
-Alterar a separacao dos dados no `CrossValidationHeatmap.tsx`:
+Substituir a logica de agrupamento por dia por uma iteracao trade-by-trade sobre `filteredOperations`, ordenadas por `operation_date` + `operation_time`:
 
-- **Historico (Camada 1)**: TODAS as operacoes (sem filtro — todo o historico completo)
-- **Mes Atual (Camada 2)**: Todas as operacoes cujo mes (MM) seja igual ao mes atual, de QUALQUER ano (ex: marco de 2018, 2019, 2020, ..., 2026)
-
-### Mudanca no codigo
-
-**Arquivo**: `src/components/operations/CrossValidationHeatmap.tsx`
-
-**Linhas 39-43** — Alterar a logica de separacao:
-
-Antes:
 ```typescript
-const currentYM = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
-const historical = operations.filter(op => !op.operation_date.startsWith(currentYM));
-const currentMonth = operations.filter(op => op.operation_date.startsWith(currentYM));
-```
+// Antes: agrupa por dia
+let accumulated = 0;
+const curve = Object.entries(daily)
+  .sort(...)
+  .map(([date, result]) => { accumulated += result; ... });
 
-Depois:
-```typescript
-const currentMonthNum = String(now.getMonth() + 1).padStart(2, "0");
-const historical = operations; // historico completo
-const currentMonth = operations.filter(op => {
-  const month = op.operation_date.split("-")[1];
-  return month === currentMonthNum;
+// Depois: trade-by-trade
+const sorted = [...filteredOperations].sort((a, b) => {
+  const cmp = a.operation_date.localeCompare(b.operation_date);
+  return cmp !== 0 ? cmp : a.operation_time.localeCompare(b.operation_time);
+});
+let accumulated = 0;
+const curve = sorted.map((op, i) => {
+  accumulated += op.result;
+  const [, mm, dd] = op.operation_date.split('-');
+  return { date: `${dd}/${mm}`, value: Number(accumulated.toFixed(2)), index: i + 1 };
 });
 ```
 
-**Atualizar o subtitulo** do componente para refletir a nova logica:
-- De: "Historico completo x Mes atual"
-- Para: "Historico completo x Todos os [nome do mes]s"
+Manter o sampling de 365 pontos para performance.
 
-Exemplo: "Historico completo x Todos os Marcos" (quando o mes atual for marco)
+### 2. `src/components/trading/TradingDashboard.tsx` (linhas 556-582)
 
-### Detalhes adicionais
+Mesma logica: em vez de agrupar por dia, iterar sobre as operacoes ordenadas por `close_time` (que ja tem data+hora) e acumular trade a trade.
 
-- Adicionar array de nomes de meses em portugues para exibir no subtitulo
-- Nenhum outro arquivo precisa ser alterado
+```typescript
+// Antes: agrupa por dia
+const sortedDays = Object.entries(dayResults).sort(...)
+
+// Depois: trade-by-trade
+const sortedOps = [...filteredOperations].sort((a, b) => 
+  new Date(a.close_time).getTime() - new Date(b.close_time).getTime()
+);
+let cumulative = 0;
+const fullEquityCurve = sortedOps.map((op, idx) => {
+  cumulative += op.operation_result || 0;
+  return {
+    index: idx + 1,
+    result: op.operation_result || 0,
+    total: cumulative,
+    date: format(new Date(op.close_time), 'dd/MM', { locale: ptBR })
+  };
+});
+```
+
+### 3. `src/components/dashboard/EquityCurveChart.tsx` e `BotsPerformanceChart.tsx`
+
+Estes dois componentes nao sao importados em nenhum lugar do projeto (estao orfaos). Nao precisam ser alterados, mas se desejar consistencia, posso ajustar tambem.
+
+## Resultado
+
+Cada ponto da curva de performance representara um trade individual, mostrando a evolucao real do capital operacao a operacao.
 
