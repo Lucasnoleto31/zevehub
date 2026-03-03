@@ -553,22 +553,23 @@ export const TradingDashboard = ({ operations = [], strategies, userId }: Tradin
       }
     }
 
-    // Equity curve by day (not by operation)
-    const sortedDays = Object.entries(dayResults)
-      .sort(([a], [b]) => a.localeCompare(b));
+    // Equity curve trade-by-trade
+    const sortedOps = [...filteredOperations].sort((a, b) =>
+      new Date(a.close_time).getTime() - new Date(b.close_time).getTime()
+    );
     
     let cumulative = 0;
     let maxBalance = 0;
     let minBalance = 0;
-    const fullEquityCurve = sortedDays.map(([date, dailyData], idx) => {
-      cumulative += dailyData.result;
+    const fullEquityCurve = sortedOps.map((op, idx) => {
+      cumulative += op.operation_result || 0;
       maxBalance = Math.max(maxBalance, cumulative);
       minBalance = Math.min(minBalance, cumulative);
       return {
         index: idx + 1,
-        result: dailyData.result,
+        result: op.operation_result || 0,
         total: cumulative,
-        date: format(parseISO(date), 'dd/MM', { locale: ptBR })
+        date: format(new Date(op.close_time), 'dd/MM', { locale: ptBR })
       };
     });
     

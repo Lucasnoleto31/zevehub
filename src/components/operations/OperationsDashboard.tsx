@@ -507,15 +507,17 @@ const OperationsDashboard = ({ userId }: OperationsDashboardProps) => {
 
     // --- Build output arrays ---
 
-    // Performance curve (equity)
+    // Performance curve (trade-by-trade equity)
+    const sortedOps = [...ops].sort((a, b) => {
+      const cmp = a.operation_date.localeCompare(b.operation_date);
+      return cmp !== 0 ? cmp : a.operation_time.localeCompare(b.operation_time);
+    });
     let accumulated = 0;
-    const curve = Object.entries(daily)
-      .sort(([a], [b]) => a.localeCompare(b))
-      .map(([date, result]) => {
-        accumulated += result;
-        const [, mm, dd] = date.split('-');
-        return { date: `${dd}/${mm}`, value: accumulated };
-      });
+    const curve = sortedOps.map((op, i) => {
+      accumulated += Number(op.result);
+      const [, mm, dd] = op.operation_date.split('-');
+      return { date: `${dd}/${mm}`, value: Number(accumulated.toFixed(2)), index: i + 1 };
+    });
     setPerformanceCurve(sampleData(curve, 365));
 
     // Month stats
